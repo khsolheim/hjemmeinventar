@@ -1,0 +1,456 @@
+// Hjemmeinventar - Komplett Database Schema
+// Bygget for Next.js 15 + Prisma ORM + PostgreSQL
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// NextAuth.js required models
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+  
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+  
+  @@unique([identifier, token])
+}
+
+// Core application models
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String?
+  image     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  // Relations
+  locations  Location[]
+  items      Item[]
+  activities Activity[]
+  households HouseholdMember[]
+  
+  // NEW: Yarn-specific relations
+  yarnPatterns YarnPattern[]
+  yarnProjects YarnProject[]
+  
+  // NEW: User-specific tags
+  tags         Tag[]
+  
+  // NEW: Loan tracking
+  loans        Loan[]
+  
+  // Authentication
+  accounts Account[]
+  sessions Session[]
+}
+
+// Physical organization
+model Location {
+  id          String      @id @default(cuid())
+  name        String
+  description String?
+  type        LocationType
+  qrCode      String      @unique
+  parentId    String?
+  
+  // Relations
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId      String
+  parent      Location?   @relation("LocationHierarchy", fields: [parentId], references: [id])
+  children    Location[]  @relation("LocationHierarchy")
+  items       Item[]
+  
+  // NEW: Distribution tracking
+  distributions ItemDistribution[]
+  
+  activities  Activity[]
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  @@index([userId])
+  @@index([parentId])
+  @@index([qrCode])
+}
+
+enum LocationType {
+  ROOM
+  SHELF
+  BOX
+  CONTAINER
+  DRAWER
+  CABINET
+}
+
+// Categories with dynamic fields
+model Category {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  icon        String?
+  
+  // NEW: Dynamic field schema stored as JSON
+  fieldSchema String?
+  
+  items       Item[]
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+// Items with both standard and category-specific fields
+model Item {
+  id           String    @id @default(cuid())
+  name         String
+  
+  // FORBEDRET: Mer presis lagerstyring
+  totalQuantity     Int     @default(1)   // Total antall enheter kjøpt opprinnelig
+  availableQuantity Float @default(0)   // Nåværende tilgjengelig antall (kan være desimaltall for delvis brukte enheter)
+  consumedQuantity  Float @default(0)   // Totalt antall som er brukt/konsumert
+  unit             String  @default("stk") // "stk", "nøste", "gram", "meter", "liter", "ml", "kg" - Nå påkrevd for klarhet
+  
+  description  String?
+  imageUrl     String?
+  purchaseDate DateTime?
+  expiryDate   DateTime?
+  price        Float?
+  
+  // Product identification
+  barcode      String?   // EAN/UPC barcode for product lookup
+  brand        String?   // Auto-populated from barcode scan
+  
+  // Category-specific data stored as JSON
+  categoryData String?
+  
+  // Relations
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId       String
+  category     Category? @relation(fields: [categoryId], references: [id])
+  categoryId   String?
+  location     Location  @relation(fields: [locationId], references: [id])
+  locationId   String
+  
+  // Distribution tracking
+  distributions ItemDistribution[]
+  
+  // Project usage tracking
+  projectUsage ProjectYarnUsage[]
+  
+  // NEW: Tag system for flexible metadata
+  tags         Tag[]     @relation("ItemTags")
+  
+  // NEW: Item relationships (accessories, parts, etc.)
+  relatedItems Item[]    @relation("ItemRelations")
+  relatedTo    Item[]    @relation("ItemRelations")
+  
+  // NEW: Document attachments (receipts, manuals, warranties)
+  attachments  Attachment[]
+  
+  // NEW: Loan tracking
+  loan         Loan?
+  
+  activities   Activity[]
+  
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  
+  @@index([userId])
+  @@index([categoryId])
+  @@index([locationId])
+  @@index([expiryDate])
+  @@index([barcode])
+  @@index([availableQuantity]) // For lageroptimalisering
+}
+
+// NEW: Distribution tracking system
+model ItemDistribution {
+  id         String   @id @default(cuid())
+  quantity   Float  // Antall på denne lokasjonen (kan være desimaltall)
+  notes      String?  // F.eks. "Hovedlager", "Til reise"
+  purpose    DistributionPurpose @default(STORAGE)
+  reservedFor String? // Prosjekt-navn hvis reservert
+  displayInfo String?   // Metadata for utstilling
+  
+  // Relations
+  item       Item     @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  itemId     String
+  location   Location @relation(fields: [locationId], references: [id])
+  locationId String
+  
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  
+  @@index([itemId])
+  @@index([locationId])
+}
+
+enum DistributionPurpose {
+  STORAGE    // Normal lagring
+  DISPLAY    // Utstilling
+  RESERVED   // Reservert til prosjekt
+  WORK       // I bruk/arbeid
+}
+
+// Activity logging
+model Activity {
+  id          String      @id @default(cuid())
+  type        ActivityType
+  description String
+  metadata    String?
+  
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId      String
+  item        Item?       @relation(fields: [itemId], references: [id])
+  itemId      String?
+  location    Location?   @relation(fields: [locationId], references: [id])
+  locationId  String?
+  
+  createdAt   DateTime    @default(now())
+  
+  @@index([userId])
+  @@index([type])
+  @@index([createdAt])
+}
+
+enum ActivityType {
+  ITEM_CREATED
+  ITEM_UPDATED
+  ITEM_MOVED
+  ITEM_DELETED
+  LOCATION_CREATED
+  QR_SCANNED
+  BULK_OPERATION
+  LOAN_CREATED    // NEW
+  LOAN_RETURNED   // NEW
+}
+
+// Multi-user household support
+model Household {
+  id          String            @id @default(cuid())
+  name        String
+  description String?
+  
+  members     HouseholdMember[]
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model HouseholdMember {
+  id          String     @id @default(cuid())
+  role        HouseholdRole @default(MEMBER)
+  
+  user        User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId      String
+  household   Household  @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  householdId String
+  
+  joinedAt    DateTime   @default(now())
+  
+  @@unique([userId, householdId])
+}
+
+enum HouseholdRole {
+  ADMIN
+  MEMBER
+  READONLY
+}
+
+// NEW: Yarn pattern system
+model YarnPattern {
+  id              String   @id @default(cuid())
+  name            String
+  description     String?
+  patternFileUrl  String?  // PDF file URL
+  imageUrls       String? // Comma-separated image URLs
+  
+  // Pattern metadata
+  difficulty      PatternDifficulty?
+  estimatedTime   String?  // e.g., "2-3 weeks"
+  needleSize      String?  // e.g., "4mm"
+  gauge           String?  // e.g., "22 sts x 30 rows = 10cm"
+  yarnWeight      String?  // e.g., "DK", "Worsted"
+  yarnAmount      String?  // e.g., "400g"
+  
+  // Relations
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId          String
+  projects        YarnProject[]
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  @@index([userId])
+}
+
+// NEW: Yarn project tracking
+model YarnProject {
+  id              String   @id @default(cuid())
+  name            String
+  description     String?
+  status          ProjectStatus @default(PLANNED)
+  
+  // Progress tracking
+  progressImages  String? // Comma-separated progress image URLs
+  finalImages     String? // Comma-separated final result image URLs
+  notes           String?
+  startDate       DateTime?
+  completedDate   DateTime?
+  
+  // Pattern relation
+  pattern         YarnPattern? @relation(fields: [patternId], references: [id])
+  patternId       String?
+  
+  // Relations
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId          String
+  yarnUsage       ProjectYarnUsage[]
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  @@index([userId])
+  @@index([status])
+}
+
+// NEW: Track which yarn is used in which project
+model ProjectYarnUsage {
+  id              String   @id @default(cuid())
+  quantityUsed    Float  // Amount of yarn used
+  notes           String?  // e.g., "Used for sleeves"
+  
+  project         YarnProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  projectId       String
+  item            Item     @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  itemId          String
+  
+  createdAt       DateTime @default(now())
+  
+  @@unique([projectId, itemId])
+}
+
+enum ProjectStatus {
+  PLANNED
+  IN_PROGRESS
+  COMPLETED
+  ON_HOLD
+  CANCELLED
+}
+
+enum PatternDifficulty {
+  BEGINNER
+  INTERMEDIATE
+  ADVANCED
+  EXPERT
+}
+
+// NEW: Attachment type enum
+enum AttachmentType {
+  RECEIPT      // Kvittering
+  WARRANTY     // Garantibevis
+  MANUAL       // Bruksanvisning
+  PHOTO        // Produktbilde
+  CERTIFICATE  // Sertifikat
+  INVOICE      // Faktura
+  OTHER        // Annet dokument
+}
+
+// NEW: Loan tracking system for lending out items
+model Loan {
+  id                  String     @id @default(cuid())
+  loanedTo           String     // Navnet på personen som låner
+  contactInfo        String?    // Telefon/email til personen som låner
+  loanDate           DateTime   @default(now())
+  expectedReturnDate DateTime?  // Forventet returndato
+  actualReturnDate   DateTime?  // Faktisk returndato
+  notes              String?    // Notater om utlånet
+  status             LoanStatus @default(OUT)
+  
+  // Relations
+  item               Item       @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  itemId             String     @unique // Ett item kan bare være utlånt én gang
+  
+  user               User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId             String
+
+  createdAt          DateTime   @default(now())
+  updatedAt          DateTime   @updatedAt
+
+  @@index([userId, status])
+  @@index([expectedReturnDate])
+}
+
+// NEW: Loan status enum
+enum LoanStatus {
+  OUT        // Utlånt
+  RETURNED   // Returnert
+  OVERDUE    // Forsinket
+}
+
+// NEW: Tag system for flexible metadata
+model Tag {
+  id        String @id @default(cuid())
+  name      String
+  color     String @default("#6B7280") // Default gray color
+  
+  // Relations
+  user      User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    String
+  items     Item[] @relation("ItemTags")
+  
+  createdAt DateTime @default(now())
+  
+  @@unique([name, userId]) // User can't have duplicate tag names
+  @@index([userId])
+}
+
+// NEW: Attachment system for documents
+model Attachment {
+  id        String         @id @default(cuid())
+  url       String         // File URL (Vercel Blob or similar)
+  filename  String         // Original filename
+  filetype  String         // MIME type
+  filesize  Int            // File size in bytes
+  type      AttachmentType @default(OTHER)
+  
+  // Relations
+  item      Item           @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  itemId    String
+  
+  createdAt DateTime       @default(now())
+  
+  @@index([itemId])
+  @@index([type])
+}

@@ -1,0 +1,454 @@
+// Production Prisma Schema for PostgreSQL (Neon)
+// This will replace schema.prisma when deploying to production
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// NextAuth.js required models
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+  
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+  
+  @@unique([identifier, token])
+}
+
+// Core application models
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String?
+  image     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  // Relations
+  locations  Location[]
+  items      Item[]
+  activities Activity[]
+  households HouseholdMember[]
+  
+  // Yarn-specific relations
+  yarnPatterns YarnPattern[]
+  yarnProjects YarnProject[]
+  
+  // User-specific tags
+  tags         Tag[]
+  
+  // Loan tracking
+  loans        Loan[]
+  
+  // Authentication
+  accounts Account[]
+  sessions Session[]
+}
+
+// Physical organization
+model Location {
+  id          String      @id @default(cuid())
+  name        String
+  description String?
+  type        LocationType
+  qrCode      String      @unique
+  parentId    String?
+  
+  // Relations
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId      String
+  parent      Location?   @relation("LocationHierarchy", fields: [parentId], references: [id])
+  children    Location[]  @relation("LocationHierarchy")
+  items       Item[]
+  
+  // Distribution tracking
+  distributions ItemDistribution[]
+  
+  activities  Activity[]
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  @@index([userId])
+  @@index([parentId])
+  @@index([qrCode])
+}
+
+enum LocationType {
+  ROOM
+  SHELF
+  BOX
+  CONTAINER
+  DRAWER
+  CABINET
+}
+
+// Categories with dynamic fields
+model Category {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  icon        String?
+  
+  // Dynamic field schema stored as JSON
+  fieldSchema Json?
+  
+  items       Item[]
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+// Items with both standard and category-specific fields
+model Item {
+  id           String    @id @default(cuid())
+  name         String
+  
+  // Enhanced inventory tracking
+  totalQuantity     Int     @default(1)   // Total units originally purchased
+  availableQuantity Decimal @default(0)   // Current available amount
+  consumedQuantity  Decimal @default(0)   // Total amount consumed/used
+  unit             String  @default("stk") // Unit type
+  
+  description  String?
+  imageUrl     String?
+  purchaseDate DateTime?
+  expiryDate   DateTime?
+  price        Decimal?  @db.Decimal(10, 2)
+  
+  // Product identification
+  barcode      String?   // EAN/UPC barcode for product lookup
+  brand        String?   // Auto-populated from barcode scan
+  
+  // Category-specific data stored as JSON
+  categoryData Json?
+  
+  // Relations
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId       String
+  category     Category? @relation(fields: [categoryId], references: [id])
+  categoryId   String?
+  location     Location  @relation(fields: [locationId], references: [id])
+  locationId   String
+  
+  // Distribution tracking
+  distributions ItemDistribution[]
+  
+  // Project usage tracking
+  projectUsage ProjectYarnUsage[]
+  
+  // Tag system for flexible metadata
+  tags         Tag[]     @relation("ItemTags")
+  
+  // Item relationships
+  relatedItems Item[]    @relation("ItemRelations")
+  relatedTo    Item[]    @relation("ItemRelations")
+  
+  // Document attachments
+  attachments  Attachment[]
+  
+  // Loan tracking
+  loan         Loan?
+  
+  activities   Activity[]
+  
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  
+  @@index([userId])
+  @@index([categoryId])
+  @@index([locationId])
+  @@index([expiryDate])
+  @@index([barcode])
+  @@index([availableQuantity])
+}
+
+// Distribution tracking system
+model ItemDistribution {
+  id         String   @id @default(cuid())
+  quantity   Decimal  // Amount at this location
+  notes      String?  
+  purpose    DistributionPurpose @default(STORAGE)
+  reservedFor String? 
+  displayInfo Json?   // Display metadata
+  
+  // Relations
+  item       Item     @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  itemId     String
+  location   Location @relation(fields: [locationId], references: [id])
+  locationId String
+  
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  
+  @@index([itemId])
+  @@index([locationId])
+}
+
+enum DistributionPurpose {
+  STORAGE    // Normal storage
+  DISPLAY    // Display/exhibition
+  RESERVED   // Reserved for project
+  WORK       // In use/work
+}
+
+// Activity logging
+model Activity {
+  id          String      @id @default(cuid())
+  type        ActivityType
+  description String
+  metadata    Json?
+  
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId      String
+  item        Item?       @relation(fields: [itemId], references: [id])
+  itemId      String?
+  location    Location?   @relation(fields: [locationId], references: [id])
+  locationId  String?
+  
+  createdAt   DateTime    @default(now())
+  
+  @@index([userId])
+  @@index([type])
+  @@index([createdAt])
+}
+
+enum ActivityType {
+  ITEM_CREATED
+  ITEM_UPDATED
+  ITEM_MOVED
+  ITEM_DELETED
+  LOCATION_CREATED
+  QR_SCANNED
+  BULK_OPERATION
+  LOAN_CREATED
+  LOAN_RETURNED
+}
+
+// Multi-user household support
+model Household {
+  id          String            @id @default(cuid())
+  name        String
+  description String?
+  
+  members     HouseholdMember[]
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model HouseholdMember {
+  id          String     @id @default(cuid())
+  role        HouseholdRole @default(MEMBER)
+  
+  user        User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId      String
+  household   Household  @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  householdId String
+  
+  joinedAt    DateTime   @default(now())
+  
+  @@unique([userId, householdId])
+}
+
+enum HouseholdRole {
+  ADMIN
+  MEMBER
+  READONLY
+}
+
+// Yarn pattern system
+model YarnPattern {
+  id              String   @id @default(cuid())
+  name            String
+  description     String?
+  patternFileUrl  String?  // PDF file URL
+  imageUrls       String[] // Array of image URLs
+  
+  // Pattern metadata
+  difficulty      PatternDifficulty?
+  estimatedTime   String?  
+  needleSize      String?  
+  gauge           String?  
+  yarnWeight      String?  
+  yarnAmount      String?  
+  
+  // Relations
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId          String
+  projects        YarnProject[]
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  @@index([userId])
+}
+
+// Yarn project tracking
+model YarnProject {
+  id              String   @id @default(cuid())
+  name            String
+  description     String?
+  status          ProjectStatus @default(PLANNED)
+  
+  // Progress tracking
+  progressImages  String[] // Array of progress image URLs
+  finalImages     String[] // Array of final result image URLs
+  notes           String?
+  startDate       DateTime?
+  completedDate   DateTime?
+  
+  // Pattern relation
+  pattern         YarnPattern? @relation(fields: [patternId], references: [id])
+  patternId       String?
+  
+  // Relations
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId          String
+  yarnUsage       ProjectYarnUsage[]
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  @@index([userId])
+  @@index([status])
+}
+
+// Track which yarn is used in which project
+model ProjectYarnUsage {
+  id              String   @id @default(cuid())
+  quantityUsed    Decimal  // Amount of yarn used
+  notes           String?  
+  
+  project         YarnProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  projectId       String
+  item            Item     @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  itemId          String
+  
+  createdAt       DateTime @default(now())
+  
+  @@unique([projectId, itemId])
+}
+
+enum ProjectStatus {
+  PLANNED
+  IN_PROGRESS
+  COMPLETED
+  ON_HOLD
+  CANCELLED
+}
+
+enum PatternDifficulty {
+  BEGINNER
+  INTERMEDIATE
+  ADVANCED
+  EXPERT
+}
+
+// Loan tracking system
+model Loan {
+  id                  String     @id @default(cuid())
+  loanedTo           String     
+  contactInfo        String?    
+  loanDate           DateTime   @default(now())
+  expectedReturnDate DateTime?  
+  actualReturnDate   DateTime?  
+  notes              String?    
+  status             LoanStatus @default(OUT)
+  
+  // Relations
+  item               Item       @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  itemId             String     @unique 
+  
+  user               User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId             String
+
+  createdAt          DateTime   @default(now())
+  updatedAt          DateTime   @updatedAt
+
+  @@index([userId, status])
+  @@index([expectedReturnDate])
+}
+
+enum LoanStatus {
+  OUT        // Out on loan
+  RETURNED   // Returned
+  OVERDUE    // Overdue
+}
+
+// Tag system
+model Tag {
+  id        String @id @default(cuid())
+  name      String
+  color     String @default("#6B7280")
+  
+  // Relations
+  user      User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    String
+  items     Item[] @relation("ItemTags")
+  
+  createdAt DateTime @default(now())
+  
+  @@unique([name, userId])
+  @@index([userId])
+}
+
+// Attachment system
+model Attachment {
+  id        String         @id @default(cuid())
+  url       String         
+  filename  String         
+  filetype  String         
+  filesize  Int            
+  type      AttachmentType @default(OTHER)
+  
+  // Relations
+  item      Item           @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  itemId    String
+  
+  createdAt DateTime       @default(now())
+  
+  @@index([itemId])
+  @@index([type])
+}
+
+enum AttachmentType {
+  RECEIPT      
+  WARRANTY     
+  MANUAL       
+  PHOTO        
+  CERTIFICATE  
+  INVOICE      
+  OTHER        
+}

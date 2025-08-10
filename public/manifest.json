@@ -1,0 +1,64 @@
+{
+  "name": "Hjemmeinventar - Organiser alt du eier",
+  "short_name": "Hjemmeinventar",
+  "description": "Den enkle måten å holde oversikt over alle dine eiendeler med QR-koder og smart organisering",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#000000",
+  "orientation": "portrait-primary",
+  "categories": ["productivity", "utilities", "lifestyle"],
+  "icons": [
+    {
+      "src": "/icon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable any"
+    },
+    {
+      "src": "/icon-512x512.png", 
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable any"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Legg til gjenstand",
+      "short_name": "Ny gjenstand",
+      "description": "Registrer en ny gjenstand i inventaret",
+      "url": "/items/new",
+      "icons": [{ "src": "/icon-192x192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Skann QR-kode",
+      "short_name": "Skann QR",
+      "description": "Skann QR-kode for å finne gjenstander",
+      "url": "/scan",
+      "icons": [{ "src": "/icon-192x192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Søk i inventar",
+      "short_name": "Søk",
+      "description": "Søk etter gjenstander og lokasjoner",
+      "url": "/search",
+      "icons": [{ "src": "/icon-192x192.png", "sizes": "192x192" }]
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "/screenshot-mobile.png",
+      "sizes": "390x844",
+      "type": "image/png",
+      "form_factor": "narrow"
+    },
+    {
+      "src": "/screenshot-desktop.png", 
+      "sizes": "1280x720",
+      "type": "image/png",
+      "form_factor": "wide"
+    }
+  ],
+  "related_applications": [],
+  "prefer_related_applications": false
+}
