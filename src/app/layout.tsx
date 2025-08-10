@@ -2,8 +2,9 @@ import type { Metadata, Viewport } from "next"
 import { Inter } from "next/font/google"
 import "./globals.css"
 import { TRPCProvider } from "@/lib/trpc/client"
+import { SessionProvider } from "@/components/providers/SessionProvider"
 import { Toaster } from "@/components/ui/sonner"
-import { initializeAxe } from "@/lib/testing/accessibility"
+// import { initializeAxe } from "@/lib/testing/accessibility" // Disabled for production build
 import { SkipToContent } from "@/components/accessibility/SkipToContent"
 
 const inter = Inter({
@@ -44,9 +45,9 @@ export const viewport: Viewport = {
 }
 
 // Initialize accessibility testing in development
-if (typeof window !== "undefined") {
-  initializeAxe()
-}
+// if (typeof window !== "undefined") {
+//   initializeAxe()
+// }
 
 export default function RootLayout({
   children,
@@ -62,14 +63,16 @@ export default function RootLayout({
       </head>
       <body className="min-h-screen bg-background font-sans antialiased">
         <SkipToContent />
-        <TRPCProvider>
-          <div className="relative flex min-h-screen flex-col">
-            <main id="main-content" className="flex-1" tabIndex={-1}>
-              {children}
-            </main>
-          </div>
-          <Toaster />
-        </TRPCProvider>
+        <SessionProvider>
+          <TRPCProvider>
+            <div className="relative flex min-h-screen flex-col">
+              <main id="main-content" className="flex-1" tabIndex={-1}>
+                {children}
+              </main>
+            </div>
+            <Toaster />
+          </TRPCProvider>
+        </SessionProvider>
       </body>
     </html>
   )

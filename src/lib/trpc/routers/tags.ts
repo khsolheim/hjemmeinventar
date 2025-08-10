@@ -333,7 +333,7 @@ export const tagsRouter = createTRPCRouter({
           userId: ctx.user.id,
           name: {
             contains: input.query,
-            mode: 'insensitive'
+
           }
         },
         include: {

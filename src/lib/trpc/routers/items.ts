@@ -3,6 +3,8 @@ import { z } from 'zod'
 import { createTRPCRouter, protectedProcedure } from '../server'
 import { TRPCError } from '@trpc/server'
 import { logActivity } from '../../db'
+import { inventoryEvents } from '../../inngest/services/inventory-events'
+import { emitToHousehold } from '../../websocket/server'
 
 export const itemsRouter = createTRPCRouter({
   // Get all items for user
@@ -11,6 +13,7 @@ export const itemsRouter = createTRPCRouter({
       locationId: z.string().optional(),
       categoryId: z.string().optional(),
       search: z.string().optional(),
+      filter: z.enum(['available', 'loaned']).optional(),
       limit: z.number().min(1).max(100).default(50),
       offset: z.number().min(0).default(0)
     }))
@@ -29,10 +32,18 @@ export const itemsRouter = createTRPCRouter({
       
       if (input.search) {
         where.OR = [
-          { name: { contains: input.search, mode: 'insensitive' } },
-          { description: { contains: input.search, mode: 'insensitive' } },
-          { brand: { contains: input.search, mode: 'insensitive' } }
+          { name: { contains: input.search } },
+          { description: { contains: input.search } },
+          { brand: { contains: input.search } }
         ]
+      }
+      
+      if (input.filter === 'available') {
+        where.loan = null // Items without active loans
+      } else if (input.filter === 'loaned') {
+        where.loan = {
+          status: 'OUT'
+        }
       }
       
       const [items, total] = await Promise.all([
@@ -42,12 +53,13 @@ export const itemsRouter = createTRPCRouter({
             location: true,
             category: true,
             tags: true,
+            attachments: true,
+            loan: true, // Include loan info for filtering
             distributions: {
               include: {
                 location: true
               }
-            },
-            loan: true
+            }
           },
           orderBy: { createdAt: 'desc' },
           take: input.limit,
@@ -107,7 +119,8 @@ export const itemsRouter = createTRPCRouter({
       unit: z.string().default('stk'),
       locationId: z.string(),
       categoryId: z.string().optional(),
-      imageUrl: z.string().optional(),
+      imageUrl: z.string().optional(), // Legacy single image support
+      images: z.array(z.string()).optional(), // New multiple images support
       purchaseDate: z.date().optional(),
       expiryDate: z.date().optional(),
       price: z.number().optional(),
@@ -133,16 +146,51 @@ export const itemsRouter = createTRPCRouter({
       
       const item = await ctx.db.item.create({
         data: {
-          ...input,
+          name: input.name,
+          description: input.description,
+          totalQuantity: input.totalQuantity,
+          unit: input.unit,
+          locationId: input.locationId,
+          categoryId: input.categoryId,
+          imageUrl: input.imageUrl,
+          purchaseDate: input.purchaseDate,
+          expiryDate: input.expiryDate,
+          price: input.price,
+          barcode: input.barcode,
+          brand: input.brand,
+          categoryData: input.categoryData,
           userId: ctx.user.id,
           availableQuantity: input.totalQuantity,
           consumedQuantity: 0
         },
         include: {
           location: true,
-          category: true
+          category: true,
+          attachments: true
         }
       })
+
+      // Create attachments for images
+      if (input.images && input.images.length > 0) {
+        await Promise.all(
+          input.images.map(async (imageUrl) => {
+            // Extract filename from URL
+            const urlParts = imageUrl.split('/')
+            const filename = urlParts[urlParts.length - 1] || 'image.jpg'
+            
+            return ctx.db.attachment.create({
+              data: {
+                url: imageUrl,
+                filename,
+                filetype: 'image',
+                filesize: 0, // We don't have size info from URL
+                type: 'IMAGE',
+                itemId: item.id
+              }
+            })
+          })
+        )
+      }
       
       // Log activity
       await logActivity({
@@ -152,6 +200,45 @@ export const itemsRouter = createTRPCRouter({
         itemId: item.id,
         locationId: item.locationId
       })
+      
+      // Trigger background jobs
+      await inventoryEvents.onItemCreated({
+        itemId: item.id,
+        userId: ctx.user.id,
+        categoryId: item.categoryId || undefined,
+        locationId: item.locationId,
+        expiryDate: item.expiryDate || undefined
+      })
+      
+      // Emit WebSocket event to household members
+      try {
+        const user = await ctx.db.user.findUnique({
+          where: { id: ctx.user.id },
+          include: {
+            households: {
+              include: { household: true }
+            }
+          }
+        })
+        
+        if (user?.households) {
+          user.households.forEach(membership => {
+            emitToHousehold(membership.householdId, 'item:created', {
+              item,
+              householdId: membership.householdId,
+              createdBy: {
+                id: user.id,
+                name: user.name,
+                email: user.email,
+                householdIds: user.households.map(h => h.householdId)
+              }
+            })
+          })
+        }
+      } catch (error) {
+        console.error('Failed to emit WebSocket event:', error)
+        // Don't fail the mutation if WebSocket fails
+      }
       
       return item
     }),
@@ -230,6 +317,20 @@ export const itemsRouter = createTRPCRouter({
         locationId: item.locationId
       })
       
+      // Trigger background jobs
+      await inventoryEvents.onItemUpdated({
+        itemId: item.id,
+        userId: ctx.user.id,
+        changes: updateData,
+        oldValues: {
+          name: existingItem.name,
+          locationId: existingItem.locationId,
+          categoryId: existingItem.categoryId,
+          expiryDate: existingItem.expiryDate,
+          price: existingItem.price
+        }
+      })
+      
       return item
     }),
 
@@ -261,6 +362,12 @@ export const itemsRouter = createTRPCRouter({
         description: `Slettet ${item.name}`,
         userId: ctx.user.id,
         locationId: item.locationId
+      })
+      
+      // Trigger background jobs
+      await inventoryEvents.onItemDeleted({
+        itemId: item.id,
+        userId: ctx.user.id
       })
       
       return { success: true }
@@ -387,5 +494,56 @@ export const itemsRouter = createTRPCRouter({
       }
       
       return updatedItem
+    }),
+
+  // Bulk delete items
+  bulkDelete: protectedProcedure
+    .input(z.array(z.string()).min(1))
+    .mutation(async ({ ctx, input }) => {
+      // Verify all items belong to user
+      const items = await ctx.db.item.findMany({
+        where: {
+          id: { in: input },
+          userId: ctx.user.id
+        },
+        select: {
+          id: true,
+          name: true
+        }
+      })
+      
+      if (items.length !== input.length) {
+        throw new TRPCError({
+          code: 'NOT_FOUND',
+          message: 'En eller flere gjenstander ble ikke funnet'
+        })
+      }
+      
+      // Delete items
+      const result = await ctx.db.item.deleteMany({
+        where: {
+          id: { in: input },
+          userId: ctx.user.id
+        }
+      })
+      
+      // Log bulk delete activity
+      await logActivity({
+        type: 'BULK_OPERATION',
+        description: `Slettet ${result.count} gjenstander: ${items.map(i => i.name).join(', ')}`,
+        userId: ctx.user.id,
+        metadata: {
+          operation: 'DELETE',
+          itemCount: result.count,
+          itemIds: input,
+          itemNames: items.map(i => i.name)
+        }
+      })
+      
+      return { 
+        success: true, 
+        deletedCount: result.count,
+        deletedItems: items
+      }
     })
 })

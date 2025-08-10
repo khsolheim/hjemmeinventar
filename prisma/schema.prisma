@@ -52,6 +52,7 @@ model User {
   email     String   @unique
   name      String?
   image     String?
+  password  String?  // For credentials-based authentication
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   
@@ -252,8 +253,17 @@ enum ActivityType {
   LOCATION_CREATED
   QR_SCANNED
   BULK_OPERATION
-  LOAN_CREATED    // NEW
-  LOAN_RETURNED   // NEW
+  LOAN_CREATED
+  LOAN_RETURNED
+  HOUSEHOLD_CREATED
+  HOUSEHOLD_UPDATED
+  HOUSEHOLD_DELETED
+  HOUSEHOLD_LEFT
+  HOUSEHOLD_MEMBER_ADDED
+  HOUSEHOLD_MEMBER_REMOVED
+  HOUSEHOLD_MEMBER_ROLE_UPDATED
+  SYSTEM_NOTIFICATION
+  ANALYTICS_GENERATED
 }
 
 // Multi-user household support

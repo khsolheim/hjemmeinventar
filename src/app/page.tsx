@@ -1,8 +1,7 @@
-'use client'
-
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { AccessibleButton } from "@/components/ui/accessible-button"
+import Link from "next/link"
 
 export default function Home() {
   return (
@@ -15,25 +14,37 @@ export default function Home() {
         <p className="text-xl text-muted-foreground mb-8 max-w-2xl mx-auto">
           Den enkle måten å holde oversikt over alle dine eiendeler med QR-koder og smart organisering
         </p>
-        <div className="flex gap-4 justify-center">
-          <AccessibleButton 
-            size="lg"
-            aria-label="Kom i gang med hjemmeinventar"
-          >
-            Kom i gang
-          </AccessibleButton>
+        <div className="flex gap-4 justify-center flex-wrap">
+          <Link href="/auth/signup">
+            <AccessibleButton 
+              size="lg"
+              aria-label="Registrer deg og kom i gang"
+            >
+              Kom i gang
+            </AccessibleButton>
+          </Link>
           <Button 
             variant="outline" 
             size="lg"
             aria-label="Les mer om funksjoner"
+            asChild
           >
-            Les mer
+            <a href="#features">Les mer</a>
           </Button>
+          <Link href="/auth/signin">
+            <Button 
+              variant="ghost" 
+              size="lg"
+              aria-label="Logg inn hvis du allerede har konto"
+            >
+              Logg inn
+            </Button>
+          </Link>
         </div>
       </section>
 
       {/* Features Grid */}
-      <section className="py-16">
+      <section id="features" className="py-16">
         <h2 className="text-3xl font-bold text-center mb-12">
           Hovedfunksjoner
         </h2>
@@ -127,12 +138,25 @@ export default function Home() {
           <p className="text-lg text-muted-foreground mb-8">
             Det tar bare noen minutter å sette opp ditt første rom og legge til gjenstander
           </p>
-          <AccessibleButton 
-            size="lg"
-            aria-label="Registrer deg og start med hjemmeinventar"
-          >
-            Registrer deg gratis
-          </AccessibleButton>
+          <div className="flex gap-4 justify-center flex-wrap">
+            <Link href="/auth/signup">
+              <AccessibleButton 
+                size="lg"
+                aria-label="Registrer deg og start med hjemmeinventar"
+              >
+                Registrer deg gratis
+              </AccessibleButton>
+            </Link>
+            <Link href="/auth/signin">
+              <Button 
+                variant="outline"
+                size="lg"
+                aria-label="Logg inn hvis du allerede har konto"
+              >
+                Har du konto? Logg inn
+              </Button>
+            </Link>
+          </div>
         </div>
       </section>
     </div>

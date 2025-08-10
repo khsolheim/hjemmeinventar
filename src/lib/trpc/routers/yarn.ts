@@ -23,8 +23,8 @@ export const yarnRouter = createTRPCRouter({
       
       if (input.search) {
         where.OR = [
-          { name: { contains: input.search, mode: 'insensitive' } },
-          { description: { contains: input.search, mode: 'insensitive' } }
+          { name: { contains: input.search } },
+          { description: { contains: input.search } }
         ]
       }
       
@@ -536,7 +536,7 @@ export const yarnRouter = createTRPCRouter({
       // Get yarn category ID
       const yarnCategory = await ctx.db.category.findFirst({
         where: {
-          name: { contains: 'garn', mode: 'insensitive' }
+          name: { contains: 'garn' }
         }
       })
       

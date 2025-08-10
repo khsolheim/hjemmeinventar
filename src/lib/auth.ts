@@ -14,7 +14,7 @@ const signInSchema = z.object({
 })
 
 export const authConfig = {
-  adapter: PrismaAdapter(db),
+  // adapter: PrismaAdapter(db), // Temporarily disable to debug
   providers: [
     Google({
       clientId: process.env.GOOGLE_CLIENT_ID,
@@ -40,16 +40,16 @@ export const authConfig = {
             where: { email }
           })
           
-          if (!user) {
+          if (!user || !user.password) {
             return null
           }
           
-          // For demo purposes - in production you'd hash passwords
-          // const passwordsMatch = await bcrypt.compare(password, user.password)
+          // Verify password
+          const passwordsMatch = await bcrypt.compare(password, user.password)
           
-          // if (!passwordsMatch) {
-          //   return null
-          // }
+          if (!passwordsMatch) {
+            return null
+          }
           
           return {
             id: user.id,

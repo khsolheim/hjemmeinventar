@@ -19,7 +19,11 @@ import {
   Archive,
   Heart,
   ShoppingCart,
-  Tag
+  Tag,
+  Edit2,
+  Trash2,
+  Loader2,
+  Image as ImageIcon
 } from 'lucide-react'
 import {
   Select,
@@ -28,77 +32,20 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
+import { CameraCaptureCompact } from '@/components/ui/camera-capture'
+import { BarcodeScannerCompact, type ProductInfo } from '@/components/ui/barcode-scanner'
+import { SmartSuggestions } from '@/components/ai/SmartSuggestions'
+import { trpc } from '@/lib/trpc/client'
+import { toast } from 'sonner'
 
-// Mock data for demonstration
-const mockItems = [
-  {
-    id: '1',
-    name: 'DROPS Melody Garn - Perlegrå',
-    description: '71% Alpakka, 25% Ull, 4% Polyamid - 140m/50g',
-    imageUrl: '/placeholder-yarn.jpg',
-    totalQuantity: 5,
-    availableQuantity: 3,
-    unit: 'nøste',
-    category: 'Garn og Strikking',
-    location: 'Soverom > Strikkeskap',
-    purchaseDate: '2024-01-15',
-    price: 89,
-    tags: ['alpakka', 'vinter-prosjekt'],
-    categoryData: {
-      producer: 'DROPS Design',
-      composition: '71% Alpakka, 25% Ull, 4% Polyamid',
-      yardage: '140m',
-      weight: '50g',
-      gauge: '14 m x 19 v = 10cm²',
-      needleSize: '7mm',
-      careInstructions: 'Håndvask maks 30°C. Plantørking.'
-    }
-  },
-  {
-    id: '2',
-    name: 'Apple MacBook Pro 14"',
-    description: 'M3 Pro chip, 18GB RAM, 512GB SSD',
-    imageUrl: '/placeholder-laptop.jpg',
-    totalQuantity: 1,
-    availableQuantity: 1,
-    unit: 'stk',
-    category: 'Elektronikk',
-    location: 'Hjemmekontor > Skrivebord',
-    purchaseDate: '2023-11-20',
-    price: 29990,
-    tags: ['arbeid', 'verdifull'],
-    categoryData: {
-      brand: 'Apple',
-      model: 'MacBook Pro 14-inch',
-      serialNumber: 'C02XL1234567',
-      warrantyExpiry: '2026-11-20',
-      condition: 'Som ny'
-    }
-  },
-  {
-    id: '3',
-    name: 'Økologisk Kokosolje',
-    description: 'Kaldpresset, uraffinert kokosolje 500ml',
-    imageUrl: '/placeholder-coconut-oil.jpg',
-    totalQuantity: 2,
-    availableQuantity: 1.5,
-    unit: 'flaske',
-    category: 'Mat og Drikke',
-    location: 'Kjøkken > Skap',
-    purchaseDate: '2024-01-10',
-    expiryDate: '2025-01-10',
-    price: 129,
-    tags: ['økologisk', 'cooking'],
-    categoryData: {
-      brand: 'Urtekram',
-      storage: 'Tørt og kjølig',
-      opened: true,
-      openedDate: '2024-01-15'
-    }
-  }
-]
-
-const categoryIcons = {
+// Category icons mapping
+const categoryIcons: Record<string, string> = {
   'Garn og Strikking': '🧶',
   'Elektronikk': '💻',
   'Mat og Drikke': '🍎',
@@ -109,11 +56,14 @@ const categoryIcons = {
   'Helse og Skjønnhet': '💄'
 }
 
+
+
 export default function ItemsPage() {
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedCategory, setSelectedCategory] = useState('all')
   const [selectedLocation, setSelectedLocation] = useState('all')
   const [showCreateForm, setShowCreateForm] = useState(false)
+  const [editingItem, setEditingItem] = useState<any>(null)
   const [newItem, setNewItem] = useState({
     name: '',
     description: '',
@@ -121,29 +71,158 @@ export default function ItemsPage() {
     unit: 'stk',
     categoryId: '',
     locationId: '',
-    price: 0
+    price: 0,
+    images: [] as string[],
+    barcode: '',
+    brand: '',
+    productInfo: null as ProductInfo | null
   })
 
-  const filteredItems = mockItems.filter(item => {
-    const matchesSearch = item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         item.description.toLowerCase().includes(searchQuery.toLowerCase())
-    const matchesCategory = selectedCategory === 'all' || item.category === selectedCategory
-    const matchesLocation = selectedLocation === 'all' || item.location.includes(selectedLocation)
-    return matchesSearch && matchesCategory && matchesLocation
+  // tRPC queries and mutations
+  const { data: itemsData, isLoading, error, refetch } = trpc.items.getAll.useQuery({
+    search: searchQuery || undefined,
+    categoryId: selectedCategory === 'all' ? undefined : selectedCategory,
+    locationId: selectedLocation === 'all' ? undefined : selectedLocation,
+    limit: 50
+  })
+  
+  // Extract items from the response object
+  const items = itemsData?.items || []
+  
+  const { data: locations = [] } = trpc.locations.getAll.useQuery()
+  const { data: categories = [] } = trpc.categories.getAll.useQuery()
+
+  const createItemMutation = trpc.items.create.useMutation({
+    onSuccess: () => {
+      toast.success('Gjenstand opprettet!')
+      setShowCreateForm(false)
+      setNewItem({
+        name: '',
+        description: '',
+        totalQuantity: 1,
+        unit: 'stk',
+        categoryId: '',
+        locationId: '',
+        price: 0,
+        images: [],
+        barcode: '',
+        brand: '',
+        productInfo: null
+      })
+      refetch()
+    },
+    onError: (error) => {
+      toast.error(`Feil: ${error.message}`)
+    }
+  })
+
+  const updateItemMutation = trpc.items.update.useMutation({
+    onSuccess: () => {
+      toast.success('Gjenstand oppdatert!')
+      setEditingItem(null)
+      refetch()
+    },
+    onError: (error) => {
+      toast.error(`Feil: ${error.message}`)
+    }
+  })
+
+  const deleteItemMutation = trpc.items.delete.useMutation({
+    onSuccess: () => {
+      toast.success('Gjenstand slettet!')
+      refetch()
+    },
+    onError: (error) => {
+      toast.error(`Feil: ${error.message}`)
+    }
   })
 
   const handleCreateItem = () => {
-    console.log('Creating item:', newItem)
-    setShowCreateForm(false)
-    setNewItem({
-      name: '',
-      description: '',
-      totalQuantity: 1,
-      unit: 'stk',
-      categoryId: '',
-      locationId: '',
-      price: 0
+    if (!newItem.name.trim()) {
+      toast.error('Navn er påkrevd')
+      return
+    }
+    if (!newItem.locationId) {
+      toast.error('Lokasjon er påkrevd')
+      return
+    }
+
+    createItemMutation.mutate({
+      name: newItem.name,
+      description: newItem.description || undefined,
+      totalQuantity: newItem.totalQuantity,
+      unit: newItem.unit,
+      locationId: newItem.locationId,
+      categoryId: newItem.categoryId || undefined,
+      price: newItem.price || undefined,
+      images: newItem.images.length > 0 ? newItem.images : undefined,
+      barcode: newItem.barcode || undefined,
+      brand: newItem.brand || undefined
     })
+  }
+
+  const handleUpdateItem = () => {
+    if (!editingItem?.name.trim()) {
+      toast.error('Navn er påkrevd')
+      return
+    }
+
+    updateItemMutation.mutate({
+      id: editingItem.id,
+      name: editingItem.name,
+      description: editingItem.description || undefined,
+      totalQuantity: editingItem.totalQuantity,
+      unit: editingItem.unit,
+      locationId: editingItem.locationId,
+      categoryId: editingItem.categoryId || undefined,
+      price: editingItem.price || undefined
+    })
+  }
+
+  const handleDeleteItem = (itemId: string) => {
+    if (confirm('Er du sikker på at du vil slette denne gjenstanden?')) {
+      deleteItemMutation.mutate(itemId)
+    }
+  }
+
+  const handleBarcodeDetected = (barcode: string, productInfo?: ProductInfo) => {
+    setNewItem(prev => ({
+      ...prev,
+      barcode,
+      productInfo: productInfo || null,
+      name: productInfo?.name || prev.name,
+      brand: productInfo?.brand || prev.brand,
+      description: productInfo?.description || prev.description,
+      // Auto-select food category if product is from Open Food Facts
+      categoryId: productInfo?.source === 'openfoodfacts' && !prev.categoryId 
+        ? categories.find(cat => cat.name.toLowerCase().includes('mat'))?.id || prev.categoryId
+        : prev.categoryId
+    }))
+    
+    toast.success(`Strekkode ${barcode} lagt til${productInfo?.name ? ` - ${productInfo.name}` : ''}`)
+  }
+
+  if (isLoading) {
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <div className="flex items-center justify-center py-12">
+          <Loader2 className="w-8 h-8 animate-spin" />
+          <span className="ml-2">Laster gjenstander...</span>
+        </div>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <div className="text-center py-12">
+          <h3 className="text-lg font-medium text-red-600 mb-2">Feil ved lasting av gjenstander</h3>
+          <p className="text-sm text-muted-foreground mb-4">{error.message}</p>
+          <Button onClick={() => refetch()}>Prøv igjen</Button>
+        </div>
+      </div>
+    )
   }
 
   const getStatusBadge = (item: any) => {
@@ -196,10 +275,12 @@ export default function ItemsPage() {
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">Alle kategorier</SelectItem>
-            <SelectItem value="Garn og Strikking">🧶 Garn og Strikking</SelectItem>
-            <SelectItem value="Elektronikk">💻 Elektronikk</SelectItem>
-            <SelectItem value="Mat og Drikke">🍎 Mat og Drikke</SelectItem>
-            <SelectItem value="Klær og Tekstiler">👕 Klær og Tekstiler</SelectItem>
+            {categories.map((category) => (
+              <SelectItem key={category.id} value={category.id}>
+                {category.icon && <span className="mr-2">{category.icon}</span>}
+                {category.name}
+              </SelectItem>
+            ))}
           </SelectContent>
         </Select>
         <Select value={selectedLocation} onValueChange={setSelectedLocation}>
@@ -208,9 +289,11 @@ export default function ItemsPage() {
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">Alle lokasjoner</SelectItem>
-            <SelectItem value="Kjøkken">Kjøkken</SelectItem>
-            <SelectItem value="Soverom">Soverom</SelectItem>
-            <SelectItem value="Hjemmekontor">Hjemmekontor</SelectItem>
+            {locations.map((location) => (
+              <SelectItem key={location.id} value={location.id}>
+                {location.name}
+              </SelectItem>
+            ))}
           </SelectContent>
         </Select>
       </div>
@@ -271,6 +354,51 @@ export default function ItemsPage() {
                 placeholder="Beskrivelse av gjenstanden"
               />
             </div>
+            
+            {/* AI Smart Suggestions */}
+            {newItem.name && (
+              <SmartSuggestions
+                itemName={newItem.name}
+                description={newItem.description}
+                onCategorySuggestion={(categoryId, categoryName) => {
+                  setNewItem(prev => ({ ...prev, categoryId }))
+                  toast.success(`AI foreslår kategori: ${categoryName}`)
+                }}
+                onLocationSuggestion={(locationId, locationName) => {
+                  setNewItem(prev => ({ ...prev, locationId }))
+                  toast.success(`AI foreslår lokasjon: ${locationName}`)
+                }}
+                onTagsSuggestion={(tags) => {
+                  // For now, just show the tags - could be integrated with a tags system later
+                  toast.success(`AI foreslår tags: ${tags.join(', ')}`)
+                }}
+                onDuplicateWarning={(duplicates) => {
+                  if (duplicates.length > 0) {
+                    toast.warning(`Advarsel: ${duplicates.length} mulige duplikater funnet!`, {
+                      description: duplicates.map(d => d.itemName).join(', ')
+                    })
+                  }
+                }}
+                className="border-blue-200 bg-blue-50/30"
+              />
+            )}
+            
+            {/* Image Upload Section */}
+            <div>
+              <Label>Bilder</Label>
+              <CameraCaptureCompact
+                onImageCapture={(imageUrl) => {
+                  setNewItem(prev => ({
+                    ...prev,
+                    images: [...prev.images, imageUrl]
+                  }))
+                }}
+                maxImages={5}
+              />
+              <p className="text-sm text-muted-foreground mt-1">
+                Ta bilder av gjenstanden for enklere identifikasjon
+              </p>
+            </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <Label htmlFor="item-category">Kategori</Label>
@@ -279,35 +407,172 @@ export default function ItemsPage() {
                     <SelectValue placeholder="Velg kategori" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="garn">🧶 Garn og Strikking</SelectItem>
-                    <SelectItem value="elektronikk">💻 Elektronikk</SelectItem>
-                    <SelectItem value="mat">🍎 Mat og Drikke</SelectItem>
-                    <SelectItem value="klær">👕 Klær og Tekstiler</SelectItem>
+                    <SelectItem value="">Ingen kategori</SelectItem>
+                    {categories.map((category) => (
+                      <SelectItem key={category.id} value={category.id}>
+                        {category.icon && <span className="mr-2">{category.icon}</span>}
+                        {category.name}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
               <div>
-                <Label htmlFor="item-location">Lokasjon</Label>
+                <Label htmlFor="item-location">Lokasjon *</Label>
                 <Select value={newItem.locationId} onValueChange={(value) => setNewItem({...newItem, locationId: value})}>
                   <SelectTrigger>
                     <SelectValue placeholder="Velg lokasjon" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="kjokken">Kjøkken</SelectItem>
-                    <SelectItem value="soverom">Soverom</SelectItem>
-                    <SelectItem value="kontor">Hjemmekontor</SelectItem>
+                    {locations.map((location) => (
+                      <SelectItem key={location.id} value={location.id}>
+                        {location.name}
+                        {location.parent && <span className="text-muted-foreground"> (i {location.parent.name})</span>}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
             </div>
             <div className="flex gap-2">
-              <AccessibleButton onClick={handleCreateItem} aria-label="Lagre ny gjenstand">
-                Legg til gjenstand
+              <AccessibleButton 
+                onClick={handleCreateItem} 
+                disabled={createItemMutation.isPending}
+                aria-label="Lagre ny gjenstand"
+              >
+                {createItemMutation.isPending ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Oppretter...
+                  </>
+                ) : (
+                  'Legg til gjenstand'
+                )}
               </AccessibleButton>
               <Button 
                 variant="outline" 
                 onClick={() => setShowCreateForm(false)}
+                disabled={createItemMutation.isPending}
                 aria-label="Avbryt opprettelse av gjenstand"
+              >
+                Avbryt
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Edit Item Form */}
+      {editingItem && (
+        <Card className="mb-6">
+          <CardHeader>
+            <CardTitle>Rediger gjenstand</CardTitle>
+            <CardDescription>
+              Oppdater informasjon om gjenstanden
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="edit-item-name">Navn på gjenstand</Label>
+                <Input
+                  id="edit-item-name"
+                  value={editingItem.name}
+                  onChange={(e) => setEditingItem({...editingItem, name: e.target.value})}
+                  placeholder="F.eks. DROPS garn, iPhone 15, Kaffe"
+                />
+              </div>
+              <div>
+                <Label htmlFor="edit-item-quantity">Antall</Label>
+                <div className="flex gap-2">
+                  <Input
+                    id="edit-item-quantity"
+                    type="number"
+                    min="1"
+                    value={editingItem.totalQuantity}
+                    onChange={(e) => setEditingItem({...editingItem, totalQuantity: parseInt(e.target.value)})}
+                    className="flex-1"
+                  />
+                  <Select value={editingItem.unit} onValueChange={(value) => setEditingItem({...editingItem, unit: value})}>
+                    <SelectTrigger className="w-24">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="stk">stk</SelectItem>
+                      <SelectItem value="nøste">nøste</SelectItem>
+                      <SelectItem value="kg">kg</SelectItem>
+                      <SelectItem value="gram">gram</SelectItem>
+                      <SelectItem value="liter">liter</SelectItem>
+                      <SelectItem value="ml">ml</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            </div>
+            <div>
+              <Label htmlFor="edit-item-description">Beskrivelse</Label>
+              <Input
+                id="edit-item-description"
+                value={editingItem.description || ''}
+                onChange={(e) => setEditingItem({...editingItem, description: e.target.value})}
+                placeholder="Beskrivelse av gjenstanden"
+              />
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="edit-item-category">Kategori</Label>
+                <Select value={editingItem.categoryId || ''} onValueChange={(value) => setEditingItem({...editingItem, categoryId: value})}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Velg kategori" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">Ingen kategori</SelectItem>
+                    {categories.map((category) => (
+                      <SelectItem key={category.id} value={category.id}>
+                        {category.icon && <span className="mr-2">{category.icon}</span>}
+                        {category.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label htmlFor="edit-item-location">Lokasjon *</Label>
+                <Select value={editingItem.locationId} onValueChange={(value) => setEditingItem({...editingItem, locationId: value})}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Velg lokasjon" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {locations.map((location) => (
+                      <SelectItem key={location.id} value={location.id}>
+                        {location.name}
+                        {location.parent && <span className="text-muted-foreground"> (i {location.parent.name})</span>}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="flex gap-2">
+              <AccessibleButton 
+                onClick={handleUpdateItem} 
+                disabled={updateItemMutation.isPending}
+                aria-label="Lagre endringer"
+              >
+                {updateItemMutation.isPending ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Lagrer...
+                  </>
+                ) : (
+                  'Lagre endringer'
+                )}
+              </AccessibleButton>
+              <Button 
+                variant="outline" 
+                onClick={() => setEditingItem(null)}
+                disabled={updateItemMutation.isPending}
+                aria-label="Avbryt redigering"
               >
                 Avbryt
               </Button>
@@ -318,14 +583,14 @@ export default function ItemsPage() {
 
       {/* Items Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {filteredItems.map((item) => (
+        {items.map((item) => (
           <Card key={item.id} className="hover:shadow-md transition-shadow">
             <CardHeader className="pb-3">
               <div className="flex items-start justify-between">
                 <div className="flex-1">
                   <div className="flex items-center gap-2 mb-1">
                     <span className="text-lg">
-                      {categoryIcons[item.category as keyof typeof categoryIcons] || '📦'}
+                      {item.category?.icon || categoryIcons[item.category?.name || ''] || '📦'}
                     </span>
                     <CardTitle className="text-lg line-clamp-1">{item.name}</CardTitle>
                   </div>
@@ -333,21 +598,69 @@ export default function ItemsPage() {
                     {item.description}
                   </CardDescription>
                 </div>
-                <Button variant="ghost" size="sm" aria-label={`Mer handlinger for ${item.name}`}>
-                  <MoreVertical className="w-4 h-4" />
-                </Button>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="sm" aria-label={`Mer handlinger for ${item.name}`}>
+                      <MoreVertical className="w-4 h-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent>
+                    <DropdownMenuItem onClick={() => setEditingItem(item)}>
+                      <Edit2 className="w-4 h-4 mr-2" />
+                      Rediger
+                    </DropdownMenuItem>
+                    <DropdownMenuItem 
+                      onClick={() => handleDeleteItem(item.id)}
+                      className="text-red-600"
+                      disabled={deleteItemMutation.isPending}
+                    >
+                      <Trash2 className="w-4 h-4 mr-2" />
+                      Slett
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </div>
               <div className="flex items-center gap-2 flex-wrap">
-                <Badge variant="secondary">{item.category}</Badge>
+                {item.category && <Badge variant="secondary">{item.category.name}</Badge>}
                 {getStatusBadge(item)}
-                {item.tags.map((tag) => (
-                  <Badge key={tag} variant="outline" className="text-xs">
+                {item.tags?.map((tag) => (
+                  <Badge key={tag.id} variant="outline" className="text-xs">
                     <Tag className="w-3 h-3 mr-1" />
-                    {tag}
+                    {tag.name}
                   </Badge>
                 ))}
               </div>
             </CardHeader>
+            
+            {/* Images Section */}
+            {item.attachments && item.attachments.filter((att: any) => att.type === 'IMAGE').length > 0 && (
+              <div className="px-6 pb-3">
+                <div className="flex gap-2 overflow-x-auto">
+                  {item.attachments
+                    .filter((att: any) => att.type === 'IMAGE')
+                    .slice(0, 3)
+                    .map((attachment: any) => (
+                      <div key={attachment.id} className="flex-shrink-0">
+                        <img
+                          src={attachment.url}
+                          alt={attachment.filename}
+                          className="w-16 h-16 object-cover rounded border"
+                        />
+                      </div>
+                    ))}
+                  {item.attachments.filter((att: any) => att.type === 'IMAGE').length > 3 && (
+                    <div className="flex-shrink-0 w-16 h-16 bg-muted rounded border flex items-center justify-center">
+                      <div className="text-center">
+                        <ImageIcon className="w-4 h-4 mx-auto mb-1" />
+                        <span className="text-xs">
+                          +{item.attachments.filter((att: any) => att.type === 'IMAGE').length - 3}
+                        </span>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
             
             <CardContent className="space-y-3">
               {/* Quantity and Unit */}
@@ -368,19 +681,26 @@ export default function ItemsPage() {
               {/* Location */}
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 <MapPin className="w-4 h-4" />
-                <span className="line-clamp-1">{item.location}</span>
+                <span className="line-clamp-1">
+                  {item.location.parent 
+                    ? `${item.location.parent.name} > ${item.location.name}`
+                    : item.location.name
+                  }
+                </span>
               </div>
 
               {/* Purchase Info */}
               <div className="flex items-center justify-between text-sm">
-                <div className="flex items-center gap-2 text-muted-foreground">
-                  <Calendar className="w-4 h-4" />
-                  <span>{new Date(item.purchaseDate).toLocaleDateString('no-NO')}</span>
-                </div>
+                {item.purchaseDate && (
+                  <div className="flex items-center gap-2 text-muted-foreground">
+                    <Calendar className="w-4 h-4" />
+                    <span>{new Date(item.purchaseDate).toLocaleDateString('no-NO')}</span>
+                  </div>
+                )}
                 {item.price && (
                   <div className="flex items-center gap-1 font-medium">
                     <DollarSign className="w-4 h-4" />
-                    <span>{item.price} kr</span>
+                    <span>{Number(item.price)} kr</span>
                   </div>
                 )}
               </div>
@@ -396,29 +716,29 @@ export default function ItemsPage() {
               )}
 
               {/* Category-specific info */}
-              {item.categoryData && (
+              {item.categoryData && typeof item.categoryData === 'object' && (
                 <div className="pt-2 border-t">
                   <div className="space-y-1 text-xs text-muted-foreground">
-                    {item.category === 'Garn og Strikking' && (
+                    {item.category?.name === 'Garn og Strikking' && (
                       <>
-                        <div>Produsent: {item.categoryData.producer}</div>
-                        <div>Sammensetning: {item.categoryData.composition}</div>
-                        <div>Strikkefasthet: {item.categoryData.gauge}</div>
+                        {(item.categoryData as any).producer && <div>Produsent: {(item.categoryData as any).producer}</div>}
+                        {(item.categoryData as any).composition && <div>Sammensetning: {(item.categoryData as any).composition}</div>}
+                        {(item.categoryData as any).gauge && <div>Strikkefasthet: {(item.categoryData as any).gauge}</div>}
                       </>
                     )}
-                    {item.category === 'Elektronikk' && (
+                    {item.category?.name === 'Elektronikk' && (
                       <>
-                        <div>Merke: {item.categoryData.brand}</div>
-                        <div>Modell: {item.categoryData.model}</div>
-                        <div>Tilstand: {item.categoryData.condition}</div>
+                        {(item.categoryData as any).brand && <div>Merke: {(item.categoryData as any).brand}</div>}
+                        {(item.categoryData as any).model && <div>Modell: {(item.categoryData as any).model}</div>}
+                        {(item.categoryData as any).condition && <div>Tilstand: {(item.categoryData as any).condition}</div>}
                       </>
                     )}
-                    {item.category === 'Mat og Drikke' && (
+                    {item.category?.name === 'Mat og Drikke' && (
                       <>
-                        <div>Merke: {item.categoryData.brand}</div>
-                        <div>Lagring: {item.categoryData.storage}</div>
-                        {item.categoryData.opened && (
-                          <div>Åpnet: {new Date(item.categoryData.openedDate).toLocaleDateString('no-NO')}</div>
+                        {(item.categoryData as any).brand && <div>Merke: {(item.categoryData as any).brand}</div>}
+                        {(item.categoryData as any).storage && <div>Lagring: {(item.categoryData as any).storage}</div>}
+                        {(item.categoryData as any).opened && (item.categoryData as any).openedDate && (
+                          <div>Åpnet: {new Date((item.categoryData as any).openedDate).toLocaleDateString('no-NO')}</div>
                         )}
                       </>
                     )}
@@ -431,7 +751,7 @@ export default function ItemsPage() {
       </div>
 
       {/* Empty State */}
-      {filteredItems.length === 0 && (
+      {items.length === 0 && (
         <div className="text-center py-12">
           <Package className="w-16 h-16 mx-auto mb-4 opacity-30" />
           <h3 className="text-lg font-medium mb-2">

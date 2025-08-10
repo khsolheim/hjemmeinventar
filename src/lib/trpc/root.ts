@@ -7,6 +7,11 @@ import { activitiesRouter } from './routers/activities'
 import { loansRouter } from './routers/loans'
 import { tagsRouter } from './routers/tags'
 import { yarnRouter } from './routers/yarn'
+import { usersRouter } from './routers/users'
+import { analyticsRouter } from './routers/analytics'
+import { householdsRouter } from './routers/households'
+import { aiRouter } from './routers/ai'
+import { importExportRouter } from './routers/import-export'
 
 export const appRouter = createTRPCRouter({
   items: itemsRouter,
@@ -15,7 +20,12 @@ export const appRouter = createTRPCRouter({
   activities: activitiesRouter,
   loans: loansRouter,
   tags: tagsRouter,
-  yarn: yarnRouter
+  yarn: yarnRouter,
+  users: usersRouter,
+  analytics: analyticsRouter,
+  households: householdsRouter,
+  ai: aiRouter,
+  importExport: importExportRouter
 })
 
 export type AppRouter = typeof appRouter

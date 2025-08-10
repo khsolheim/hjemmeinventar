@@ -52,11 +52,11 @@ export function buildSearchQuery(query: string) {
   const words = query.toLowerCase().split(' ').filter(Boolean)
   return {
     OR: [
-      { name: { contains: query, mode: 'insensitive' as const } },
-      { description: { contains: query, mode: 'insensitive' as const } },
-      { brand: { contains: query, mode: 'insensitive' as const } },
+      { name: { contains: query } },
+      { description: { contains: query } },
+      { brand: { contains: query } },
       ...words.map(word => ({
-        name: { contains: word, mode: 'insensitive' as const }
+        name: { contains: word }
       }))
     ]
   }

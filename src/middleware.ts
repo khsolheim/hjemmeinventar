@@ -9,8 +9,18 @@ const protectedRoutes = [
   '/items',
   '/locations',
   '/categories',
-  '/settings',
-  '/api/trpc'
+  '/settings'
+]
+
+// Routes that should be accessible without authentication  
+const publicRoutes = [
+  '/test'
+]
+
+// tRPC routes that should be public (no authentication required)
+const publicTrpcRoutes = [
+  '/api/trpc/users.register',
+  '/api/trpc/users.test'
 ]
 
 // Auth routes that should redirect if already authenticated
@@ -22,6 +32,20 @@ const authRoutes = [
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
   
+  // Allow public tRPC routes without authentication
+  const isPublicTrpcRoute = publicTrpcRoutes.some(route => 
+    pathname === route
+  )
+  
+  // Allow public routes without authentication
+  const isPublicRoute = publicRoutes.some(route => 
+    pathname.startsWith(route)
+  )
+  
+  if (isPublicTrpcRoute || isPublicRoute) {
+    return NextResponse.next()
+  }
+  
   // Get the session using NextAuth
   const session = await auth()
   const isAuthenticated = !!session?.user
@@ -31,13 +55,16 @@ export async function middleware(request: NextRequest) {
     pathname.startsWith(route)
   )
   
+  // Check if this is a tRPC route that requires authentication
+  const isProtectedTrpcRoute = pathname.startsWith('/api/trpc') && !isPublicTrpcRoute
+  
   // Check if this is an auth route
   const isAuthRoute = authRoutes.some(route => 
     pathname.startsWith(route)
   )
   
   // Redirect unauthenticated users away from protected routes
-  if (isProtectedRoute && !isAuthenticated) {
+  if ((isProtectedRoute || isProtectedTrpcRoute) && !isAuthenticated) {
     const signInUrl = new URL('/auth/signin', request.url)
     signInUrl.searchParams.set('callbackUrl', pathname)
     return NextResponse.redirect(signInUrl)

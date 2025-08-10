@@ -3,6 +3,7 @@ import { z } from 'zod'
 import { createTRPCRouter, protectedProcedure } from '../server'
 import { TRPCError } from '@trpc/server'
 import { logActivity } from '../../db'
+import { inventoryEvents } from '../../inngest/services/inventory-events'
 
 export const loansRouter = createTRPCRouter({
   // Create new loan
@@ -68,6 +69,15 @@ export const loansRouter = createTRPCRouter({
         description: `Lånte ut ${item.name} til ${input.loanedTo}`,
         userId: ctx.user.id,
         itemId: input.itemId
+      })
+      
+      // Trigger background jobs
+      await inventoryEvents.onLoanCreated({
+        loanId: loan.id,
+        itemId: loan.itemId,
+        userId: ctx.user.id,
+        loanedTo: loan.loanedTo,
+        expectedReturnDate: loan.expectedReturnDate || new Date(Date.now() + 14 * 24 * 60 * 60 * 1000) // Default 14 days
       })
       
       return loan
@@ -162,7 +172,7 @@ export const loansRouter = createTRPCRouter({
         ctx.db.loan.count({ where })
       ])
       
-      return { loans, total }
+      return loans
     }),
     
   // Get active loans (OUT or OVERDUE)
@@ -393,36 +403,54 @@ export const loansRouter = createTRPCRouter({
         })
       )
       
+      const returnedLoans = await ctx.db.loan.count({
+        where: {
+          userId: ctx.user.id,
+          status: 'RETURNED'
+        }
+      })
+
       return {
-        activeLoans,
-        overdueLoans,
-        totalLoans,
-        recentLoans,
+        active: activeLoans,
+        overdue: overdueLoans,
+        returned: returnedLoans,
+        total: totalLoans,
+        recent: recentLoans,
         popularItems: popularItemsWithDetails.filter(Boolean)
       }
     }),
     
-  // Delete loan (only for returned loans)
+  // Delete loan
   delete: protectedProcedure
     .input(z.string())
     .mutation(async ({ ctx, input }) => {
       const loan = await ctx.db.loan.findFirst({
         where: {
           id: input,
-          userId: ctx.user.id,
-          status: 'RETURNED'
+          userId: ctx.user.id
+        },
+        include: {
+          item: true
         }
       })
       
       if (!loan) {
         throw new TRPCError({
           code: 'NOT_FOUND',
-          message: 'Utlån ikke funnet eller ikke returnert ennå'
+          message: 'Utlån ikke funnet'
         })
       }
       
       await ctx.db.loan.delete({
         where: { id: input }
+      })
+
+      // Log activity
+      await logActivity({
+        type: 'LOAN_RETURNED', // Reuse this activity type
+        description: `Utlån av ${loan.item.name} til ${loan.loanedTo} ble slettet`,
+        userId: ctx.user.id,
+        itemId: loan.itemId
       })
       
       return { success: true }

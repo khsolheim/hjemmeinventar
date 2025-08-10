@@ -9,6 +9,7 @@ import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { AccessibleButton } from '@/components/ui/accessible-button'
 import { toast } from 'sonner'
+import { trpc } from '@/lib/trpc/client'
 
 export default function SignUpPage() {
   const [formData, setFormData] = useState({
@@ -19,6 +20,39 @@ export default function SignUpPage() {
   })
   const [isLoading, setIsLoading] = useState(false)
   const router = useRouter()
+
+  // tRPC mutation for user registration
+  const registerMutation = trpc.users.register.useMutation({
+    onSuccess: async () => {
+      toast.success('Konto opprettet! Logger deg inn...')
+      
+      // Automatically sign in the user after successful registration
+      try {
+        const result = await signIn('credentials', {
+          email: formData.email,
+          password: formData.password,
+          redirect: false
+        })
+
+        if (result?.error) {
+          toast.error('Konto opprettet, men kunne ikke logge inn automatisk. Prøv å logge inn manuelt.')
+          router.push('/auth/signin')
+        } else {
+          toast.success('Velkommen! Du er nå logget inn.')
+          router.push('/dashboard')
+        }
+      } catch (error) {
+        toast.error('Konto opprettet, men kunne ikke logge inn automatisk. Prøv å logge inn manuelt.')
+        router.push('/auth/signin')
+      }
+    },
+    onError: (error) => {
+      toast.error(error.message || 'Kunne ikke opprette konto. Prøv igjen.')
+    },
+    onSettled: () => {
+      setIsLoading(false)
+    }
+  })
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -35,16 +69,12 @@ export default function SignUpPage() {
 
     setIsLoading(true)
 
-    try {
-      // For now, since we don't have a working database,
-      // we'll just show a success message and redirect to signin
-      toast.success('Konto opprettet! Du kan nå logge inn.')
-      router.push('/auth/signin')
-    } catch (error) {
-      toast.error('Kunne ikke opprette konto. Prøv igjen.')
-    } finally {
-      setIsLoading(false)
-    }
+    // Call tRPC mutation
+    registerMutation.mutate({
+      name: formData.name,
+      email: formData.email,
+      password: formData.password
+    })
   }
 
   const handleGoogleSignUp = async () => {

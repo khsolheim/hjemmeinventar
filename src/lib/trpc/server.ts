@@ -1,6 +1,6 @@
 // tRPC server configuration
 import { initTRPC, TRPCError } from '@trpc/server'
-import { auth } from 'next-auth'
+import { auth } from '@/auth'
 import { db } from '../db'
 import { ZodError } from 'zod'
 import superjson from 'superjson'
@@ -20,7 +20,8 @@ export type Context = Awaited<ReturnType<typeof createTRPCContext>>
 
 // Initialize tRPC
 const t = initTRPC.context<Context>().create({
-  transformer: superjson,
+  // Remove superjson transformer temporarily to fix serialization issues
+  // transformer: superjson,
   errorFormatter({ shape, error }) {
     return {
       ...shape,
