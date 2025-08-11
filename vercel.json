@@ -6,7 +6,7 @@
     },
     {
       "path": "/api/notifications/jobs?type=expiry",
-      "schedule": "0 8,20 * * *"
+      "schedule": "0 8 * * *"
     },
     {
       "path": "/api/notifications/jobs?type=loans",
@@ -14,12 +14,7 @@
     },
     {
       "path": "/api/notifications/jobs?type=stock",
-      "schedule": "0 12 * * MON"
+      "schedule": "0 12 * * 1"
     }
-  ],
-  "env": {
-    "NEXT_PUBLIC_VAPID_PUBLIC_KEY": "@vapid_public_key",
-    "VAPID_PRIVATE_KEY": "@vapid_private_key",
-    "CRON_SECRET": "@cron_secret"
-  }
+  ]
 }

@@ -26,33 +26,40 @@ export default function OfflinePage() {
   const [offlineStats, setOfflineStats] = useState<any>(null)
   const [retryCount, setRetryCount] = useState(0)
   const [lastChecked, setLastChecked] = useState(new Date())
+  const [isClient, setIsClient] = useState(false)
   const router = useRouter()
 
   useEffect(() => {
-    // Check initial online status
-    setIsOnline(navigator.onLine)
-    loadOfflineStats()
+    // Check if we're in the browser
+    setIsClient(true)
+    
+    // Only proceed if we're in the browser
+    if (typeof window !== 'undefined') {
+      // Check initial online status
+      setIsOnline(navigator.onLine)
+      loadOfflineStats()
 
-    // Set up online/offline listeners
-    const handleOnline = () => {
-      setIsOnline(true)
-      setRetryCount(0)
-      // Automatically redirect when back online
-      setTimeout(() => {
-        router.push('/dashboard')
-      }, 1000)
-    }
+      // Set up online/offline listeners
+      const handleOnline = () => {
+        setIsOnline(true)
+        setRetryCount(0)
+        // Automatically redirect when back online
+        setTimeout(() => {
+          router.push('/dashboard')
+        }, 1000)
+      }
 
-    const handleOffline = () => {
-      setIsOnline(false)
-    }
+      const handleOffline = () => {
+        setIsOnline(false)
+      }
 
-    window.addEventListener('online', handleOnline)
-    window.addEventListener('offline', handleOffline)
+      window.addEventListener('online', handleOnline)
+      window.addEventListener('offline', handleOffline)
 
-    return () => {
-      window.removeEventListener('online', handleOnline)
-      window.removeEventListener('offline', handleOffline)
+      return () => {
+        window.removeEventListener('online', handleOnline)
+        window.removeEventListener('offline', handleOffline)
+      }
     }
   }, [router])
 
@@ -70,7 +77,7 @@ export default function OfflinePage() {
     setRetryCount(prev => prev + 1)
     setLastChecked(new Date())
     
-    if (navigator.onLine) {
+    if (typeof window !== 'undefined' && navigator.onLine) {
       try {
         // Try to fetch a small resource to verify actual connectivity
         const response = await fetch('/api/ping', { 
@@ -109,6 +116,20 @@ export default function OfflinePage() {
     ]
     
     return tips[retryCount % tips.length]
+  }
+
+  // Don't render anything until we're sure we're in the browser
+  if (!isClient) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center p-4">
+        <div className="w-full max-w-md text-center">
+          <div className="mx-auto w-16 h-16 bg-muted rounded-full flex items-center justify-center mb-4">
+            <RefreshCw className="w-8 h-8 animate-spin text-muted-foreground" />
+          </div>
+          <p className="text-muted-foreground">Laster...</p>
+        </div>
+      </div>
+    )
   }
 
   return (
