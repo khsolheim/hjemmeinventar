@@ -38,12 +38,15 @@ export interface CachedData {
 
 class OfflineManager {
   private db: IDBPDatabase | null = null
-  private isOnline = navigator.onLine
+  private isOnline = typeof window !== 'undefined' ? navigator.onLine : false
   private syncInProgress = false
   private retryTimeouts = new Map<string, NodeJS.Timeout>()
 
   constructor() {
-    this.setupOnlineListeners()
+    // Only setup listeners in browser environment
+    if (typeof window !== 'undefined') {
+      this.setupOnlineListeners()
+    }
   }
 
   // Initialize IndexedDB
@@ -326,6 +329,8 @@ class OfflineManager {
 
   // Online/Offline Management
   private setupOnlineListeners(): void {
+    if (typeof window === 'undefined') return
+    
     window.addEventListener('online', () => {
       console.log('App went online')
       this.isOnline = true
