@@ -88,25 +88,44 @@ export function DymoPrintDialog({
   const loadPrinters = async () => {
     setIsLoadingPrinters(true)
     try {
-      await dymoService.initialize()
-      setIsConnected(true) // Mock for now
+      const initialized = await dymoService.initialize()
       
-      if (true) { // Mock connection check
-        const availablePrinters = ['Default Printer'] // Mock printers
+      if (initialized) {
+        const availablePrinters = dymoService.getAvailablePrinters()
         setPrinters(availablePrinters)
+        setIsConnected(true)
         
         if (availablePrinters.length > 0) {
           setSelectedPrinter(availablePrinters[0])
+          toast.success(`Koblet til DYMO Connect - ${availablePrinters.length} skriver(e) funnet`)
+        } else {
+          toast.warning('DYMO Connect koblet til, men ingen skrivere funnet')
         }
-        
-        toast.success('Koblet til Dymo Connect')
       } else {
-        toast.error('Dymo Connect er ikke tilgjengelig')
+        // Try force reinitialization as fallback
+        const forceInitialized = await dymoService.forceReinitialize()
+        if (forceInitialized) {
+          const availablePrinters = dymoService.getAvailablePrinters()
+          setPrinters(availablePrinters)
+          setIsConnected(true)
+          
+          if (availablePrinters.length > 0) {
+            setSelectedPrinter(availablePrinters[0])
+            toast.success(`Koblet til DYMO Connect etter gjenopprettelse - ${availablePrinters.length} skriver(e) funnet`)
+          } else {
+            toast.warning('DYMO Connect koblet til etter gjenopprettelse, men ingen skrivere funnet')
+          }
+        } else {
+          setIsConnected(false)
+          setPrinters([])
+          toast.error('Kunne ikke koble til DYMO Connect. Sjekk at programmet kjører og at en skriver er tilkoblet.')
+        }
       }
     } catch (error) {
-      console.error('Dymo connection error:', error)
+      console.error('DYMO connection error:', error)
       setIsConnected(false)
-      toast.error('Kunne ikke koble til Dymo Connect. Sjekk at programmet kjører.')
+      setPrinters([])
+      toast.error('Feil ved tilkobling til DYMO Connect')
     } finally {
       setIsLoadingPrinters(false)
     }
@@ -164,26 +183,12 @@ export function DymoPrintDialog({
       }
       
       if (locations.length === 1) {
-        // Convert Location to LabelData
-        const labelData: LabelData = {
-          itemName: locations[0].name,
-          locationName: locations[0].name,
-          qrCode: locations[0].qrCode,
-          categoryName: locations[0].type,
-          dateAdded: new Date().toLocaleDateString('no-NO')
-        }
-        await dymoService.printLocationLabel(labelData, options)
+        // Single label print
+        await dymoService.printLocationLabel(locations[0], options)
         toast.success('Etikett skrevet ut!')
       } else {
-        // Convert multiple Locations to LabelData
-        const labelsData: LabelData[] = locations.map(location => ({
-          itemName: location.name,
-          locationName: location.name,
-          qrCode: location.qrCode,
-          categoryName: location.type,
-          dateAdded: new Date().toLocaleDateString('no-NO')
-        }))
-        await dymoService.printMultipleLabels(labelsData, options)
+        // Multiple labels print  
+        await dymoService.printMultipleLabels(locations, options)
         toast.success(`${locations.length} etiketter skrevet ut!`)
       }
       

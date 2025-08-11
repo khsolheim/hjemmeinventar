@@ -1,13 +1,30 @@
 // Optional dymo import - will be handled gracefully if not available
 let dymo: any = null
 
-try {
-  // Try to import dymo-js-sdk if available
-  if (typeof window !== 'undefined') {
-    dymo = require('dymo-js-sdk')
+// Dynamic import approach for better Next.js compatibility
+const loadDymoSDK = async (): Promise<any> => {
+  try {
+    if (typeof window !== 'undefined') {
+      // Check if DYMO is already available globally
+      if ((window as any).dymo) {
+        return (window as any).dymo
+      }
+      
+      // Try dynamic import
+      try {
+        const dymoModule = await import('dymo-js-sdk')
+        return dymoModule.default || dymoModule
+      } catch (importError) {
+        console.warn('Dynamic DYMO import failed, trying require fallback')
+        // Fallback to require
+        return require('dymo-js-sdk')
+      }
+    }
+    return null
+  } catch (error) {
+    console.warn('DYMO SDK not available - printing features will be disabled', error)
+    return null
   }
-} catch (error) {
-  console.warn('DYMO SDK not available - printing features will be disabled')
 }
 
 export interface LabelData {
@@ -35,8 +52,14 @@ class DymoService {
 
   async initialize(): Promise<boolean> {
     try {
+      // Load DYMO SDK dynamically
+      if (!dymo) {
+        dymo = await loadDymoSDK()
+      }
+      
       if (!dymo || !dymo.label || !dymo.label.framework) {
         console.warn('DYMO SDK not available')
+        this.isInitialized = false
         return false
       }
 
@@ -44,11 +67,15 @@ class DymoService {
       const isServiceRunning = await dymo.label.framework.checkEnvironment()
       
       if (!isServiceRunning.isFrameworkInstalled) {
-        throw new Error('DYMO Label Framework is not installed')
+        console.warn('DYMO Label Framework is not installed')
+        this.isInitialized = false
+        return false
       }
       
       if (!isServiceRunning.isWebServicePresent) {
-        throw new Error('DYMO Label Web Service is not running')
+        console.warn('DYMO Label Web Service is not running')
+        this.isInitialized = false
+        return false
       }
 
       // Get available printers
@@ -59,13 +86,21 @@ class DymoService {
       return true
     } catch (error) {
       console.error('Failed to initialize DYMO service:', error)
+      this.isInitialized = false
       return false
     }
   }
 
   async refreshPrinters(): Promise<string[]> {
     try {
+      // Ensure DYMO SDK is loaded
+      if (!dymo) {
+        dymo = await loadDymoSDK()
+      }
+      
       if (!dymo || !dymo.label || !dymo.label.framework) {
+        console.warn('DYMO SDK not available for printer refresh')
+        this.availablePrinters = []
         return []
       }
 
@@ -78,6 +113,7 @@ class DymoService {
       return this.availablePrinters
     } catch (error) {
       console.error('Failed to get DYMO printers:', error)
+      this.availablePrinters = []
       return []
     }
   }
@@ -88,6 +124,13 @@ class DymoService {
 
   isReady(): boolean {
     return this.isInitialized && this.availablePrinters.length > 0
+  }
+
+  // Force reinitialization
+  async forceReinitialize(): Promise<boolean> {
+    this.isInitialized = false
+    this.availablePrinters = []
+    return this.initialize()
   }
 
   // Standard QR label template
@@ -291,8 +334,16 @@ class DymoService {
   }
 
   async printQRLabel(data: LabelData, options: PrintOptions = {}): Promise<boolean> {
+    // Try to initialize if not ready
     if (!this.isReady()) {
-      throw new Error('DYMO service not ready. Please initialize and ensure printer is connected.')
+      const initialized = await this.initialize()
+      if (!initialized || !this.isReady()) {
+        // Try one more time with force reinitialization
+        const forceInitialized = await this.forceReinitialize()
+        if (!forceInitialized || !this.isReady()) {
+          throw new Error('DYMO service not ready. Please ensure DYMO Connect is running and a printer is connected.')
+        }
+      }
     }
 
     try {
@@ -331,8 +382,16 @@ class DymoService {
   }
 
   async printBarcodeLabel(data: LabelData, options: PrintOptions = {}): Promise<boolean> {
+    // Try to initialize if not ready
     if (!this.isReady()) {
-      throw new Error('DYMO service not ready. Please initialize and ensure printer is connected.')
+      const initialized = await this.initialize()
+      if (!initialized || !this.isReady()) {
+        // Try one more time with force reinitialization
+        const forceInitialized = await this.forceReinitialize()
+        if (!forceInitialized || !this.isReady()) {
+          throw new Error('DYMO service not ready. Please ensure DYMO Connect is running and a printer is connected.')
+        }
+      }
     }
 
     if (!data.barcode) {
@@ -379,8 +438,16 @@ class DymoService {
     labelType: 'qr' | 'barcode' = 'qr',
     options: PrintOptions = {}
   ): Promise<{ success: number; failed: number; errors: string[] }> {
+    // Try to initialize if not ready
     if (!this.isReady()) {
-      throw new Error('DYMO service not ready. Please initialize and ensure printer is connected.')
+      const initialized = await this.initialize()
+      if (!initialized || !this.isReady()) {
+        // Try one more time with force reinitialization
+        const forceInitialized = await this.forceReinitialize()
+        if (!forceInitialized || !this.isReady()) {
+          throw new Error('DYMO service not ready. Please ensure DYMO Connect is running and a printer is connected.')
+        }
+      }
     }
 
     const results = {
@@ -471,6 +538,18 @@ class DymoService {
 
   // Print location label (wrapper method for compatibility)
   async printLocationLabel(location: any, options: PrintOptions = {}): Promise<boolean> {
+    // Try to initialize if not ready
+    if (!this.isReady()) {
+      const initialized = await this.initialize()
+      if (!initialized || !this.isReady()) {
+        // Try one more time with force reinitialization
+        const forceInitialized = await this.forceReinitialize()
+        if (!forceInitialized || !this.isReady()) {
+          throw new Error('DYMO service not ready. Please ensure DYMO Connect is running and a printer is connected.')
+        }
+      }
+    }
+
     const labelData: LabelData = {
       itemName: location.name,
       locationName: location.description || location.type || 'Lokasjon',
@@ -483,6 +562,18 @@ class DymoService {
 
   // Print multiple location labels
   async printMultipleLabels(locations: any[], options: PrintOptions = {}): Promise<boolean> {
+    // Try to initialize if not ready
+    if (!this.isReady()) {
+      const initialized = await this.initialize()
+      if (!initialized || !this.isReady()) {
+        // Try one more time with force reinitialization
+        const forceInitialized = await this.forceReinitialize()
+        if (!forceInitialized || !this.isReady()) {
+          throw new Error('DYMO service not ready. Please ensure DYMO Connect is running and a printer is connected.')
+        }
+      }
+    }
+
     const labelDataArray: LabelData[] = locations.map(location => ({
       itemName: location.name,
       locationName: location.description || location.type || 'Lokasjon',

@@ -23,7 +23,10 @@ import {
   Edit2,
   Trash2,
   Eye,
-  Loader2
+  Loader2,
+  Layers,
+  ShoppingBag,
+  Square
 } from 'lucide-react'
 import {
   Select,
@@ -50,16 +53,55 @@ const locationTypeIcons = {
   BOX: Archive,
   CONTAINER: Package,
   DRAWER: Folder,
-  CABINET: FileText
+  CABINET: FileText,
+  SHELF_COMPARTMENT: Layers,
+  BAG: ShoppingBag,
+  SECTION: Square
 }
 
 const locationTypeLabels = {
   ROOM: 'Rom',
-  SHELF: 'Hylle',
+  SHELF: 'Reol',
   BOX: 'Boks',
   CONTAINER: 'Beholder',
   DRAWER: 'Skuff',
-  CABINET: 'Skap'
+  CABINET: 'Skap',
+  SHELF_COMPARTMENT: 'Hylle',
+  BAG: 'Pose',
+  SECTION: 'Avsnitt'
+}
+
+// Hierarki-regler for lokasjonstyper (samme som backend)
+const HIERARCHY_RULES: Record<string, string[]> = {
+  ROOM: ['SHELF', 'CABINET', 'CONTAINER'],
+  SHELF: ['SHELF_COMPARTMENT', 'BOX', 'DRAWER'],
+  SHELF_COMPARTMENT: ['BOX', 'BAG', 'CONTAINER'],
+  BOX: ['BAG', 'SECTION'],
+  BAG: [], // Kun gjenstander
+  CABINET: ['DRAWER', 'SHELF_COMPARTMENT'],
+  DRAWER: ['SECTION', 'BAG'],
+  CONTAINER: ['BAG', 'SECTION'],
+  SECTION: ['BAG']
+}
+
+// Helper function for validating parent-child relationship
+function canBeChildOf(childType: string, parentType: string): boolean {
+  return HIERARCHY_RULES[parentType]?.includes(childType) || false
+}
+
+// Helper function to flatten hierarchical location structure
+function flattenLocations(locations: any[]): any[] {
+  const flattened: any[] = []
+  
+  function addLocation(location: any) {
+    flattened.push(location)
+    if (location.children && location.children.length > 0) {
+      location.children.forEach((child: any) => addLocation(child))
+    }
+  }
+  
+  locations.forEach(location => addLocation(location))
+  return flattened
 }
 
 export default function LocationsPage() {
@@ -80,6 +122,9 @@ export default function LocationsPage() {
 
   // tRPC queries and mutations
   const { data: locations = [], isLoading, error, refetch } = trpc.locations.getAll.useQuery()
+  
+  // Flat list of all locations for dropdowns
+  const allLocations = flattenLocations(locations)
   const createLocationMutation = trpc.locations.create.useMutation({
     onSuccess: () => {
       toast.success('Lokasjon opprettet!')
@@ -112,7 +157,7 @@ export default function LocationsPage() {
   })
 
   // Filter locations based on search and type
-  const filteredLocations = locations.filter(location => {
+  const filteredLocations = allLocations.filter(location => {
     const matchesSearch = location.name.toLowerCase().includes(searchQuery.toLowerCase())
     const matchesType = selectedType === 'all' || location.type === selectedType
     return matchesSearch && matchesType
@@ -219,7 +264,7 @@ export default function LocationsPage() {
               <Button
                 variant="outline"
                 onClick={() => setIsSelectionMode(true)}
-                disabled={locations.length === 0}
+                disabled={allLocations.length === 0}
               >
                 <Printer className="w-4 h-4 mr-2" />
                 Bulk utskrift
@@ -255,11 +300,14 @@ export default function LocationsPage() {
           <SelectContent>
             <SelectItem value="all">Alle typer</SelectItem>
             <SelectItem value="ROOM">Rom</SelectItem>
-            <SelectItem value="SHELF">Hylle</SelectItem>
+            <SelectItem value="SHELF">Reol</SelectItem>
+            <SelectItem value="SHELF_COMPARTMENT">Hylle</SelectItem>
             <SelectItem value="BOX">Boks</SelectItem>
+            <SelectItem value="BAG">Pose</SelectItem>
             <SelectItem value="CONTAINER">Beholder</SelectItem>
             <SelectItem value="DRAWER">Skuff</SelectItem>
             <SelectItem value="CABINET">Skap</SelectItem>
+            <SelectItem value="SECTION">Avsnitt</SelectItem>
           </SelectContent>
         </Select>
       </div>
@@ -292,11 +340,14 @@ export default function LocationsPage() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="ROOM">Rom</SelectItem>
-                    <SelectItem value="SHELF">Hylle</SelectItem>
+                    <SelectItem value="SHELF">Reol</SelectItem>
+                    <SelectItem value="SHELF_COMPARTMENT">Hylle</SelectItem>
                     <SelectItem value="BOX">Boks</SelectItem>
+                    <SelectItem value="BAG">Pose</SelectItem>
                     <SelectItem value="CONTAINER">Beholder</SelectItem>
                     <SelectItem value="DRAWER">Skuff</SelectItem>
                     <SelectItem value="CABINET">Skap</SelectItem>
+                    <SelectItem value="SECTION">Avsnitt</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -318,11 +369,13 @@ export default function LocationsPage() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="none">Ingen (rot-nivå)</SelectItem>
-                  {locations.map((location) => (
-                    <SelectItem key={location.id} value={location.id}>
-                      {location.name} ({locationTypeLabels[location.type as keyof typeof locationTypeLabels]})
-                    </SelectItem>
-                  ))}
+                  {allLocations
+                    .filter(location => canBeChildOf(newLocation.type, location.type)) // Kun vis gyldige parents
+                    .map((location) => (
+                      <SelectItem key={location.id} value={location.id}>
+                        {location.name} ({locationTypeLabels[location.type as keyof typeof locationTypeLabels]})
+                      </SelectItem>
+                    ))}
                 </SelectContent>
               </Select>
             </div>
@@ -382,11 +435,14 @@ export default function LocationsPage() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="ROOM">Rom</SelectItem>
-                    <SelectItem value="SHELF">Hylle</SelectItem>
+                    <SelectItem value="SHELF">Reol</SelectItem>
+                    <SelectItem value="SHELF_COMPARTMENT">Hylle</SelectItem>
                     <SelectItem value="BOX">Boks</SelectItem>
+                    <SelectItem value="BAG">Pose</SelectItem>
                     <SelectItem value="CONTAINER">Beholder</SelectItem>
                     <SelectItem value="DRAWER">Skuff</SelectItem>
                     <SelectItem value="CABINET">Skap</SelectItem>
+                    <SelectItem value="SECTION">Avsnitt</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -399,6 +455,30 @@ export default function LocationsPage() {
                 onChange={(e) => setEditingLocation({...editingLocation, description: e.target.value})}
                 placeholder="Tilleggsinformasjon om lokasjonen"
               />
+            </div>
+            <div>
+              <Label htmlFor="edit-parent-location">Overordnet lokasjon (valgfritt)</Label>
+              <Select 
+                value={editingLocation.parentId || 'none'} 
+                onValueChange={(value) => setEditingLocation({...editingLocation, parentId: value === 'none' ? null : value})}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Velg overordnet lokasjon" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Ingen (rot-nivå)</SelectItem>
+                  {allLocations
+                    .filter(location => 
+                      location.id !== editingLocation.id && // Ikke vis seg selv
+                      canBeChildOf(editingLocation.type, location.type) // Kun vis gyldige parents
+                    )
+                    .map((location) => (
+                      <SelectItem key={location.id} value={location.id}>
+                        {location.name} ({locationTypeLabels[location.type as keyof typeof locationTypeLabels]})
+                      </SelectItem>
+                    ))}
+                </SelectContent>
+              </Select>
             </div>
             <div className="flex gap-2">
               <AccessibleButton 
@@ -440,7 +520,7 @@ export default function LocationsPage() {
           <CardContent className="flex flex-col items-center">
             <QRCodeCard 
               value={showQRCode} 
-              title={`Lokasjon: ${locations.find(loc => loc.qrCode === showQRCode)?.name || 'Ukjent'}`}
+              title={`Lokasjon: ${allLocations.find(loc => loc.qrCode === showQRCode)?.name || 'Ukjent'}`}
               description="Skann denne koden for å finne lokasjonen"
             />
             <Button 
@@ -601,7 +681,7 @@ export default function LocationsPage() {
 
       {/* Dymo Print Dialog */}
       <DymoPrintDialog
-        locations={selectedLocations.map(id => locations.find(loc => loc.id === id)!).filter(Boolean)}
+        locations={selectedLocations.map(id => allLocations.find(loc => loc.id === id)!).filter(Boolean)}
         isOpen={showPrintDialog}
         onClose={() => {
           setShowPrintDialog(false)

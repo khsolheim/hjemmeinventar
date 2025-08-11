@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
 import { Separator } from '@/components/ui/separator'
+import { SignOutButton } from '@/components/auth/SignOutButton'
 import { 
   User, 
   Shield, 
@@ -196,13 +197,24 @@ export default function SettingsPage() {
                 Disse handlingene kan ikke angres
               </div>
               
-              <div className="space-y-2">
-                <Button variant="destructive" className="flex items-center gap-2">
-                  <Trash2 className="h-4 w-4" />
-                  Slett alle data
-                </Button>
-                <div className="text-xs text-gray-500">
-                  Dette vil permanent slette alle dine gjenstander, lokasjoner og aktiviteter
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <SignOutButton variant="destructive" className="w-full sm:w-auto">
+                    Logg ut fra kontoen
+                  </SignOutButton>
+                  <div className="text-xs text-gray-500">
+                    Dette vil logge deg ut og sende deg tilbake til innloggingssiden
+                  </div>
+                </div>
+                
+                <div className="space-y-2">
+                  <Button variant="destructive" className="flex items-center gap-2">
+                    <Trash2 className="h-4 w-4" />
+                    Slett alle data
+                  </Button>
+                  <div className="text-xs text-gray-500">
+                    Dette vil permanent slette alle dine gjenstander, lokasjoner og aktiviteter
+                  </div>
                 </div>
               </div>
             </div>

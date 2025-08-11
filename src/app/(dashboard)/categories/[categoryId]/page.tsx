@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useCallback, useEffect, useMemo } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -25,7 +25,8 @@ import {
   MapPin,
   Calendar,
   DollarSign,
-  Archive
+  Archive,
+  Check
 } from 'lucide-react'
 import {
   DropdownMenu,
@@ -60,20 +61,25 @@ export default function CategoryDetailPage({}: CategoryDetailPageProps) {
   const [isEditingFields, setIsEditingFields] = useState(false)
 
   // tRPC queries
-  const { data: category, isLoading: categoryLoading, error: categoryError } = trpc.categories.getById.useQuery(categoryId)
+  const { data: category, isLoading: categoryLoading, error: categoryError, refetch: refetchCategory } = trpc.categories.getById.useQuery(categoryId)
   const { data: itemsData, isLoading: itemsLoading, refetch: refetchItems } = trpc.categories.getItems.useQuery({
     categoryId,
     limit: 50
   })
-  const { data: categoryStats } = trpc.categories.getStats.useQuery(categoryId)
+  const { data: categoryStats, refetch: refetchStats } = trpc.categories.getStats.useQuery(categoryId)
+  
+
 
   // tRPC mutations
   const updateFieldSchemaMutation = trpc.categories.updateFieldSchema.useMutation({
     onSuccess: () => {
       toast.success('Kategori-felt oppdatert!')
-      setIsEditingFields(false)
-      // Refetch category to get updated schema
-      window.location.reload() // Simple reload to get updated data
+      // Don't automatically close edit mode - let user decide when they're done
+      // setIsEditingFields(false)
+      // Refetch category to get updated schema without page reload
+      refetchCategory()
+      refetchItems()
+      refetchStats()
     },
     onError: (error) => {
       toast.error(`Feil: ${error.message}`)
@@ -85,24 +91,29 @@ export default function CategoryDetailPage({}: CategoryDetailPageProps) {
   const totalItems = itemsData?.total || 0
 
   // Parse field schema if it exists
-  let fieldSchema = null
-  try {
-    if (category?.fieldSchema && typeof category.fieldSchema === 'string') {
-      fieldSchema = JSON.parse(category.fieldSchema)
-    } else if (category?.fieldSchema && typeof category.fieldSchema === 'object') {
-      fieldSchema = category.fieldSchema
+  const fieldSchema = useMemo(() => {
+    if (!category?.fieldSchema) return null
+    
+    try {
+      if (typeof category.fieldSchema === 'string') {
+        return JSON.parse(category.fieldSchema)
+      } else if (typeof category.fieldSchema === 'object') {
+        return category.fieldSchema
+      }
+      return null
+    } catch (error) {
+      console.error('Failed to parse field schema:', error)
+      return null
     }
-  } catch (error) {
-    console.error('Failed to parse field schema:', error)
-  }
+  }, [category?.fieldSchema])
 
   // Handler for updating field schema
-  const handleFieldSchemaUpdate = (newSchema: any) => {
+  const handleFieldSchemaUpdate = useCallback((newSchema: any) => {
     updateFieldSchemaMutation.mutate({
       categoryId,
       fieldSchema: newSchema
     })
-  }
+  }, [categoryId, updateFieldSchemaMutation])
 
   // Filter items based on search query
   const filteredItems = items.filter(item => 
@@ -186,6 +197,20 @@ export default function CategoryDetailPage({}: CategoryDetailPageProps) {
         </div>
         
         <div className="flex gap-2">
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={() => {
+              refetchCategory()
+              refetchItems()
+              refetchStats()
+              toast.success('Data oppdatert!')
+            }}
+            className="gap-2"
+          >
+            <BarChart3 className="w-4 h-4" />
+            Oppdater
+          </Button>
           <Link href={`/items/new?category=${categoryId}`}>
             <Button className="gap-2">
               <Plus className="w-4 h-4" />
@@ -244,13 +269,35 @@ export default function CategoryDetailPage({}: CategoryDetailPageProps) {
                   Rediger felt
                 </Button>
               ) : (
-                <Button 
-                  variant="outline" 
-                  onClick={() => setIsEditingFields(false)}
-                  disabled={updateFieldSchemaMutation.isPending}
-                >
-                  {updateFieldSchemaMutation.isPending ? 'Lagrer...' : 'Avbryt'}
-                </Button>
+                <>
+                  <Button 
+                    variant="outline" 
+                    onClick={() => {
+                      refetchCategory()
+                      toast.success('Data oppdatert!')
+                    }}
+                    className="flex items-center gap-2"
+                    size="sm"
+                  >
+                    <BarChart3 className="w-4 h-4" />
+                    Oppdater
+                  </Button>
+                  <Button 
+                    onClick={() => setIsEditingFields(false)}
+                    disabled={updateFieldSchemaMutation.isPending}
+                    className="flex items-center gap-2"
+                  >
+                    <Check className="w-4 h-4" />
+                    Ferdig
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    onClick={() => setIsEditingFields(false)}
+                    disabled={updateFieldSchemaMutation.isPending}
+                  >
+                    Avbryt
+                  </Button>
+                </>
               )}
             </div>
           </div>
@@ -286,6 +333,7 @@ export default function CategoryDetailPage({}: CategoryDetailPageProps) {
           ) : (
             // Edit mode
             <FieldSchemaBuilder
+              key={`edit-${categoryId}-${isEditingFields}`}
               initialSchema={fieldSchema}
               onChange={handleFieldSchemaUpdate}
               disabled={updateFieldSchemaMutation.isPending}

@@ -5,12 +5,17 @@ const prisma = new PrismaClient()
 
 async function createTestUser() {
   try {
-    // Hash password
+    // Hash password (using same rounds as auth system)
     const hashedPassword = await bcrypt.hash('test123', 12)
     
-    // Create test user
-    const user = await prisma.user.create({
-      data: {
+    // Create or update test user  
+    const user = await prisma.user.upsert({
+      where: { email: 'test@example.com' },
+      update: {
+        password: hashedPassword,
+        name: 'Test Bruker'
+      },
+      create: {
         email: 'test@example.com',
         name: 'Test Bruker',
         password: hashedPassword,

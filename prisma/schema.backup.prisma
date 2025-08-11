@@ -112,6 +112,9 @@ enum LocationType {
   CONTAINER
   DRAWER
   CABINET
+  SHELF_COMPARTMENT  // Hyller på reol
+  BAG               // Poser/bagger
+  SECTION           // Generisk avsnitt/seksjon
 }
 
 // Categories with dynamic fields

@@ -28,7 +28,8 @@ import {
   Brain,
   Database,
   Menu,
-  X
+  X,
+  Palette
 } from 'lucide-react'
 import {
   DropdownMenu,
@@ -50,6 +51,7 @@ export function Sidebar({ isOpen, onToggle, isMobile = false }: SidebarProps) {
   const navigation = [
     { name: 'Dashboard', href: '/dashboard', icon: Home },
     { name: 'Gjenstander', href: '/items', icon: Package },
+    { name: 'Garn', href: '/garn', icon: Palette },
     { name: 'Lokasjoner', href: '/locations', icon: MapPin },
     { name: 'Kategorier', href: '/categories', icon: Grid3x3 },
     { name: 'Husholdninger', href: '/households', icon: Users },
@@ -128,6 +130,18 @@ export function Sidebar({ isOpen, onToggle, isMobile = false }: SidebarProps) {
                     Legg til gjenstand
                   </Link>
                 </Button>
+                              <Button size="sm" variant="secondary" className="w-full justify-start" asChild>
+                <Link href="/garn" onClick={onToggle}>
+                  <Palette className="h-4 w-4 mr-2" />
+                  Registrer garn
+                </Link>
+              </Button>
+              <Button size="sm" variant="ghost" className="w-full justify-start md:hidden" asChild>
+                <Link href="/garn/mobile" onClick={onToggle}>
+                  <Palette className="h-4 w-4 mr-2" />
+                  Garn (Mobil)
+                </Link>
+              </Button>
                 <Button size="sm" variant="outline" className="w-full justify-start" asChild>
                   <Link href="/scan" onClick={onToggle}>
                     <QrCode className="h-4 w-4 mr-2" />
@@ -248,6 +262,18 @@ export function Sidebar({ isOpen, onToggle, isMobile = false }: SidebarProps) {
                 <Link href="/items/enhanced">
                   <Plus className="h-4 w-4 mr-2" />
                   Legg til gjenstand
+                </Link>
+              </Button>
+              <Button size="sm" variant="secondary" className="w-full justify-start" asChild>
+                <Link href="/garn">
+                  <Palette className="h-4 w-4 mr-2" />
+                  Registrer garn
+                </Link>
+              </Button>
+              <Button size="sm" variant="ghost" className="w-full justify-start md:hidden" asChild>
+                <Link href="/garn/mobile">
+                  <Palette className="h-4 w-4 mr-2" />
+                  Garn (Mobil)
                 </Link>
               </Button>
               <Button size="sm" variant="outline" className="w-full justify-start" asChild>

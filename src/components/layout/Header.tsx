@@ -10,6 +10,7 @@ import {
   Plus,
   Shield
 } from 'lucide-react'
+import { signOut, useSession } from 'next-auth/react'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -26,6 +27,18 @@ interface HeaderProps {
 }
 
 export function Header({ onToggleSidebar }: HeaderProps) {
+  const { data: session } = useSession()
+
+  const handleSignOut = async () => {
+    try {
+      await signOut({
+        callbackUrl: '/auth/signin',
+        redirect: true
+      })
+    } catch (error) {
+      console.error('Feil ved utlogging:', error)
+    }
+  }
 
   return (
     <header className="sticky top-0 z-40 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -85,10 +98,10 @@ export function Header({ onToggleSidebar }: HeaderProps) {
               <DropdownMenuLabel className="font-normal">
                 <div className="flex flex-col space-y-1">
                   <p className="text-sm font-medium leading-none">
-                    Bruker
+                    {session?.user?.name || 'Bruker'}
                   </p>
                   <p className="text-xs leading-none text-muted-foreground">
-                    bruker@example.com
+                    {session?.user?.email || 'Ikke innlogget'}
                   </p>
                 </div>
               </DropdownMenuLabel>
@@ -106,7 +119,10 @@ export function Header({ onToggleSidebar }: HeaderProps) {
                 </Link>
               </DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem className="cursor-pointer text-red-600">
+              <DropdownMenuItem 
+                className="cursor-pointer text-red-600"
+                onClick={handleSignOut}
+              >
                 <LogOut className="mr-2 h-4 w-4" />
                 <span>Logg ut</span>
               </DropdownMenuItem>

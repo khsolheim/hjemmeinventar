@@ -55,6 +55,32 @@ export default function SignInPage() {
     }
   }
 
+  const handleTestLogin = async () => {
+    setIsLoading(true)
+    try {
+      const result = await signIn('credentials', {
+        email: 'test@example.com',
+        password: 'test123',
+        redirect: false
+      })
+
+      if (result?.error) {
+        toast.error('Test innlogging feilet')
+      } else if (result?.ok) {
+        toast.success('Test bruker logget inn!')
+        setTimeout(() => {
+          window.location.href = '/dashboard'
+        }, 500)
+      } else {
+        toast.error('Test innlogging feilet. Prøv igjen.')
+      }
+    } catch (error) {
+      toast.error('Noe gikk galt med test innlogging.')
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-md w-full space-y-8">
@@ -152,6 +178,21 @@ export default function SignInPage() {
                   Fortsett med Google
                 </Button>
               </div>
+
+              {/* Development Test Login Button */}
+              {process.env.NODE_ENV === 'development' && (
+                <div className="mt-4">
+                  <Button
+                    variant="secondary"
+                    className="w-full bg-amber-100 hover:bg-amber-200 text-amber-800 border-amber-300"
+                    onClick={handleTestLogin}
+                    disabled={isLoading}
+                    aria-label="Logg inn som test bruker"
+                  >
+                    🧪 Test Innlogging
+                  </Button>
+                </div>
+              )}
             </div>
 
             <div className="mt-6 text-center">

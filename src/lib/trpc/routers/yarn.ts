@@ -2,6 +2,18 @@
 import { z } from 'zod'
 import { createTRPCRouter, protectedProcedure } from '../server'
 import { TRPCError } from '@trpc/server'
+import {
+  isYarnMaster,
+  isYarnBatch,
+  getBatchesForMaster,
+  getMasterForBatch,
+  calculateMasterTotals,
+  createBatchForMaster,
+  createYarnMaster,
+  syncMasterDataToBatches,
+  type YarnMasterData,
+  type YarnBatchData
+} from '../../utils/yarn-helpers'
 
 export const yarnRouter = createTRPCRouter({
   // Get all yarn patterns for user
@@ -596,5 +608,841 @@ export const yarnRouter = createTRPCRouter({
         totalProjects,
         activeProjects
       }
-    })
+    }),
+
+  // YARN MASTER/BATCH SYSTEM ENDPOINTS
+
+  // Opprett ny garn master
+  createMaster: protectedProcedure
+    .input(z.object({
+      name: z.string().min(1),
+      locationId: z.string().optional(),
+      producer: z.string().optional(),
+      composition: z.string().optional(),
+      yardage: z.string().optional(),
+      weight: z.string().optional(),
+      gauge: z.string().optional(),
+      needleSize: z.string().optional(),
+      careInstructions: z.string().optional(),
+      store: z.string().optional(),
+      notes: z.string().optional(),
+      imageUrl: z.string().optional(),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const master = await createYarnMaster(ctx.db, {
+        name: input.name,
+        locationId: input.locationId,
+        userId: ctx.user.id,
+        producer: input.producer,
+        composition: input.composition,
+        yardage: input.yardage,
+        weight: input.weight,
+        gauge: input.gauge,
+        needleSize: input.needleSize,
+        careInstructions: input.careInstructions,
+        store: input.store,
+        notes: input.notes,
+        imageUrl: input.imageUrl,
+      })
+
+      return master
+    }),
+
+  // Opprett ny batch for eksisterende master
+  createBatch: protectedProcedure
+    .input(z.object({
+      masterId: z.string(),
+      name: z.string().min(1),
+      locationId: z.string(),
+      batchNumber: z.string().min(1),
+      color: z.string().min(1),
+      colorCode: z.string().optional(),
+      quantity: z.number().min(1),
+      pricePerSkein: z.number().min(0).optional(),
+      purchaseDate: z.date().optional(),
+      condition: z.string().optional(),
+      notes: z.string().optional(),
+      imageUrl: z.string().optional(),
+      unit: z.string().default('nøste'),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      // Verifiser at master tilhører brukeren
+      const master = await ctx.db.item.findFirst({
+        where: {
+          id: input.masterId,
+          userId: ctx.user.id
+        },
+        include: { category: true }
+      })
+
+      if (!master || !isYarnMaster(master.category?.name)) {
+        throw new TRPCError({
+          code: 'NOT_FOUND',
+          message: 'Garn Master ikke funnet'
+        })
+      }
+
+      const batch = await createBatchForMaster(ctx.db, input.masterId, {
+        name: input.name,
+        locationId: input.locationId,
+        userId: ctx.user.id,
+        batchNumber: input.batchNumber,
+        color: input.color,
+        colorCode: input.colorCode,
+        quantity: input.quantity,
+        pricePerSkein: input.pricePerSkein,
+        purchaseDate: input.purchaseDate,
+        condition: input.condition,
+        notes: input.notes,
+        imageUrl: input.imageUrl,
+        unit: input.unit,
+      })
+
+      return batch
+    }),
+
+  // Hent alle batches for en master
+  getBatchesForMaster: protectedProcedure
+    .input(z.object({
+      masterId: z.string()
+    }))
+    .query(async ({ ctx, input }) => {
+      const batches = await getBatchesForMaster(ctx.db, input.masterId, ctx.user.id)
+      return batches
+    }),
+
+  // Hent master for en batch
+  getMasterForBatch: protectedProcedure
+    .input(z.object({
+      batchId: z.string()
+    }))
+    .query(async ({ ctx, input }) => {
+      const master = await getMasterForBatch(ctx.db, input.batchId, ctx.user.id)
+      return master
+    }),
+
+  // Hent aggregerte data for en master
+  getMasterTotals: protectedProcedure
+    .input(z.object({
+      masterId: z.string()
+    }))
+    .query(async ({ ctx, input }) => {
+      const totals = await calculateMasterTotals(ctx.db, input.masterId, ctx.user.id)
+      return totals
+    }),
+
+  // Hent alle yarn masters for brukeren
+  getAllMasters: protectedProcedure
+    .input(z.object({
+      limit: z.number().min(1).max(100).default(50),
+      offset: z.number().min(0).default(0),
+      search: z.string().optional(),
+    }))
+    .query(async ({ ctx, input }) => {
+      const masterCategory = await ctx.db.category.findFirst({
+        where: { name: 'Garn Master' }
+      })
+
+      if (!masterCategory) {
+        return { masters: [], total: 0 }
+      }
+
+      const where = {
+        userId: ctx.user.id,
+        categoryId: masterCategory.id,
+        ...(input.search && {
+          OR: [
+            { name: { contains: input.search, mode: 'insensitive' as const } },
+            { description: { contains: input.search, mode: 'insensitive' as const } }
+          ]
+        })
+      }
+
+      const [masters, total] = await Promise.all([
+        ctx.db.item.findMany({
+          where,
+          include: {
+            location: true,
+            category: true,
+            relatedTo: {
+              include: {
+                category: true
+              }
+            }
+          },
+          orderBy: { createdAt: 'desc' },
+          take: input.limit,
+          skip: input.offset
+        }),
+        ctx.db.item.count({ where })
+      ])
+
+      // Beregn totals for hver master
+      const mastersWithTotals = await Promise.all(
+        masters.map(async (master) => {
+          const totals = await calculateMasterTotals(ctx.db, master.id, ctx.user.id)
+          return {
+            ...master,
+            totals
+          }
+        })
+      )
+
+      return { masters: mastersWithTotals, total }
+    }),
+
+  // PROJECT INTEGRATION ENDPOINTS
+
+  // Hent garn-bruk for et spesifikt item
+  getYarnUsageForItem: protectedProcedure
+    .input(z.object({
+      itemId: z.string()
+    }))
+    .query(async ({ ctx, input }) => {
+      const usage = await ctx.db.projectYarnUsage.findMany({
+        where: {
+          itemId: input.itemId,
+          project: {
+            userId: ctx.user.id
+          }
+        },
+        include: {
+          project: true,
+          item: {
+            include: {
+              category: true
+            }
+          }
+        },
+        orderBy: { createdAt: 'desc' }
+      })
+
+      return usage
+    }),
+
+  // Fjern garn fra prosjekt
+  removeYarnFromProject: protectedProcedure
+    .input(z.object({
+      projectId: z.string(),
+      itemId: z.string()
+    }))
+    .mutation(async ({ ctx, input }) => {
+      // Verifiser at prosjektet tilhører brukeren
+      const project = await ctx.db.yarnProject.findFirst({
+        where: {
+          id: input.projectId,
+          userId: ctx.user.id
+        }
+      })
+
+      if (!project) {
+        throw new TRPCError({
+          code: 'NOT_FOUND',
+          message: 'Prosjekt ikke funnet'
+        })
+      }
+
+      // Finn og slett bruken
+      const usage = await ctx.db.projectYarnUsage.findFirst({
+        where: {
+          projectId: input.projectId,
+          itemId: input.itemId
+        }
+      })
+
+      if (!usage) {
+        throw new TRPCError({
+          code: 'NOT_FOUND',
+          message: 'Garn-bruk ikke funnet i prosjekt'
+        })
+      }
+
+      // Oppdater item tilgjengelighet
+      const item = await ctx.db.item.findUnique({
+        where: { id: input.itemId }
+      })
+
+      if (item) {
+        await ctx.db.item.update({
+          where: { id: input.itemId },
+          data: {
+            availableQuantity: item.availableQuantity + usage.quantityUsed
+          }
+        })
+      }
+
+      // Slett bruken
+      await ctx.db.projectYarnUsage.delete({
+        where: { id: usage.id }
+      })
+
+      return { success: true }
+    }),
+
+  // Oppdater garn-bruk i prosjekt
+  updateYarnUsageInProject: protectedProcedure
+    .input(z.object({
+      projectId: z.string(),
+      itemId: z.string(),
+      quantityUsed: z.number().min(0),
+      notes: z.string().optional()
+    }))
+    .mutation(async ({ ctx, input }) => {
+      // Verifiser at prosjektet tilhører brukeren
+      const project = await ctx.db.yarnProject.findFirst({
+        where: {
+          id: input.projectId,
+          userId: ctx.user.id
+        }
+      })
+
+      if (!project) {
+        throw new TRPCError({
+          code: 'NOT_FOUND',
+          message: 'Prosjekt ikke funnet'
+        })
+      }
+
+      // Finn eksisterende bruk
+      const existingUsage = await ctx.db.projectYarnUsage.findFirst({
+        where: {
+          projectId: input.projectId,
+          itemId: input.itemId
+        }
+      })
+
+      if (!existingUsage) {
+        throw new TRPCError({
+          code: 'NOT_FOUND',
+          message: 'Garn-bruk ikke funnet'
+        })
+      }
+
+      // Beregn forskjell i mengde
+      const quantityDifference = input.quantityUsed - existingUsage.quantityUsed
+
+      // Sjekk tilgjengelighet hvis vi øker bruken
+      if (quantityDifference > 0) {
+        const item = await ctx.db.item.findUnique({
+          where: { id: input.itemId }
+        })
+
+        if (!item || item.availableQuantity < quantityDifference) {
+          throw new TRPCError({
+            code: 'BAD_REQUEST',
+            message: 'Ikke nok garn tilgjengelig'
+          })
+        }
+
+        // Oppdater tilgjengelighet
+        await ctx.db.item.update({
+          where: { id: input.itemId },
+          data: {
+            availableQuantity: item.availableQuantity - quantityDifference
+          }
+        })
+      } else if (quantityDifference < 0) {
+        // Hvis vi reduserer bruken, gi tilbake til tilgjengelig
+        const item = await ctx.db.item.findUnique({
+          where: { id: input.itemId }
+        })
+
+        if (item) {
+          await ctx.db.item.update({
+            where: { id: input.itemId },
+            data: {
+              availableQuantity: item.availableQuantity - quantityDifference // negativt tall, så vi legger til
+            }
+          })
+        }
+      }
+
+      // Oppdater bruken
+      const updatedUsage = await ctx.db.projectYarnUsage.update({
+        where: { id: existingUsage.id },
+        data: {
+          quantityUsed: input.quantityUsed,
+          notes: input.notes
+        },
+        include: {
+          project: true,
+          item: true
+        }
+      })
+
+      return updatedUsage
+    }),
+
+  // Hent alle prosjekter for dropdown
+  getProjects: protectedProcedure
+    .input(z.object({
+      limit: z.number().min(1).max(100).default(20),
+      offset: z.number().min(0).default(0),
+      status: z.string().optional()
+    }))
+    .query(async ({ ctx, input }) => {
+      const where = {
+        userId: ctx.user.id,
+        ...(input.status && { status: input.status })
+      }
+
+      const [projects, total] = await Promise.all([
+        ctx.db.yarnProject.findMany({
+          where,
+          include: {
+            pattern: true,
+            yarnUsage: {
+              include: {
+                item: true
+              }
+            }
+          },
+          orderBy: { createdAt: 'desc' },
+          take: input.limit,
+          skip: input.offset
+        }),
+        ctx.db.yarnProject.count({ where })
+      ])
+
+      return { projects, total }
+    }),
+
+  // ANALYTICS ENDPOINTS
+
+  // Hent garn analytics
+  getYarnAnalytics: protectedProcedure
+    .input(z.object({
+      timeRange: z.number().default(30), // days
+      groupBy: z.string().default('producer')
+    }))
+    .query(async ({ ctx, input }) => {
+      const dateThreshold = new Date()
+      dateThreshold.setDate(dateThreshold.getDate() - input.timeRange)
+
+      // Get master and batch categories
+      const [masterCategory, batchCategory] = await Promise.all([
+        ctx.db.category.findFirst({ where: { name: 'Garn Master' } }),
+        ctx.db.category.findFirst({ where: { name: 'Garn Batch' } })
+      ])
+
+      if (!masterCategory || !batchCategory) {
+        return {
+          totalMasters: 0,
+          uniqueColors: 0,
+          topProducers: [],
+          topColors: []
+        }
+      }
+
+      // Get all yarn masters for this user
+      const masters = await ctx.db.item.findMany({
+        where: {
+          userId: ctx.user.id,
+          categoryId: masterCategory.id
+        },
+        include: {
+          relatedTo: {
+            where: {
+              categoryId: batchCategory.id
+            },
+            include: {
+              category: true
+            }
+          }
+        }
+      })
+
+      // Get all yarn batches for this user
+      const batches = await ctx.db.item.findMany({
+        where: {
+          userId: ctx.user.id,
+          categoryId: batchCategory.id
+        }
+      })
+
+      // Calculate analytics
+      const producerStats = new Map()
+      const colorStats = new Map()
+      const uniqueColors = new Set()
+
+      masters.forEach(master => {
+        const masterData = master.categoryData ? JSON.parse(master.categoryData) : {}
+        const producer = masterData.producer || 'Ukjent'
+        
+        if (!producerStats.has(producer)) {
+          producerStats.set(producer, {
+            name: producer,
+            masterCount: 0,
+            totalSkeins: 0,
+            totalValue: 0
+          })
+        }
+
+        const stats = producerStats.get(producer)
+        stats.masterCount += 1
+
+        // Add batch data
+        master.relatedTo.forEach(batch => {
+          const batchData = batch.categoryData ? JSON.parse(batch.categoryData) : {}
+          stats.totalSkeins += batchData.quantity || 0
+          stats.totalValue += (batchData.quantity || 0) * (batchData.pricePerSkein || 0)
+
+          // Track colors
+          if (batchData.color) {
+            uniqueColors.add(batchData.color.toLowerCase())
+            
+            if (!colorStats.has(batchData.color)) {
+              colorStats.set(batchData.color, {
+                name: batchData.color,
+                colorCode: batchData.colorCode,
+                batchCount: 0,
+                totalSkeins: 0,
+                totalValue: 0
+              })
+            }
+
+            const colorStat = colorStats.get(batchData.color)
+            colorStat.batchCount += 1
+            colorStat.totalSkeins += batchData.quantity || 0
+            colorStat.totalValue += (batchData.quantity || 0) * (batchData.pricePerSkein || 0)
+          }
+        })
+      })
+
+      // Sort and limit results
+      const topProducers = Array.from(producerStats.values())
+        .sort((a, b) => b.totalSkeins - a.totalSkeins)
+        .slice(0, 10)
+
+      const topColors = Array.from(colorStats.values())
+        .sort((a, b) => b.totalSkeins - a.totalSkeins)
+        .slice(0, 10)
+
+      return {
+        totalMasters: masters.length,
+        uniqueColors: uniqueColors.size,
+        topProducers,
+        topColors
+      }
+    }),
+
+  // Hent stock alerts
+  getStockAlerts: protectedProcedure
+    .query(async ({ ctx }) => {
+      const batchCategory = await ctx.db.category.findFirst({
+        where: { name: 'Garn Batch' }
+      })
+
+      if (!batchCategory) {
+        return {
+          lowStockCount: 0,
+          lowStockItems: []
+        }
+      }
+
+      // Find items with low stock (availableQuantity <= 2)
+      const lowStockItems = await ctx.db.item.findMany({
+        where: {
+          userId: ctx.user.id,
+          categoryId: batchCategory.id,
+          availableQuantity: {
+            lte: 2,
+            gt: 0
+          }
+        },
+        orderBy: { availableQuantity: 'asc' }
+      })
+
+      const processedItems = lowStockItems.map(item => {
+        const batchData = item.categoryData ? JSON.parse(item.categoryData) : {}
+        return {
+          ...item,
+          batchInfo: {
+            color: batchData.color,
+            batchNumber: batchData.batchNumber
+          },
+          stockLevel: item.availableQuantity <= 1 ? 'CRITICAL' : 'LOW'
+        }
+      })
+
+      return {
+        lowStockCount: lowStockItems.length,
+        lowStockItems: processedItems
+      }
+    }),
+
+  // Hent value analysis
+  getValueAnalysis: protectedProcedure
+    .query(async ({ ctx }) => {
+      const batchCategory = await ctx.db.category.findFirst({
+        where: { name: 'Garn Batch' }
+      })
+
+      if (!batchCategory) {
+        return {
+          totalValue: 0,
+          valueChange: 0
+        }
+      }
+
+      const batches = await ctx.db.item.findMany({
+        where: {
+          userId: ctx.user.id,
+          categoryId: batchCategory.id
+        }
+      })
+
+      let totalValue = 0
+      batches.forEach(batch => {
+        const batchData = batch.categoryData ? JSON.parse(batch.categoryData) : {}
+        const quantity = batchData.quantity || 0
+        const pricePerSkein = batchData.pricePerSkein || 0
+        totalValue += quantity * pricePerSkein
+      })
+
+      // For now, we'll simulate value change (in a real app, you'd compare with previous period)
+      const valueChange = Math.random() * 20 - 10 // -10% to +10%
+
+      return {
+        totalValue,
+        valueChange
+      }
+    }),
+
+  // Hent usage statistics
+  getUsageStatistics: protectedProcedure
+    .input(z.object({
+      timeRange: z.number().default(30)
+    }))
+    .query(async ({ ctx, input }) => {
+      const dateThreshold = new Date()
+      dateThreshold.setDate(dateThreshold.getDate() - input.timeRange)
+
+      // Get active projects
+      const [activeProjects, allProjects] = await Promise.all([
+        ctx.db.yarnProject.count({
+          where: {
+            userId: ctx.user.id,
+            status: 'IN_PROGRESS'
+          }
+        }),
+        ctx.db.yarnProject.findMany({
+          where: {
+            userId: ctx.user.id
+          },
+          include: {
+            yarnUsage: {
+              include: {
+                item: {
+                  include: {
+                    category: true
+                  }
+                }
+              }
+            }
+          }
+        })
+      ])
+
+      // Calculate project status distribution
+      const statusCounts = new Map()
+      allProjects.forEach(project => {
+        const count = statusCounts.get(project.status) || 0
+        statusCounts.set(project.status, count + 1)
+      })
+
+      const projectStatusDistribution = Array.from(statusCounts.entries()).map(([status, count]) => ({
+        status,
+        count,
+        percentage: (count / allProjects.length) * 100
+      }))
+
+      // Calculate most used yarns
+      const yarnUsageMap = new Map()
+      allProjects.forEach(project => {
+        project.yarnUsage.forEach(usage => {
+          const key = usage.item.id
+          if (!yarnUsageMap.has(key)) {
+            yarnUsageMap.set(key, {
+              id: usage.item.id,
+              name: usage.item.name,
+              producer: usage.item.categoryData ? JSON.parse(usage.item.categoryData).producer : 'Ukjent',
+              totalUsed: 0,
+              projectCount: 0,
+              projects: new Set()
+            })
+          }
+
+          const yarnStat = yarnUsageMap.get(key)
+          yarnStat.totalUsed += usage.quantityUsed
+          yarnStat.projects.add(project.id)
+          yarnStat.projectCount = yarnStat.projects.size
+        })
+      })
+
+      const mostUsedYarns = Array.from(yarnUsageMap.values())
+        .sort((a, b) => b.totalUsed - a.totalUsed)
+        .slice(0, 10)
+
+      const projectsUsingYarn = allProjects.filter(p => p.yarnUsage.length > 0).length
+
+      return {
+        activeProjects,
+        projectsUsingYarn,
+        projectStatusDistribution,
+        mostUsedYarns
+      }
+    }),
+
+  // BULK OPERATIONS ENDPOINTS
+
+  // Bulk update batches
+  bulkUpdateBatches: protectedProcedure
+    .input(z.object({
+      itemIds: z.array(z.string()),
+      updateData: z.object({
+        pricePerSkein: z.number().min(0).optional(),
+        condition: z.string().optional(),
+        notes: z.string().optional()
+      })
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const batchCategory = await ctx.db.category.findFirst({
+        where: { name: 'Garn Batch' }
+      })
+
+      if (!batchCategory) {
+        throw new TRPCError({
+          code: 'NOT_FOUND',
+          message: 'Garn Batch kategori ikke funnet'
+        })
+      }
+
+      // Verify all items belong to user and are batches
+      const items = await ctx.db.item.findMany({
+        where: {
+          id: { in: input.itemIds },
+          userId: ctx.user.id,
+          categoryId: batchCategory.id
+        }
+      })
+
+      if (items.length !== input.itemIds.length) {
+        throw new TRPCError({
+          code: 'NOT_FOUND',
+          message: 'En eller flere items ikke funnet eller tilhører ikke deg'
+        })
+      }
+
+      // Update each item
+      const updatePromises = items.map(async (item) => {
+        const currentData = item.categoryData ? JSON.parse(item.categoryData) : {}
+        const updatedData = { ...currentData }
+
+        if (input.updateData.pricePerSkein !== undefined) {
+          updatedData.pricePerSkein = input.updateData.pricePerSkein
+        }
+        if (input.updateData.condition !== undefined) {
+          updatedData.condition = input.updateData.condition
+        }
+        if (input.updateData.notes !== undefined) {
+          updatedData.notes = input.updateData.notes
+        }
+
+        return ctx.db.item.update({
+          where: { id: item.id },
+          data: {
+            categoryData: JSON.stringify(updatedData)
+          }
+        })
+      })
+
+      await Promise.all(updatePromises)
+
+      return { updated: items.length }
+    }),
+
+  // Bulk delete items
+  bulkDeleteItems: protectedProcedure
+    .input(z.object({
+      itemIds: z.array(z.string())
+    }))
+    .mutation(async ({ ctx, input }) => {
+      // Verify all items belong to user
+      const items = await ctx.db.item.findMany({
+        where: {
+          id: { in: input.itemIds },
+          userId: ctx.user.id
+        }
+      })
+
+      if (items.length !== input.itemIds.length) {
+        throw new TRPCError({
+          code: 'NOT_FOUND',
+          message: 'En eller flere items ikke funnet eller tilhører ikke deg'
+        })
+      }
+
+      // Delete all items
+      await ctx.db.item.deleteMany({
+        where: {
+          id: { in: input.itemIds },
+          userId: ctx.user.id
+        }
+      })
+
+      return { deleted: items.length }
+    }),
+
+  // Bulk move items to different location
+  bulkMoveItems: protectedProcedure
+    .input(z.object({
+      itemIds: z.array(z.string()),
+      locationId: z.string()
+    }))
+    .mutation(async ({ ctx, input }) => {
+      // Verify location belongs to user
+      const location = await ctx.db.location.findFirst({
+        where: {
+          id: input.locationId,
+          userId: ctx.user.id
+        }
+      })
+
+      if (!location) {
+        throw new TRPCError({
+          code: 'NOT_FOUND',
+          message: 'Lokasjon ikke funnet'
+        })
+      }
+
+      // Verify all items belong to user
+      const items = await ctx.db.item.findMany({
+        where: {
+          id: { in: input.itemIds },
+          userId: ctx.user.id
+        }
+      })
+
+      if (items.length !== input.itemIds.length) {
+        throw new TRPCError({
+          code: 'NOT_FOUND',
+          message: 'En eller flere items ikke funnet eller tilhører ikke deg'
+        })
+      }
+
+      // Update location for all items
+      await ctx.db.item.updateMany({
+        where: {
+          id: { in: input.itemIds },
+          userId: ctx.user.id
+        },
+        data: {
+          locationId: input.locationId
+        }
+      })
+
+      return { moved: items.length }
+    }),
+
 })

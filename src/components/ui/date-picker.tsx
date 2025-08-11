@@ -1,49 +1,56 @@
-"use client"
+'use client'
 
-import { CalendarIcon } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { Calendar } from "@/components/ui/calendar"
+import * as React from 'react'
+import { format } from 'date-fns'
+import { nb } from 'date-fns/locale'
+import { Calendar as CalendarIcon } from 'lucide-react'
+
+import { cn } from '@/lib/utils'
+import { Button } from '@/components/ui/button'
+import { Calendar } from '@/components/ui/calendar'
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
-} from "@/components/ui/popover"
-import { cn } from "@/lib/utils"
-import { format } from "date-fns"
-import { nb } from "date-fns/locale"
+} from '@/components/ui/popover'
 
 interface DatePickerProps {
-  value?: Date
-  onChange?: (date: Date | undefined) => void
+  date?: Date
+  onDateChange?: (date: Date | undefined) => void
   placeholder?: string
-  className?: string
+  disabled?: boolean
 }
 
-export function DatePicker({ value, onChange, placeholder = "Velg dato", className }: DatePickerProps) {
+export function DatePicker({
+  date,
+  onDateChange,
+  placeholder = 'Velg dato',
+  disabled = false,
+}: DatePickerProps) {
   return (
     <Popover>
       <PopoverTrigger asChild>
         <Button
-          variant={"outline"}
+          variant={'outline'}
+          disabled={disabled}
           className={cn(
-            "w-full justify-start text-left font-normal",
-            !value && "text-muted-foreground",
-            className
+            'w-full justify-start text-left font-normal',
+            !date && 'text-muted-foreground'
           )}
         >
           <CalendarIcon className="mr-2 h-4 w-4" />
-          {value ? format(value, "PPP", { locale: nb }) : placeholder}
+          {date ? format(date, 'PPP', { locale: nb }) : <span>{placeholder}</span>}
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-auto p-0" align="start">
+      <PopoverContent className="w-auto p-0">
         <Calendar
           mode="single"
-          selected={value}
-          onSelect={onChange}
+          selected={date}
+          onSelect={onDateChange}
           initialFocus
+          locale={nb}
         />
       </PopoverContent>
     </Popover>
   )
 }
-

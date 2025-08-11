@@ -453,12 +453,16 @@ export default function CategoriesPage() {
             <FieldSchemaBuilder
               initialSchema={(() => {
                 const category = categories.find(c => c.id === editingFieldsCategory)
-                if (!category?.fieldSchema) return null
+                if (!category?.fieldSchema) {
+                  return null
+                }
                 try {
-                  return typeof category.fieldSchema === 'string' 
+                  const schema = typeof category.fieldSchema === 'string' 
                     ? JSON.parse(category.fieldSchema)
                     : category.fieldSchema
-                } catch {
+                  return schema
+                } catch (error) {
+                  toast.error(`Feil ved parsing av feltskjema for ${category.name}`)
                   return null
                 }
               })()}

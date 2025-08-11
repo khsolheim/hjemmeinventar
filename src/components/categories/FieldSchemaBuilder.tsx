@@ -33,6 +33,7 @@ import {
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
+import { useDebounce } from '@/hooks/useDebounce'
 
 // Type definitions
 type FieldType = 'string' | 'number' | 'select' | 'boolean' | 'date'
@@ -284,31 +285,49 @@ export function FieldSchemaBuilder({
   categoryName 
 }: FieldSchemaBuilderProps) {
   const [fields, setFields] = useState<FieldDefinition[]>([])
+  const [hasInitialized, setHasInitialized] = useState(false)
+  const [isLoadingInitialFields, setIsLoadingInitialFields] = useState(false)
+  
+  // Reset initialization when initialSchema changes
+  useEffect(() => {
+    setHasInitialized(false)
+    setIsLoadingInitialFields(true)
+  }, [initialSchema])
+  
+  // Debounce fields changes to avoid too many server calls
+  const debouncedFields = useDebounce(fields, 1000) // 1 second delay
 
   // Initialize fields from schema
   useEffect(() => {
-    if (initialSchema?.properties) {
+    if (initialSchema?.properties && Object.keys(initialSchema.properties).length > 0) {
       const initialFields: FieldDefinition[] = Object.entries(initialSchema.properties).map(([key, field]) => ({
         id: key,
-        type: field.type,
-        label: field.label,
+        type: field.type as FieldType,
+        label: field.label || key,
         placeholder: field.placeholder,
         description: field.description,
         required: initialSchema.required?.includes(key) || false,
         options: field.options
       }))
+      
       setFields(initialFields)
+      setHasInitialized(true)
+      setIsLoadingInitialFields(false)
+    } else {
+      setFields([])
+      setHasInitialized(true)
+      setIsLoadingInitialFields(false)
     }
   }, [initialSchema])
 
-  // Don't automatically call onChange on mount, only when user makes changes
-  const generateSchema = () => {
+  // Generate schema from fields
+  const generateSchema = (fieldsToUse: FieldDefinition[] = fields) => {
     const properties: Record<string, Omit<FieldDefinition, 'id'>> = {}
     const required: string[] = []
 
-    fields.forEach(field => {
+    fieldsToUse.forEach(field => {
       if (field.label.trim()) {
-        const key = field.id
+        const key = generatePropertyKey(field)
         properties[key] = {
           type: field.type,
           label: field.label,
@@ -324,12 +343,40 @@ export function FieldSchemaBuilder({
       }
     })
 
+    // Safety check: Don't return empty schema if we started with a non-empty initialSchema
+    // This prevents accidentally clearing existing field definitions
+    const hasInitialFields = initialSchema?.properties && Object.keys(initialSchema.properties).length > 0
+    const hasCurrentProperties = Object.keys(properties).length > 0
+    
+    if (!hasCurrentProperties && hasInitialFields && hasInitialized) {
+      // Only warn in development mode to avoid console spam
+      if (process.env.NODE_ENV === 'development') {
+        console.warn('FieldSchemaBuilder: Preventing empty schema generation when initialSchema had fields')
+      }
+      return initialSchema
+    }
+
     return {
       type: 'object',
       properties,
       required
     } as FieldSchema
   }
+
+  // Call onChange when debounced fields change, but not during initial loading
+  useEffect(() => {
+    // Only call onChange if we have been initialized AND we're not loading initial fields
+    if (hasInitialized && !isLoadingInitialFields && debouncedFields.length >= 0) {
+      const newSchema = generateSchema(debouncedFields)
+      
+      // Additional safeguard: Don't call onChange if we would be sending back the same initialSchema
+      // This prevents infinite loops when the safeguard in generateSchema kicks in
+      if (newSchema !== initialSchema) {
+        onChange(newSchema)
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [debouncedFields, hasInitialized, isLoadingInitialFields])
 
   const addField = () => {
     const newField: FieldDefinition = {
@@ -338,25 +385,38 @@ export function FieldSchemaBuilder({
       label: '',
       required: false
     }
-    const newFields = [...fields, newField]
-    setFields(newFields)
-    // Call onChange when user adds a field
-    setTimeout(() => onChange(generateSchema()), 0)
+    setFields(prev => [...prev, newField])
+  }
+
+  // Generate a safe property key from field label or use existing ID
+  const generatePropertyKey = (field: FieldDefinition) => {
+    // If field has an existing ID that's not a generated one, use it
+    if (field.id && !field.id.startsWith('field_') && field.label) {
+      return field.id
+    }
+    
+    // Otherwise generate from label
+    if (field.label.trim()) {
+      return field.label
+        .toLowerCase()
+        .replace(/[^a-z0-9]/g, '_')
+        .replace(/_+/g, '_')
+        .replace(/^_|_$/g, '') || field.id
+    }
+    
+    return field.id
   }
 
   const updateField = (index: number, updatedField: FieldDefinition) => {
-    const newFields = [...fields]
-    newFields[index] = updatedField
-    setFields(newFields)
-    // Call onChange when user makes changes
-    setTimeout(() => onChange(generateSchema()), 0)
+    setFields(prev => {
+      const newFields = [...prev]
+      newFields[index] = updatedField
+      return newFields
+    })
   }
 
   const deleteField = (index: number) => {
-    const newFields = fields.filter((_, i) => i !== index)
-    setFields(newFields)
-    // Call onChange when user makes changes  
-    setTimeout(() => onChange(generateSchema()), 0)
+    setFields(prev => prev.filter((_, i) => i !== index))
   }
 
   const duplicateField = (index: number) => {
@@ -366,10 +426,7 @@ export function FieldSchemaBuilder({
       id: `field_${Date.now()}`,
       label: `${fieldToDuplicate.label} (kopi)`
     }
-    const newFields = [...fields, duplicatedField]
-    setFields(newFields)
-    // Call onChange when user duplicates a field
-    setTimeout(() => onChange(generateSchema()), 0)
+    setFields(prev => [...prev, duplicatedField])
   }
 
   return (

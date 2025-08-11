@@ -3,6 +3,47 @@ import { z } from 'zod'
 import { createTRPCRouter, protectedProcedure, publicProcedure } from '../server'
 
 // Predefined category schemas
+
+// GARN MASTER: Felles data for en garntype
+const yarnMasterFieldSchema = {
+  type: 'object',
+  properties: {
+    producer: { type: 'string', label: 'Produsent', required: true },
+    composition: { type: 'string', label: 'Sammensetning', required: true },
+    yardage: { type: 'string', label: 'Løpelengde', placeholder: 'f.eks. 100m' },
+    weight: { type: 'string', label: 'Vekt', placeholder: 'f.eks. 50g' },
+    gauge: { type: 'string', label: 'Strikkefasthet', placeholder: 'f.eks. 22 masker = 10cm' },
+    needleSize: { type: 'string', label: 'Anbefalte pinner', placeholder: 'f.eks. 4.0mm' },
+    careInstructions: { type: 'string', label: 'Vaskeråd' },
+    store: { type: 'string', label: 'Butikk', placeholder: 'Hvor garnet vanligvis kjøpes' },
+    notes: { type: 'textarea', label: 'Notater', placeholder: 'Generelle notater om denne garntypen' }
+  },
+  required: ['producer', 'composition']
+}
+
+// GARN BATCH: Unike data per nøste/batch
+const yarnBatchFieldSchema = {
+  type: 'object',
+  properties: {
+    batchNumber: { type: 'string', label: 'Batch nummer', required: true },
+    color: { type: 'string', label: 'Farge', required: true },
+    colorCode: { type: 'string', label: 'Farge kode', placeholder: 'f.eks. #FF5733 eller navn' },
+    quantity: { type: 'number', label: 'Antall nøster', required: true, min: 1 },
+    pricePerSkein: { type: 'number', label: 'Pris per nøste (kr)', min: 0, step: 0.01 },
+    purchaseDate: { type: 'date', label: 'Kjøpsdato' },
+    condition: { 
+      type: 'select', 
+      label: 'Tilstand',
+      options: ['Ny', 'Brukt - god', 'Brukt - ok', 'Brukt - dårlig'],
+      default: 'Ny'
+    },
+    masterItemId: { type: 'string', label: 'Tilhører Master', hidden: true }, // For relasjon til master
+    notes: { type: 'textarea', label: 'Batch-notater', placeholder: 'Spesifikke notater for denne batchen' }
+  },
+  required: ['batchNumber', 'color', 'quantity']
+}
+
+// LEGACY: Eksisterende garn schema (beholder for bakoverkompatibilitet)
 const yarnFieldSchema = {
   type: 'object',
   properties: {
@@ -106,8 +147,20 @@ export const categoriesRouter = createTRPCRouter({
     .mutation(async ({ ctx }) => {
       const defaultCategories = [
         {
+          name: 'Garn Master',
+          description: 'Garn-typer med felles egenskaper (produsent, sammensetning, etc.)',
+          icon: '🧶',
+          fieldSchema: yarnMasterFieldSchema
+        },
+        {
+          name: 'Garn Batch',
+          description: 'Individuelle nøster/batcher med unike egenskaper (farge, batch nr, etc.)',
+          icon: '🎨',
+          fieldSchema: yarnBatchFieldSchema
+        },
+        {
           name: 'Garn og Strikking',
-          description: 'Garn, oppskrifter og strikkeutstyr',
+          description: 'Garn, oppskrifter og strikkeutstyr (legacy)',
           icon: '🧶',
           fieldSchema: yarnFieldSchema
         },
@@ -115,13 +168,41 @@ export const categoriesRouter = createTRPCRouter({
           name: 'Elektronikk',
           description: 'Datautstyr, telefoner og elektroniske enheter',
           icon: '💻',
-          fieldSchema: electronicsFieldSchema
+          fieldSchema: {
+            type: 'object',
+            properties: {
+              brand: { type: 'string', label: 'Merke' },
+              model: { type: 'string', label: 'Modell' },
+              serialNumber: { type: 'string', label: 'Serienummer' },
+              warrantyExpiry: { type: 'date', label: 'Garanti utløper' },
+              condition: { 
+                type: 'select', 
+                label: 'Tilstand',
+                options: ['Ny', 'Som ny', 'God', 'Brukbar', 'Defekt']
+              },
+              accessories: { type: 'string', label: 'Tilbehør inkludert' }
+            }
+          }
         },
         {
           name: 'Mat og Drikke',
           description: 'Matvarer, krydder og drikkevarer',
           icon: '🍎',
-          fieldSchema: foodFieldSchema
+          fieldSchema: {
+            type: 'object',
+            properties: {
+              brand: { type: 'string', label: 'Merke' },
+              nutritionInfo: { type: 'string', label: 'Næringsinnhold' },
+              allergens: { type: 'string', label: 'Allergener' },
+              storage: { 
+                type: 'select', 
+                label: 'Oppbevaring',
+                options: ['Kjøleskap', 'Fryser', 'Tørt og kjølig', 'Romtemperatur']
+              },
+              opened: { type: 'boolean', label: 'Åpnet' },
+              openedDate: { type: 'date', label: 'Åpnet dato' }
+            }
+          }
         },
         {
           name: 'Klær og Tekstiler',
