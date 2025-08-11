@@ -42,7 +42,7 @@ export function YarnBulkOperations({ items, onRefresh, itemType }: YarnBulkOpera
   const [showOperations, setShowOperations] = useState(false)
   const [bulkEditData, setBulkEditData] = useState({
     pricePerSkein: '',
-    condition: '',
+    condition: 'none',
     locationId: '',
     notes: ''
   })
@@ -109,7 +109,7 @@ export function YarnBulkOperations({ items, onRefresh, itemType }: YarnBulkOpera
     if (bulkEditData.pricePerSkein) {
       updateData.pricePerSkein = parseFloat(bulkEditData.pricePerSkein)
     }
-    if (bulkEditData.condition) {
+    if (bulkEditData.condition && bulkEditData.condition !== 'none') {
       updateData.condition = bulkEditData.condition
     }
     if (bulkEditData.notes) {
@@ -334,7 +334,7 @@ export function YarnBulkOperations({ items, onRefresh, itemType }: YarnBulkOpera
                                   <SelectValue placeholder="Velg tilstand (eller la stå tom)" />
                                 </SelectTrigger>
                                 <SelectContent>
-                                  <SelectItem value="">Ingen endring</SelectItem>
+                                  <SelectItem value="none">Ingen endring</SelectItem>
                                   <SelectItem value="Ny">Ny</SelectItem>
                                   <SelectItem value="Brukt - god">Brukt - god</SelectItem>
                                   <SelectItem value="Brukt - ok">Brukt - ok</SelectItem>

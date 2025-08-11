@@ -276,6 +276,7 @@ model Household {
   description String?
   
   members     HouseholdMember[]
+  hierarchyRules HierarchyRule[]
   
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
@@ -466,4 +467,37 @@ model Attachment {
   
   @@index([itemId])
   @@index([type])
+}
+
+// NEW: Hierarchy rules system for configurable location organization
+model HierarchyRule {
+  id           String       @id @default(cuid())
+  parentType   LocationType // Which location type can contain
+  childType    LocationType // Which location type can be contained
+  isAllowed    Boolean      @default(true)
+  
+  // Relations
+  household    Household    @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  householdId  String
+  
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+  
+  @@unique([householdId, parentType, childType])
+  @@index([householdId])
+}
+
+// NEW: Default hierarchy rule sets that users can choose from
+model DefaultHierarchyRule {
+  id          String       @id @default(cuid())
+  ruleSetName String       // 'minimal', 'standard', 'extended'
+  parentType  LocationType // Which location type can contain
+  childType   LocationType // Which location type can be contained
+  isAllowed   Boolean      @default(true)
+  description String?      // Explanation of why this rule makes sense
+  
+  createdAt   DateTime     @default(now())
+  
+  @@unique([ruleSetName, parentType, childType])
+  @@index([ruleSetName])
 }

@@ -12,6 +12,7 @@ import { analyticsRouter } from './routers/analytics'
 import { householdsRouter } from './routers/households'
 import { aiRouter } from './routers/ai'
 import { importExportRouter } from './routers/import-export'
+import { hierarchyRouter } from './routers/hierarchy'
 
 export const appRouter = createTRPCRouter({
   items: itemsRouter,
@@ -25,7 +26,8 @@ export const appRouter = createTRPCRouter({
   analytics: analyticsRouter,
   households: householdsRouter,
   ai: aiRouter,
-  importExport: importExportRouter
+  importExport: importExportRouter,
+  hierarchy: hierarchyRouter
 })
 
 export type AppRouter = typeof appRouter

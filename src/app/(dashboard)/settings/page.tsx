@@ -13,8 +13,11 @@ import {
   Database, 
   Download,
   Trash2,
-  HelpCircle
+  HelpCircle,
+  Layers,
+  ExternalLink
 } from 'lucide-react'
+import Link from 'next/link'
 
 export default function SettingsPage() {
   return (
@@ -162,6 +165,67 @@ export default function SettingsPage() {
                 <option value="da">Dansk</option>
                 <option value="sv">Svenska</option>
               </select>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Organization Settings */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Layers className="h-5 w-5" />
+              Organisering
+            </CardTitle>
+            <CardDescription>
+              Konfigurer hvordan lokasjoner og gjenstander kan organiseres
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-3">
+              <div className="flex items-center justify-between p-3 border rounded-lg">
+                <div className="space-y-1">
+                  <div className="font-medium">Hierarki-regler</div>
+                  <div className="text-sm text-muted-foreground">
+                    Definer hvilke lokasjonstyper som kan inneholde andre typer
+                  </div>
+                </div>
+                <Link href="/settings/hierarchy">
+                  <Button variant="outline" size="sm" className="flex items-center gap-2">
+                    Konfigurer
+                    <ExternalLink className="h-3 w-3" />
+                  </Button>
+                </Link>
+              </div>
+
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label className="text-base">Streng hierarki-validering</Label>
+                  <div className="text-sm text-gray-600">
+                    Forhindre plassering av gjenstander som bryter hierarki-reglene
+                  </div>
+                </div>
+                <Switch defaultChecked />
+              </div>
+
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label className="text-base">Vis hierarki-advarsler</Label>
+                  <div className="text-sm text-gray-600">
+                    Vis advarsler når du oppretter lokasjoner som kan forvirre organisasjonen
+                  </div>
+                </div>
+                <Switch defaultChecked />
+              </div>
+
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label className="text-base">Auto-foreslå lokasjoner</Label>
+                  <div className="text-sm text-gray-600">
+                    Foreslå passende overordnede lokasjoner basert på type
+                  </div>
+                </div>
+                <Switch defaultChecked />
+              </div>
             </div>
           </CardContent>
         </Card>

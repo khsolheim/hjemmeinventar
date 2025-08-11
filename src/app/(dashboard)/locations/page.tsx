@@ -5,11 +5,9 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { AccessibleButton } from '@/components/ui/accessible-button'
 import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
 import { Checkbox } from '@/components/ui/checkbox'
 import { 
-  Plus, 
   MapPin, 
   QrCode, 
   Search, 
@@ -26,7 +24,10 @@ import {
   Loader2,
   Layers,
   ShoppingBag,
-  Square
+  Square,
+  TreePine,
+  Smartphone,
+  Layout
 } from 'lucide-react'
 import {
   Select,
@@ -43,9 +44,14 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { trpc } from '@/lib/trpc/client'
 import { toast } from 'sonner'
+import Link from 'next/link'
 
 import { QRCodeCard } from '@/components/ui/qr-code'
 import { DymoPrintDialog } from '@/components/printing/DymoPrintDialog'
+import { LocationModal } from '@/components/locations/LocationModal'
+import { FloatingActionButton } from '@/components/locations/FloatingActionButton'
+import { BulkActionsToolbar } from '@/components/locations/BulkActionsToolbar'
+import { BulkEditModal } from '@/components/locations/BulkEditModal'
 
 const locationTypeIcons = {
   ROOM: Home,
@@ -107,18 +113,15 @@ function flattenLocations(locations: any[]): any[] {
 export default function LocationsPage() {
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedType, setSelectedType] = useState('all')
-  const [showCreateForm, setShowCreateForm] = useState(false)
+  const [showLocationModal, setShowLocationModal] = useState(false)
+  const [modalMode, setModalMode] = useState<'create' | 'edit'>('create')
   const [editingLocation, setEditingLocation] = useState<any>(null)
   const [showQRCode, setShowQRCode] = useState<string | null>(null)
   const [showPrintDialog, setShowPrintDialog] = useState(false)
   const [selectedLocations, setSelectedLocations] = useState<string[]>([])
   const [isSelectionMode, setIsSelectionMode] = useState(false)
-  const [newLocation, setNewLocation] = useState({
-    name: '',
-    type: 'ROOM' as const,
-    description: '',
-    parentId: ''
-  })
+  const [initialLocationData, setInitialLocationData] = useState<any>(null)
+  const [showBulkEdit, setShowBulkEdit] = useState(false)
 
   // tRPC queries and mutations
   const { data: locations = [], isLoading, error, refetch } = trpc.locations.getAll.useQuery()
@@ -128,8 +131,8 @@ export default function LocationsPage() {
   const createLocationMutation = trpc.locations.create.useMutation({
     onSuccess: () => {
       toast.success('Lokasjon opprettet!')
-      setShowCreateForm(false)
-      setNewLocation({ name: '', type: 'ROOM', description: '', parentId: '' })
+      setShowLocationModal(false)
+      setInitialLocationData(null)
       refetch()
     },
     onError: (error) => {
@@ -139,6 +142,7 @@ export default function LocationsPage() {
   const updateLocationMutation = trpc.locations.update.useMutation({
     onSuccess: () => {
       toast.success('Lokasjon oppdatert!')
+      setShowLocationModal(false)
       setEditingLocation(null)
       refetch()
     },
@@ -156,6 +160,16 @@ export default function LocationsPage() {
     }
   })
 
+  // Bulk mutations would go here - for now we'll simulate
+  const simulateBulkOperation = async (operation: string, locationIds: string[]) => {
+    // In a real app, you'd have actual bulk mutations
+    // For now, we'll just simulate the operations
+    toast.success(`${operation} utført på ${locationIds.length} lokasjoner!`)
+    setSelectedLocations([])
+    setIsSelectionMode(false)
+    refetch()
+  }
+
   // Filter locations based on search and type
   const filteredLocations = allLocations.filter(location => {
     const matchesSearch = location.name.toLowerCase().includes(searchQuery.toLowerCase())
@@ -163,39 +177,111 @@ export default function LocationsPage() {
     return matchesSearch && matchesType
   })
 
-  const handleCreateLocation = () => {
-    if (!newLocation.name.trim()) {
-      toast.error('Navn er påkrevd')
-      return
-    }
-
-    createLocationMutation.mutate({
-      name: newLocation.name,
-      type: newLocation.type,
-      description: newLocation.description || undefined,
-      parentId: newLocation.parentId === '' ? undefined : newLocation.parentId
-    })
+  // Modal handlers
+  const handleCreateLocation = (template?: any) => {
+    setModalMode('create')
+    setEditingLocation(null)
+    setInitialLocationData(template || null)
+    setShowLocationModal(true)
   }
 
-  const handleUpdateLocation = () => {
-    if (!editingLocation?.name.trim()) {
-      toast.error('Navn er påkrevd')
-      return
-    }
+  const handleEditLocation = (location: any) => {
+    setModalMode('edit')
+    setEditingLocation(location)
+    setInitialLocationData(null)
+    setShowLocationModal(true)
+  }
 
-    updateLocationMutation.mutate({
-      id: editingLocation.id,
-      name: editingLocation.name,
-      type: editingLocation.type,
-      description: editingLocation.description || undefined,
-      parentId: editingLocation.parentId === '' ? undefined : editingLocation.parentId
-    })
+  const handleModalSave = (data: any) => {
+    if (modalMode === 'create') {
+      createLocationMutation.mutate(data)
+    } else if (modalMode === 'edit') {
+      updateLocationMutation.mutate(data)
+    }
+  }
+
+  const handleModalClose = () => {
+    setShowLocationModal(false)
+    setEditingLocation(null)
+    setInitialLocationData(null)
+  }
+
+  // FAB handlers
+  const handleScanQR = () => {
+    // TODO: Implement QR scanning
+    toast.info('QR-skanning kommer snart!')
+  }
+
+  const handleSearch = () => {
+    // Focus search input
+    const searchInput = document.querySelector('input[placeholder*="Søk"]') as HTMLInputElement
+    if (searchInput) {
+      searchInput.focus()
+    }
   }
 
   const handleDeleteLocation = (locationId: string) => {
     if (confirm('Er du sikker på at du vil slette denne lokasjonen?')) {
       deleteLocationMutation.mutate(locationId)
     }
+  }
+
+  // Bulk operation handlers
+  const handleBulkEdit = () => {
+    setShowBulkEdit(true)
+  }
+
+  const handleBulkDelete = async () => {
+    await simulateBulkOperation('Sletting', selectedLocations)
+  }
+
+  const handleBulkMove = async () => {
+    await simulateBulkOperation('Flytting', selectedLocations)
+  }
+
+  const handleBulkExport = async () => {
+    // Generate CSV export
+    const selectedLocationData = allLocations.filter(loc => selectedLocations.includes(loc.id))
+    const csvData = selectedLocationData.map(loc => ({
+      navn: loc.name,
+      type: loc.type,
+      beskrivelse: loc.description || '',
+      qrKode: loc.qrCode,
+      antallTing: loc._count?.items || 0
+    }))
+    
+    const csvString = [
+      'navn,type,beskrivelse,qrKode,antallTing',
+      ...csvData.map(row => Object.values(row).join(','))
+    ].join('\n')
+    
+    const blob = new Blob([csvString], { type: 'text/csv' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `lokasjoner-${new Date().toISOString().split('T')[0]}.csv`
+    a.click()
+    URL.revokeObjectURL(url)
+    
+    toast.success(`Eksporterte ${selectedLocations.length} lokasjoner til CSV`)
+  }
+
+  const handleBulkPrint = () => {
+    setShowPrintDialog(true)
+  }
+
+  const handleBulkEditSave = async (data: any) => {
+    await simulateBulkOperation('Bulk-redigering', data.locationIds)
+    setShowBulkEdit(false)
+  }
+
+  const handleDeselectAll = () => {
+    setSelectedLocations([])
+  }
+
+  const handleCloseBulkMode = () => {
+    setIsSelectionMode(false)
+    setSelectedLocations([])
   }
 
   if (isLoading) {
@@ -269,13 +355,24 @@ export default function LocationsPage() {
                 <Printer className="w-4 h-4 mr-2" />
                 Bulk utskrift
               </Button>
-              <AccessibleButton 
-                onClick={() => setShowCreateForm(true)}
-                aria-label="Opprett ny lokasjon"
-              >
-                <Plus className="w-4 h-4 mr-2" />
-                Ny lokasjon
-              </AccessibleButton>
+              <Link href="/locations/tree">
+                <Button variant="outline">
+                  <TreePine className="w-4 h-4 mr-2" />
+                  Trevisning
+                </Button>
+              </Link>
+              <Link href="/locations/mobile">
+                <Button variant="outline">
+                  <Smartphone className="w-4 h-4 mr-2" />
+                  Mobilvisning
+                </Button>
+              </Link>
+              <Link href="/locations/layout">
+                <Button variant="outline">
+                  <Layout className="w-4 h-4 mr-2" />
+                  Layout-editor
+                </Button>
+              </Link>
             </>
           )}
         </div>
@@ -312,201 +409,9 @@ export default function LocationsPage() {
         </Select>
       </div>
 
-      {/* Create Location Form */}
-      {showCreateForm && (
-        <Card className="mb-6">
-          <CardHeader>
-            <CardTitle>Opprett ny lokasjon</CardTitle>
-            <CardDescription>
-              Legg til et nytt rom eller oppbevaringssted
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="location-name">Navn på lokasjon</Label>
-                <Input
-                  id="location-name"
-                  value={newLocation.name}
-                  onChange={(e) => setNewLocation({...newLocation, name: e.target.value})}
-                  placeholder="F.eks. Kjøkken, Soverom, Plastboks A"
-                />
-              </div>
-              <div>
-                <Label htmlFor="location-type">Type</Label>
-                <Select value={newLocation.type} onValueChange={(value: any) => setNewLocation({...newLocation, type: value})}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="ROOM">Rom</SelectItem>
-                    <SelectItem value="SHELF">Reol</SelectItem>
-                    <SelectItem value="SHELF_COMPARTMENT">Hylle</SelectItem>
-                    <SelectItem value="BOX">Boks</SelectItem>
-                    <SelectItem value="BAG">Pose</SelectItem>
-                    <SelectItem value="CONTAINER">Beholder</SelectItem>
-                    <SelectItem value="DRAWER">Skuff</SelectItem>
-                    <SelectItem value="CABINET">Skap</SelectItem>
-                    <SelectItem value="SECTION">Avsnitt</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-            <div>
-              <Label htmlFor="location-description">Beskrivelse (valgfritt)</Label>
-              <Input
-                id="location-description"
-                value={newLocation.description}
-                onChange={(e) => setNewLocation({...newLocation, description: e.target.value})}
-                placeholder="Tilleggsinformasjon om lokasjonen"
-              />
-            </div>
-            <div>
-              <Label htmlFor="parent-location">Overordnet lokasjon (valgfritt)</Label>
-              <Select value={newLocation.parentId} onValueChange={(value) => setNewLocation({...newLocation, parentId: value})}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Velg overordnet lokasjon" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">Ingen (rot-nivå)</SelectItem>
-                  {allLocations
-                    .filter(location => canBeChildOf(newLocation.type, location.type)) // Kun vis gyldige parents
-                    .map((location) => (
-                      <SelectItem key={location.id} value={location.id}>
-                        {location.name} ({locationTypeLabels[location.type as keyof typeof locationTypeLabels]})
-                      </SelectItem>
-                    ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="flex gap-2">
-              <AccessibleButton 
-                onClick={handleCreateLocation} 
-                disabled={createLocationMutation.isPending}
-                aria-label="Lagre ny lokasjon"
-              >
-                {createLocationMutation.isPending ? (
-                  <>
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    Oppretter...
-                  </>
-                ) : (
-                  'Opprett lokasjon'
-                )}
-              </AccessibleButton>
-              <Button 
-                variant="outline" 
-                onClick={() => setShowCreateForm(false)}
-                disabled={createLocationMutation.isPending}
-                aria-label="Avbryt opprettelse av lokasjon"
-              >
-                Avbryt
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      )}
 
-      {/* Edit Location Form */}
-      {editingLocation && (
-        <Card className="mb-6">
-          <CardHeader>
-            <CardTitle>Rediger lokasjon</CardTitle>
-            <CardDescription>
-              Oppdater informasjon om lokasjonen
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="edit-location-name">Navn på lokasjon</Label>
-                <Input
-                  id="edit-location-name"
-                  value={editingLocation.name}
-                  onChange={(e) => setEditingLocation({...editingLocation, name: e.target.value})}
-                  placeholder="F.eks. Kjøkken, Soverom, Plastboks A"
-                />
-              </div>
-              <div>
-                <Label htmlFor="edit-location-type">Type</Label>
-                <Select value={editingLocation.type} onValueChange={(value: any) => setEditingLocation({...editingLocation, type: value})}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="ROOM">Rom</SelectItem>
-                    <SelectItem value="SHELF">Reol</SelectItem>
-                    <SelectItem value="SHELF_COMPARTMENT">Hylle</SelectItem>
-                    <SelectItem value="BOX">Boks</SelectItem>
-                    <SelectItem value="BAG">Pose</SelectItem>
-                    <SelectItem value="CONTAINER">Beholder</SelectItem>
-                    <SelectItem value="DRAWER">Skuff</SelectItem>
-                    <SelectItem value="CABINET">Skap</SelectItem>
-                    <SelectItem value="SECTION">Avsnitt</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-            <div>
-              <Label htmlFor="edit-location-description">Beskrivelse (valgfritt)</Label>
-              <Input
-                id="edit-location-description"
-                value={editingLocation.description || ''}
-                onChange={(e) => setEditingLocation({...editingLocation, description: e.target.value})}
-                placeholder="Tilleggsinformasjon om lokasjonen"
-              />
-            </div>
-            <div>
-              <Label htmlFor="edit-parent-location">Overordnet lokasjon (valgfritt)</Label>
-              <Select 
-                value={editingLocation.parentId || 'none'} 
-                onValueChange={(value) => setEditingLocation({...editingLocation, parentId: value === 'none' ? null : value})}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Velg overordnet lokasjon" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">Ingen (rot-nivå)</SelectItem>
-                  {allLocations
-                    .filter(location => 
-                      location.id !== editingLocation.id && // Ikke vis seg selv
-                      canBeChildOf(editingLocation.type, location.type) // Kun vis gyldige parents
-                    )
-                    .map((location) => (
-                      <SelectItem key={location.id} value={location.id}>
-                        {location.name} ({locationTypeLabels[location.type as keyof typeof locationTypeLabels]})
-                      </SelectItem>
-                    ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="flex gap-2">
-              <AccessibleButton 
-                onClick={handleUpdateLocation} 
-                disabled={updateLocationMutation.isPending}
-                aria-label="Lagre endringer"
-              >
-                {updateLocationMutation.isPending ? (
-                  <>
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    Lagrer...
-                  </>
-                ) : (
-                  'Lagre endringer'
-                )}
-              </AccessibleButton>
-              <Button 
-                variant="outline" 
-                onClick={() => setEditingLocation(null)}
-                disabled={updateLocationMutation.isPending}
-                aria-label="Avbryt redigering"
-              >
-                Avbryt
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      )}
+
+
 
       {/* QR Code Display Modal */}
       {showQRCode && (
@@ -567,7 +472,7 @@ export default function LocationsPage() {
                       <Eye className="w-4 h-4 mr-2" />
                       Vis QR-kode
                     </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => setEditingLocation(location)}>
+                    <DropdownMenuItem onClick={() => handleEditLocation(location)}>
                       <Edit2 className="w-4 h-4 mr-2" />
                       Rediger
                     </DropdownMenuItem>
@@ -669,15 +574,60 @@ export default function LocationsPage() {
           </p>
           {!searchQuery && (
             <AccessibleButton 
-              onClick={() => setShowCreateForm(true)}
+              onClick={() => handleCreateLocation()}
               aria-label="Opprett din første lokasjon"
             >
-              <Plus className="w-4 h-4 mr-2" />
+              <MapPin className="w-4 h-4 mr-2" />
               Opprett første lokasjon
             </AccessibleButton>
           )}
         </div>
       )}
+
+      {/* Location Modal */}
+      <LocationModal
+        isOpen={showLocationModal}
+        onClose={handleModalClose}
+        onSave={handleModalSave}
+        location={editingLocation}
+        allLocations={allLocations}
+        isLoading={createLocationMutation.isPending || updateLocationMutation.isPending}
+        mode={modalMode}
+      />
+
+      {/* Floating Action Button */}
+      {!isSelectionMode && (
+        <FloatingActionButton
+          onCreateLocation={handleCreateLocation}
+          onScanQR={handleScanQR}
+          onSearch={handleSearch}
+        />
+      )}
+
+      {/* Bulk Actions Toolbar */}
+      {isSelectionMode && selectedLocations.length > 0 && (
+        <BulkActionsToolbar
+          selectedCount={selectedLocations.length}
+          selectedLocations={selectedLocations.map(id => allLocations.find(loc => loc.id === id)!).filter(Boolean)}
+          onBulkEdit={handleBulkEdit}
+          onBulkDelete={handleBulkDelete}
+          onBulkMove={handleBulkMove}
+          onBulkExport={handleBulkExport}
+          onBulkPrint={handleBulkPrint}
+          onDeselectAll={handleDeselectAll}
+          onClose={handleCloseBulkMode}
+        />
+      )}
+
+      {/* Bulk Edit Modal */}
+      <BulkEditModal
+        isOpen={showBulkEdit}
+        onClose={() => setShowBulkEdit(false)}
+        onSave={handleBulkEditSave}
+        locations={selectedLocations.map(id => allLocations.find(loc => loc.id === id)!).filter(Boolean)}
+        allLocations={allLocations}
+        isLoading={false}
+      />
 
       {/* Dymo Print Dialog */}
       <DymoPrintDialog

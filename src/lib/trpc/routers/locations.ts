@@ -265,7 +265,10 @@ export const locationsRouter = createTRPCRouter({
       
       const location = await ctx.db.location.create({
         data: {
-          ...cleanedInput,
+          name: cleanedInput.name,
+          description: cleanedInput.description,
+          type: cleanedInput.type as any, // TypeScript workaround for SHELF_COMPARTMENT
+          parentId: cleanedInput.parentId || null,
           qrCode,
           userId: ctx.user.id
         },
@@ -292,7 +295,7 @@ export const locationsRouter = createTRPCRouter({
       name: z.string().min(1).optional(),
       description: z.string().optional(),
       type: z.enum(['ROOM', 'SHELF', 'BOX', 'CONTAINER', 'DRAWER', 'CABINET', 'SHELF_COMPARTMENT', 'BAG', 'SECTION']).optional(),
-      parentId: z.string().optional()
+      parentId: z.string().nullable().optional()
     }))
     .mutation(async ({ ctx, input }) => {
       const { id, ...updateData } = input
@@ -312,8 +315,15 @@ export const locationsRouter = createTRPCRouter({
         })
       }
       
+      // Clean parentId for update
+      if (updateData.parentId !== undefined) {
+        if (updateData.parentId === null || updateData.parentId === '') {
+          updateData.parentId = null
+        }
+      }
+
       // Verify new parent if specified
-      if (updateData.parentId) {
+      if (updateData.parentId && updateData.parentId !== null) {
         // Can't set self as parent
         if (updateData.parentId === id) {
           throw new TRPCError({
@@ -348,7 +358,12 @@ export const locationsRouter = createTRPCRouter({
       
       const location = await ctx.db.location.update({
         where: { id },
-        data: updateData,
+        data: {
+          name: updateData.name,
+          description: updateData.description,
+          type: updateData.type as any, // TypeScript workaround for SHELF_COMPARTMENT
+          parentId: updateData.parentId === undefined ? undefined : updateData.parentId
+        },
         include: {
           parent: true,
           children: true

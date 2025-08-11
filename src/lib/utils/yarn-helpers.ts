@@ -129,8 +129,19 @@ export async function calculateMasterTotals(
   
   const totals = batches.reduce((acc, batch) => {
     const batchData = batch.categoryData ? JSON.parse(batch.categoryData) : {}
-    const quantity = batchData.quantity || 0
-    const pricePerSkein = batchData.pricePerSkein || 0
+    const quantity = Number(batchData.quantity) || 0
+    const pricePerSkein = Number(batchData.pricePerSkein) || 0
+    
+    // Debug logging for quantity issues
+    if (process.env.NODE_ENV === 'development') {
+      console.log(`[DEBUG] Batch ${batch.id}:`, {
+        name: batch.name,
+        categoryDataQuantity: quantity,
+        availableQuantity: batch.availableQuantity,
+        totalQuantity: batch.totalQuantity,
+        categoryDataRaw: batch.categoryData
+      })
+    }
     
     return {
       totalSkeins: acc.totalSkeins + quantity,
@@ -144,6 +155,11 @@ export async function calculateMasterTotals(
     totalValue: 0,
     batchCount: 0
   })
+
+  // Debug final totals
+  if (process.env.NODE_ENV === 'development') {
+    console.log(`[DEBUG] Master ${masterId} totals:`, totals)
+  }
 
   return totals
 }
@@ -171,6 +187,24 @@ export async function createBatchForMaster(
     throw new Error('Garn Batch kategori ikke funnet')
   }
 
+  // Debug logging before creating batch
+  if (process.env.NODE_ENV === 'development') {
+    console.log(`[DEBUG] Creating batch with quantity:`, {
+      inputQuantity: batchData.quantity,
+      quantityType: typeof batchData.quantity,
+      batchData: JSON.stringify({
+        batchNumber: batchData.batchNumber,
+        color: batchData.color,
+        colorCode: batchData.colorCode,
+        quantity: batchData.quantity,
+        pricePerSkein: batchData.pricePerSkein,
+        condition: batchData.condition || 'Ny',
+        masterItemId: masterId,
+        notes: batchData.notes
+      })
+    })
+  }
+
   // Opprett batch item
   const batch = await db.item.create({
     data: {
@@ -179,8 +213,8 @@ export async function createBatchForMaster(
       userId: batchData.userId,
       categoryId: batchCategory.id,
       locationId: batchData.locationId,
-      totalQuantity: batchData.quantity,
-      availableQuantity: batchData.quantity,
+      totalQuantity: Math.floor(batchData.quantity), // Ensure it's an integer
+      availableQuantity: Number(batchData.quantity), // Ensure it's a number
       unit: batchData.unit || 'nøste',
       price: batchData.pricePerSkein,
       purchaseDate: batchData.purchaseDate,
@@ -205,6 +239,17 @@ export async function createBatchForMaster(
       relatedItems: true
     }
   })
+
+  // Debug logging after creating batch
+  if (process.env.NODE_ENV === 'development') {
+    console.log(`[DEBUG] Created batch:`, {
+      id: batch.id,
+      name: batch.name,
+      totalQuantity: batch.totalQuantity,
+      availableQuantity: batch.availableQuantity,
+      categoryData: batch.categoryData
+    })
+  }
 
   return batch
 }

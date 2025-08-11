@@ -55,13 +55,13 @@ export function AdvancedYarnSearch({ onSearch, onClear, isLoading }: AdvancedYar
   const [isExpanded, setIsExpanded] = useState(false)
   const [filters, setFilters] = useState<AdvancedSearchFilters>({
     searchQuery: '',
-    producer: '',
-    composition: '',
+    producer: 'all',
+    composition: 'all',
     yarnWeight: '',
-    needleSize: '',
+    needleSize: 'all',
     store: '',
     color: '',
-    condition: '',
+    condition: 'all',
     batchNumber: '',
     quantityRange: [0, 100],
     priceRange: [0, 500],
@@ -88,13 +88,13 @@ export function AdvancedYarnSearch({ onSearch, onClear, isLoading }: AdvancedYar
   const handleClear = () => {
     setFilters({
       searchQuery: '',
-      producer: '',
-      composition: '',
+      producer: 'all',
+      composition: 'all',
       yarnWeight: '',
-      needleSize: '',
+      needleSize: 'all',
       store: '',
       color: '',
-      condition: '',
+      condition: 'all',
       batchNumber: '',
       quantityRange: [0, 100],
       priceRange: [0, 500],
@@ -112,13 +112,13 @@ export function AdvancedYarnSearch({ onSearch, onClear, isLoading }: AdvancedYar
   const getActiveFilterCount = () => {
     let count = 0
     if (filters.searchQuery) count++
-    if (filters.producer) count++
-    if (filters.composition) count++
+    if (filters.producer !== 'all') count++
+    if (filters.composition !== 'all') count++
     if (filters.yarnWeight) count++
-    if (filters.needleSize) count++
+    if (filters.needleSize !== 'all') count++
     if (filters.store) count++
     if (filters.color) count++
-    if (filters.condition) count++
+    if (filters.condition !== 'all') count++
     if (filters.batchNumber) count++
     if (filters.availabilityStatus !== 'all') count++
     if (filters.purchaseDateFrom || filters.purchaseDateTo) count++
@@ -202,7 +202,7 @@ export function AdvancedYarnSearch({ onSearch, onClear, isLoading }: AdvancedYar
                       <SelectValue placeholder="Alle produsenter" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">Alle produsenter</SelectItem>
+                      <SelectItem value="all">Alle produsenter</SelectItem>
                       <SelectItem value="Garnstudio">Garnstudio</SelectItem>
                       <SelectItem value="Sandnes Garn">Sandnes Garn</SelectItem>
                       <SelectItem value="Dale Garn">Dale Garn</SelectItem>
@@ -220,7 +220,7 @@ export function AdvancedYarnSearch({ onSearch, onClear, isLoading }: AdvancedYar
                       <SelectValue placeholder="Alle fiber-typer" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">Alle fiber-typer</SelectItem>
+                      <SelectItem value="all">Alle fiber-typer</SelectItem>
                       <SelectItem value="wool">Ull</SelectItem>
                       <SelectItem value="cotton">Bomull</SelectItem>
                       <SelectItem value="acrylic">Akryl</SelectItem>
@@ -239,7 +239,7 @@ export function AdvancedYarnSearch({ onSearch, onClear, isLoading }: AdvancedYar
                       <SelectValue placeholder="Alle størrelser" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">Alle størrelser</SelectItem>
+                      <SelectItem value="all">Alle størrelser</SelectItem>
                       <SelectItem value="2.5mm">2.5mm</SelectItem>
                       <SelectItem value="3.0mm">3.0mm</SelectItem>
                       <SelectItem value="3.5mm">3.5mm</SelectItem>
@@ -278,7 +278,7 @@ export function AdvancedYarnSearch({ onSearch, onClear, isLoading }: AdvancedYar
                       <SelectValue placeholder="Alle tilstander" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">Alle tilstander</SelectItem>
+                      <SelectItem value="all">Alle tilstander</SelectItem>
                       <SelectItem value="Ny">Ny</SelectItem>
                       <SelectItem value="Brukt - god">Brukt - god</SelectItem>
                       <SelectItem value="Brukt - ok">Brukt - ok</SelectItem>
