@@ -13,7 +13,7 @@ import {
   Wifi,
   Download,
   Zap,
-  Touch,
+
   Vibrate,
   Battery,
   Signal,
@@ -28,7 +28,7 @@ import {
   Target
 } from 'lucide-react'
 import { MobileOptimizedCard, MobileItemCard, MobileLocationCard } from '@/components/mobile/MobileOptimizedCard'
-import { TouchFriendlyButton, TouchIconButton, TouchActionButton, TouchFloatingActionButton } from '@/components/mobile/TouchFriendlyButton'
+import { TouchFriendlyButton, TouchIconButton, TouchFloatingButton } from '@/components/ui/touch-friendly-button'
 import { OfflineStatusBanner, useOfflineStatus } from '@/components/mobile/OfflineStatusBanner'
 import { offlineManager } from '@/lib/offline/offline-manager'
 import { trpc } from '@/lib/trpc/client'
@@ -47,7 +47,7 @@ export default function MobileDemoPage() {
   // Sample data for demo
   const { data: sampleItemsData } = trpc.items.getAll.useQuery({ limit: 5 })
   const sampleItems = sampleItemsData?.items || []
-  const { data: sampleLocations = [] } = trpc.locations.getAll.useQuery({ limit: 3 })
+  const { data: sampleLocations = [] } = trpc.locations.getAll.useQuery()
 
   useEffect(() => {
     detectDeviceCapabilities()
@@ -324,26 +324,26 @@ export default function MobileDemoPage() {
                   Standard
                 </TouchFriendlyButton>
                 
-                <TouchActionButton 
+                <TouchFriendlyButton 
                   primary
                   onClick={() => toast.success('Primær knapp trykket!')}
                 >
                   Primær
-                </TouchActionButton>
+                </TouchFriendlyButton>
                 
-                <TouchActionButton 
+                <TouchFriendlyButton 
                   success
                   onClick={() => toast.success('Suksess knapp trykket!')}
                 >
                   Suksess
-                </TouchActionButton>
+                </TouchFriendlyButton>
                 
-                <TouchActionButton 
+                <TouchFriendlyButton 
                   danger
                   onClick={() => toast.error('Farlig knapp trykket!')}
                 >
                   Farlig
-                </TouchActionButton>
+                </TouchFriendlyButton>
               </div>
 
               <div className="flex gap-4">
@@ -541,7 +541,7 @@ export default function MobileDemoPage() {
       </Tabs>
 
       {/* Floating Action Button */}
-      <TouchFloatingActionButton
+      <TouchFloatingButton
         position="bottom-right"
         onClick={() => toast.success('Floating Action Button trykket!')}
         icon={<Download className="w-6 h-6" />}

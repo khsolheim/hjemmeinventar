@@ -407,7 +407,7 @@ export default function ItemsPage() {
                     <SelectValue placeholder="Velg kategori" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Ingen kategori</SelectItem>
+                    <SelectItem value="none">Ingen kategori</SelectItem>
                     {categories.map((category) => (
                       <SelectItem key={category.id} value={category.id}>
                         {category.icon && <span className="mr-2">{category.icon}</span>}
@@ -526,7 +526,7 @@ export default function ItemsPage() {
                     <SelectValue placeholder="Velg kategori" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Ingen kategori</SelectItem>
+                    <SelectItem value="none">Ingen kategori</SelectItem>
                     {categories.map((category) => (
                       <SelectItem key={category.id} value={category.id}>
                         {category.icon && <span className="mr-2">{category.icon}</span>}

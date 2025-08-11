@@ -10,7 +10,13 @@ import type {
 // Client-side socket instance
 let socket: Socket<ServerToClientEvents, ClientToServerEvents> | null = null
 
-export const initializeSocket = (token: string) => {
+export const initializeSocket = (token: string): Socket<ServerToClientEvents, ClientToServerEvents> | null => {
+  // Skip WebSocket initialization in development for now
+  if (process.env.NODE_ENV === 'development') {
+    console.log('WebSocket disabled in development mode')
+    return null
+  }
+  
   if (!socket) {
     socket = io(process.env.NEXT_PUBLIC_SOCKET_URL || '', {
       auth: { token: { userId: token } },
@@ -32,14 +38,17 @@ export const initializeSocket = (token: string) => {
 
     socket.on('connect_error', (error) => {
       console.error('WebSocket connection error:', error)
-      toast.error('Tilkoblingsfeil til live-tjenester')
+      // Only show error in production
+      if (process.env.NODE_ENV === 'production') {
+        toast.error('Tilkoblingsfeil til live-tjenester')
+      }
     })
   }
 
   return socket
 }
 
-export const getSocket = () => socket
+export const getSocket = (): Socket<ServerToClientEvents, ClientToServerEvents> | null => socket
 
 export const disconnectSocket = () => {
   if (socket) {
@@ -60,44 +69,47 @@ export function useSocket() {
       const socketInstance = initializeSocket(session.user.id)
       socketRef.current = socketInstance
 
-      socketInstance.connect()
+      // Only proceed if socket is not null (i.e., not in development mode)
+      if (socketInstance) {
+        socketInstance.connect()
 
-      // Set up event listeners
-      socketInstance.on('connect', () => {
-        setIsConnected(true)
-      })
-
-      socketInstance.on('disconnect', () => {
-        setIsConnected(false)
-      })
-
-      // Handle user online/offline events
-      socketInstance.on('user:online', ({ user, householdId }) => {
-        setOnlineUsers(prev => {
-          const updated = new Map(prev)
-          updated.set(`${user.id}-${householdId}`, { ...user, householdId })
-          return updated
+        // Set up event listeners
+        socketInstance.on('connect', () => {
+          setIsConnected(true)
         })
-        
-        toast.success(`${user.name || user.email} kom online`, {
-          duration: 2000
-        })
-      })
 
-      socketInstance.on('user:offline', ({ user, householdId }) => {
-        setOnlineUsers(prev => {
-          const updated = new Map(prev)
-          updated.delete(`${user.id}-${householdId}`)
-          return updated
+        socketInstance.on('disconnect', () => {
+          setIsConnected(false)
         })
-        
-        toast.info(`${user.name || user.email} gikk offline`, {
-          duration: 2000
-        })
-      })
 
-      return () => {
-        socketInstance.disconnect()
+        // Handle user online/offline events
+        socketInstance.on('user:online', ({ user, householdId }) => {
+          setOnlineUsers(prev => {
+            const updated = new Map(prev)
+            updated.set(`${user.id}-${householdId}`, { ...user, householdId })
+            return updated
+          })
+          
+          toast.success(`${user.name || user.email} kom online`, {
+            duration: 2000
+          })
+        })
+
+        socketInstance.on('user:offline', ({ user, householdId }) => {
+          setOnlineUsers(prev => {
+            const updated = new Map(prev)
+            updated.delete(`${user.id}-${householdId}`)
+            return updated
+          })
+          
+          toast.info(`${user.name || user.email} gikk offline`, {
+            duration: 2000
+          })
+        })
+
+        return () => {
+          socketInstance.disconnect()
+        }
       }
     }
 
@@ -293,7 +305,7 @@ export function useTypingIndicator(context: string, householdId: string) {
   const [typingUsers, setTypingUsers] = useState<Set<string>>(new Set())
   const [isTyping, setIsTyping] = useState(false)
   const { startTyping, stopTyping } = useSocket()
-  const typingTimeoutRef = useRef<NodeJS.Timeout>()
+  const typingTimeoutRef = useRef<NodeJS.Timeout | undefined>(undefined)
 
   useEffect(() => {
     const socket = getSocket()

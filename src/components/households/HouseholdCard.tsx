@@ -32,11 +32,11 @@ import { HouseholdRole } from '@prisma/client'
 interface HouseholdMember {
   id: string
   role: HouseholdRole
-  joinedAt: Date
+  joinedAt: string | Date
   user: {
     id: string
     name: string | null
-    email: string
+    email?: string
     image: string | null
   }
 }
@@ -45,7 +45,7 @@ interface Household {
   id: string
   name: string
   description: string | null
-  createdAt: Date
+  createdAt: string | Date
   myRole: HouseholdRole
   memberCount: number
   members: HouseholdMember[]
@@ -87,11 +87,11 @@ export function HouseholdCard({ household, onLeave, onDelete }: HouseholdCardPro
     )
   }
 
-  const getInitials = (name: string | null, email: string) => {
+  const getInitials = (name: string | null, email?: string) => {
     if (name) {
       return name.split(' ').map(n => n[0]).join('').toUpperCase()
     }
-    return email.substring(0, 2).toUpperCase()
+    return email ? email.substring(0, 2).toUpperCase() : 'U'
   }
 
   const canManage = household.myRole === 'ADMIN'

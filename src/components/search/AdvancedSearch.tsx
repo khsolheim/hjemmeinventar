@@ -74,9 +74,12 @@ export function AdvancedSearch({
   const [isExpanded, setIsExpanded] = useState(!showCompact)
 
   // Hent data for filter options
-  const { data: categories = [] } = trpc.categories.getAll.useQuery()
-  const { data: locations = [] } = trpc.locations.getAll.useQuery()
-  const { data: tags = [] } = trpc.tags.getAll.useQuery()
+  const { data: categoriesData } = trpc.categories.getAll.useQuery()
+  const categories = categoriesData || []
+  const { data: locationsData } = trpc.locations.getAll.useQuery()
+  const locations = locationsData || []
+  // const { data: tagsData } = trpc.tags.getAll.useQuery()
+  const tags: any[] = [] // Mock for now
 
   const updateFilters = (newFilters: Partial<SearchFilters>) => {
     const updated = { ...filters, ...newFilters }
@@ -230,7 +233,7 @@ export function AdvancedSearch({
             Kategorier
           </Label>
           <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-            {categories.map((category) => (
+                              {categories.map((category: any) => (
               <div key={category.id} className="flex items-center space-x-2">
                 <Checkbox
                   id={`category-${category.id}`}
@@ -410,6 +413,7 @@ export function AdvancedSearch({
                       updateFilters({
                         dateRange: {
                           ...filters.dateRange,
+                          field: filters.dateRange?.field || 'createdAt',
                           from: range.from,
                           to: range.to
                         }

@@ -1,11 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '../../auth/[...nextauth]/route'
+import { auth } from '@/lib/auth'
 import { triggerNotificationCheck } from '@/lib/automation/notification-jobs'
 
 export async function POST(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions)
+    const session = await auth()
 
     if (!session?.user?.id) {
       return NextResponse.json(
@@ -49,7 +48,7 @@ export async function GET(request: NextRequest) {
     const cronSecret = process.env.CRON_SECRET
 
     // Allow access for authenticated users or valid cron requests
-    const session = await getServerSession(authOptions)
+    const session = await auth()
     const isValidCron = cronSecret && authHeader === `Bearer ${cronSecret}`
 
     if (!session?.user?.id && !isValidCron) {

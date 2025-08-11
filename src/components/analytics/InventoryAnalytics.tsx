@@ -100,8 +100,8 @@ export function InventoryAnalytics() {
   const { data: locationAnalytics } = trpc.analytics.getLocationAnalytics.useQuery()
   const { data: activityInsights } = trpc.analytics.getActivityInsights.useQuery({ days: 30 })
 
-  const exportData = trpc.analytics.getExportData.useMutation({
-    onSuccess: (data) => {
+  const exportDataMutation = trpc.importExport.exportData.useMutation({
+    onSuccess: (data: any) => {
       // Create and download file
       const content = exportFormat === 'json' 
         ? JSON.stringify(data, null, 2)
@@ -128,7 +128,10 @@ export function InventoryAnalytics() {
 
   const handleExport = async () => {
     setIsExporting(true)
-    await exportData.mutateAsync({ format: exportFormat, includeImages: false })
+    await exportDataMutation.mutateAsync({ 
+      template: 'INVENTORY_FULL',
+      format: exportFormat 
+    })
   }
 
   const convertToCSV = (data: any[]) => {

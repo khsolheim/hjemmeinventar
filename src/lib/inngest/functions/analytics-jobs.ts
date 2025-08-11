@@ -17,7 +17,7 @@ export const generateAnalytics = inngest.createFunction(
       const stats = {
         totalItems: await db.item.count({ where }),
         totalLocations: await db.location.count({ where }),
-        totalCategories: await db.category.count({ where }),
+        totalCategories: await db.category.count(),
         totalValue: 0,
         itemsAddedThisPeriod: 0,
         itemsExpiringSoon: 0,
@@ -74,16 +74,14 @@ export const generateAnalytics = inngest.createFunction(
 
     // Step 2: Generate category analytics
     const categoryAnalytics = await step.run('generate-category-analytics', async () => {
-      const where = userId ? { userId } : {}
-      
       const categories = await db.category.findMany({
-        where,
         include: {
           items: {
+            where: userId ? { userId } : {},
             select: {
               id: true,
               price: true,
-              quantity: true,
+              totalQuantity: true,
               createdAt: true
             }
           }
@@ -91,13 +89,13 @@ export const generateAnalytics = inngest.createFunction(
       })
 
       return categories.map(category => {
-        const totalValue = category.items.reduce((sum, item) => 
-          sum + (item.price || 0) * item.quantity, 0
+        const totalValue = category.items.reduce((sum: number, item: any) => 
+          sum + (item.price || 0) * item.totalQuantity, 0
         )
         
         const periodStart = getPeriodStart(type, date)
         const itemsAddedThisPeriod = category.items.filter(
-          item => item.createdAt >= periodStart
+          (item: any) => item.createdAt >= periodStart
         ).length
 
         return {
@@ -122,7 +120,7 @@ export const generateAnalytics = inngest.createFunction(
             select: {
               id: true,
               price: true,
-              quantity: true,
+              totalQuantity: true,
               createdAt: true
             }
           }
@@ -130,8 +128,8 @@ export const generateAnalytics = inngest.createFunction(
       })
 
       return locations.map(location => {
-        const totalValue = location.items.reduce((sum, item) => 
-          sum + (item.price || 0) * item.quantity, 0
+        const totalValue = location.items.reduce((sum: number, item: any) => 
+          sum + (item.price || 0) * item.totalQuantity, 0
         )
         
         const utilizationPercentage = location.items.length > 0 
@@ -201,7 +199,7 @@ export const generateAnalytics = inngest.createFunction(
           type: 'ANALYTICS_GENERATED',
           description: `${type.charAt(0).toUpperCase() + type.slice(1)} analytics generated`,
           userId: userId || 'system',
-          metadata: analyticsData
+          metadata: JSON.stringify(analyticsData)
         }
       })
 

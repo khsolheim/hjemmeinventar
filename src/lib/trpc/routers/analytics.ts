@@ -6,7 +6,8 @@ export const analyticsRouter = createTRPCRouter({
   // Get comprehensive inventory statistics
   getInventoryStats: protectedProcedure
     .query(async ({ ctx }) => {
-      const userId = ctx.session.user.id
+      const userId = ctx.session?.user?.id || ctx.user?.id
+      if (!userId) throw new Error('User not authenticated')
 
       // Get basic counts
       const [items, locations, activities, loans] = await Promise.all([
@@ -66,7 +67,7 @@ export const analyticsRouter = createTRPCRouter({
           totalValue,
           averageValue,
           totalActivities: activities.length,
-          activeLoans: loans.filter(loan => !loan.returnedAt).length
+          activeLoans: loans.filter(loan => loan.status === 'OUT').length
         },
         categoryDistribution,
         locationUsage,
@@ -84,12 +85,12 @@ export const analyticsRouter = createTRPCRouter({
   // Get detailed category analytics
   getCategoryAnalytics: protectedProcedure
     .query(async ({ ctx }) => {
-      const userId = ctx.session.user.id
+      const userId = ctx.user.id
 
-      const categories = await db.category.findMany({
-        where: { userId },
+      const categories = await ctx.db.category.findMany({
         include: {
           items: {
+            where: { userId },
             include: { location: true }
           }
         }
@@ -119,7 +120,8 @@ export const analyticsRouter = createTRPCRouter({
   // Get location analytics
   getLocationAnalytics: protectedProcedure
     .query(async ({ ctx }) => {
-      const userId = ctx.session.user.id
+      const userId = ctx.session?.user?.id || ctx.user?.id
+      if (!userId) throw new Error('User not authenticated')
 
       const locations = await db.location.findMany({
         where: { userId },
@@ -154,7 +156,8 @@ export const analyticsRouter = createTRPCRouter({
       days: z.number().default(30)
     }))
     .query(async ({ ctx, input }) => {
-      const userId = ctx.session.user.id
+      const userId = ctx.session?.user?.id || ctx.user?.id
+      if (!userId) throw new Error('User not authenticated')
       const startDate = new Date()
       startDate.setDate(startDate.getDate() - input.days)
 
@@ -170,7 +173,7 @@ export const analyticsRouter = createTRPCRouter({
 
       // Group by action type
       const actionTypes = activities.reduce((acc, activity) => {
-        acc[activity.action] = (acc[activity.action] || 0) + 1
+        acc[activity.type] = (acc[activity.type] || 0) + 1
         return acc
       }, {} as Record<string, number>)
 
@@ -206,7 +209,8 @@ export const analyticsRouter = createTRPCRouter({
       format: z.enum(['json', 'csv']).default('json')
     }))
     .query(async ({ ctx, input }) => {
-      const userId = ctx.session.user.id
+      const userId = ctx.session?.user?.id || ctx.user?.id
+      if (!userId) throw new Error('User not authenticated')
 
       const items = await db.item.findMany({
         where: { userId },
@@ -221,7 +225,7 @@ export const analyticsRouter = createTRPCRouter({
         id: item.id,
         navn: item.name,
         beskrivelse: item.description,
-        antall: item.quantity,
+        antall: item.totalQuantity,
         kategori: item.category?.name || 'Ukategorisert',
         lokasjon: item.location.name,
         pris: item.price,
@@ -232,7 +236,7 @@ export const analyticsRouter = createTRPCRouter({
         registrert: item.createdAt.toISOString().split('T')[0],
         oppdatert: item.updatedAt.toISOString().split('T')[0],
         ...(input.includeImages && { bildeUrl: item.imageUrl }),
-        ...item.categoryData // Include category-specific fields
+        ...(item.categoryData ? JSON.parse(item.categoryData) : {}) // Include category-specific fields
       }))
 
       return {

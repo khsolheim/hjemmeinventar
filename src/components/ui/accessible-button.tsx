@@ -7,6 +7,14 @@ interface AccessibleButtonProps extends ButtonProps {
   'aria-describedby'?: string
   loading?: boolean
   loadingText?: string
+  children?: React.ReactNode
+  onClick?: (event: React.MouseEvent<HTMLButtonElement>) => void
+  asChild?: boolean
+  variant?: "default" | "destructive" | "outline" | "secondary" | "ghost" | "link"
+  disabled?: boolean
+  type?: "button" | "submit" | "reset"
+  size?: "default" | "sm" | "lg" | "icon"
+  className?: string
 }
 
 const AccessibleButton = forwardRef<HTMLButtonElement, AccessibleButtonProps>(
@@ -18,7 +26,6 @@ const AccessibleButton = forwardRef<HTMLButtonElement, AccessibleButtonProps>(
     ...props 
   }, ref) => (
     <Button
-      ref={ref}
       aria-label={loading ? `${ariaLabel} - ${loadingText}` : ariaLabel}
       aria-busy={loading}
       aria-disabled={loading || props.disabled}

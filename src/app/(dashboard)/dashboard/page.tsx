@@ -19,6 +19,40 @@ export default function DashboardPage() {
   const isLoading = itemsLoading || locationsLoading
   const hasErrors = itemsError || locationsError || activitiesError
 
+  // Check if user needs to login (auth error)
+  const needsAuth = itemsError?.message?.includes('UNAUTHORIZED') || 
+                   locationsError?.message?.includes('UNAUTHORIZED') ||
+                   activitiesError?.message?.includes('UNAUTHORIZED')
+
+  if (needsAuth) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <Card className="w-full max-w-md">
+          <CardHeader className="text-center">
+            <CardTitle>🔐 Innlogging påkrevd</CardTitle>
+            <CardDescription>
+              Du må logge deg inn for å få tilgang til dashbordet
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="text-center space-y-4">
+            <p className="text-sm text-muted-foreground">
+              Bruk følgende testbruker:
+            </p>
+            <div className="bg-muted p-3 rounded text-sm">
+              <div><strong>Email:</strong> test@example.com</div>
+              <div><strong>Passord:</strong> test123</div>
+            </div>
+            <Button asChild className="w-full">
+              <Link href="/auth/signin">
+                Gå til innlogging
+              </Link>
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
+
   // Extract items from the response object
   const items = itemsData?.items || []
 
@@ -257,9 +291,9 @@ export default function DashboardPage() {
                 <Loader2 className="w-6 h-6 animate-spin" />
                 <span className="ml-2">Laster aktiviteter...</span>
               </div>
-            ) : activities.length > 0 ? (
+            ) : activities && 'activities' in activities && activities.activities?.length > 0 ? (
               <div className="space-y-3">
-                {activities.slice(0, 5).map((activity) => (
+                {activities.activities.slice(0, 5).map((activity: any) => (
                   <div key={activity.id} className="flex items-center gap-3 p-2 rounded hover:bg-muted/50">
                     <div className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center">
                       <Package className="w-4 h-4 text-primary" />

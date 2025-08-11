@@ -29,9 +29,14 @@ export default function SignInPage() {
 
       if (result?.error) {
         toast.error('Ugyldig e-post eller passord')
-      } else {
+      } else if (result?.ok) {
         toast.success('Velkommen tilbake!')
-        router.push('/dashboard')
+        // Wait a moment for session to be established, then redirect
+        setTimeout(() => {
+          window.location.href = '/dashboard'
+        }, 500)
+      } else {
+        toast.error('Innlogging feilet. Prøv igjen.')
       }
     } catch (error) {
       toast.error('Noe gikk galt. Prøv igjen.')

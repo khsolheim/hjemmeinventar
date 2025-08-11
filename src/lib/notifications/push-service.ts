@@ -82,7 +82,7 @@ export class PushNotificationService {
           userVisibleOnly: true,
           applicationServerKey: this.urlBase64ToUint8Array(
             process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY || ''
-          )
+          ).buffer as ArrayBuffer
         })
       }
 
@@ -164,8 +164,7 @@ export class PushNotificationService {
         url: data.url,
         items: data.items
       },
-      requireInteraction: data.requireInteraction || false,
-      vibrate: [200, 100, 200]
+      requireInteraction: data.requireInteraction || false
     }
 
     const notification = new Notification(data.title, options)

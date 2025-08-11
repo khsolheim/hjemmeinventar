@@ -128,7 +128,7 @@ export default function LocationsPage() {
       name: newLocation.name,
       type: newLocation.type,
       description: newLocation.description || undefined,
-      parentId: newLocation.parentId || undefined
+      parentId: newLocation.parentId === '' ? undefined : newLocation.parentId
     })
   }
 
@@ -143,7 +143,7 @@ export default function LocationsPage() {
       name: editingLocation.name,
       type: editingLocation.type,
       description: editingLocation.description || undefined,
-      parentId: editingLocation.parentId || undefined
+      parentId: editingLocation.parentId === '' ? undefined : editingLocation.parentId
     })
   }
 
@@ -317,7 +317,7 @@ export default function LocationsPage() {
                   <SelectValue placeholder="Velg overordnet lokasjon" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Ingen (rot-nivå)</SelectItem>
+                  <SelectItem value="none">Ingen (rot-nivå)</SelectItem>
                   {locations.map((location) => (
                     <SelectItem key={location.id} value={location.id}>
                       {location.name} ({locationTypeLabels[location.type as keyof typeof locationTypeLabels]})

@@ -7,6 +7,7 @@ import {
   ImportCategorySchema,
   importService 
 } from '@/lib/import-export/import-service'
+import { generateUniqueQRCode } from '@/lib/db'
 import { 
   exportService, 
   ExportTemplates,
@@ -37,13 +38,15 @@ export const importExportRouter = createTRPCRouter({
           type: input.fileName.endsWith('.csv') ? 'text/csv' : 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
         })
 
-        // Select appropriate schema
-        const schema = input.type === 'items' ? ImportItemSchema :
-                      input.type === 'locations' ? ImportLocationSchema :
-                      ImportCategorySchema
-
-        // Parse and validate file
-        const result = await importService.parseFile(file, schema, input.options)
+        // Parse and validate file based on type
+        let result: any
+        if (input.type === 'items') {
+          result = await importService.parseFile(file, ImportItemSchema, input.options)
+        } else if (input.type === 'locations') {
+          result = await importService.parseFile(file, ImportLocationSchema, input.options)
+        } else {
+          result = await importService.parseFile(file, ImportCategorySchema, input.options)
+        }
 
         // For items, check against existing data
         if (input.type === 'items' && result.data.length > 0) {
@@ -117,8 +120,8 @@ export const importExportRouter = createTRPCRouter({
                 }
               }
 
-              // Find or create location
-              let locationId = null
+              // Find or create location - required for all items
+              let locationId: string | null = null
               if (itemData.locationName) {
                 const location = await prisma.location.findFirst({
                   where: { 
@@ -129,15 +132,24 @@ export const importExportRouter = createTRPCRouter({
                 if (location) {
                   locationId = location.id
                 } else if (input.options?.createMissingReferences) {
+                  // Generate unique QR code
+                  const qrCode = await generateUniqueQRCode()
                   const newLocation = await prisma.location.create({
                     data: {
                       name: itemData.locationName,
-                      type: 'OTHER',
+                      type: 'BOX',
+                      qrCode,
                       userId: ctx.user.id
                     }
                   })
                   locationId = newLocation.id
                 }
+              }
+
+              // Skip items without valid location since locationId is required
+              if (!locationId) {
+                errors.push(`Item "${itemData.name}" skipped: Missing required location`)
+                continue
               }
 
               // Check for existing item
@@ -214,29 +226,37 @@ export const importExportRouter = createTRPCRouter({
                 }
               })
 
-              const locationPayload = {
-                name: locationData.name,
-                description: locationData.description,
-                type: locationData.type || 'OTHER',
-                capacity: locationData.capacity,
-                notes: locationData.notes,
-                parentId,
-                userId: ctx.user.id
-              }
-
               if (existingLocation && input.options?.skipDuplicates) {
                 continue
               }
 
               if (existingLocation && input.options?.updateExisting) {
+                const updatePayload = {
+                  name: locationData.name,
+                  description: locationData.description,
+                  type: locationData.type || 'OTHER',
+                  capacity: locationData.capacity,
+                  notes: locationData.notes,
+                  parentId
+                }
                 await prisma.location.update({
                   where: { id: existingLocation.id },
-                  data: locationPayload
+                  data: updatePayload
                 })
                 updated++
               } else if (!existingLocation) {
+                const createPayload = {
+                  name: locationData.name,
+                  description: locationData.description,
+                  type: locationData.type || 'OTHER',
+                  capacity: locationData.capacity,
+                  notes: locationData.notes,
+                  parentId,
+                  userId: ctx.user.id,
+                  qrCode: await generateUniqueQRCode()
+                }
                 await prisma.location.create({
-                  data: locationPayload
+                  data: createPayload
                 })
                 created++
               }
@@ -401,7 +421,7 @@ export const importExportRouter = createTRPCRouter({
                   select: { items: true }
                 },
                 items: {
-                  select: { estimatedValue: true }
+                  select: { price: true }
                 }
               }
             })

@@ -23,6 +23,7 @@ export interface LabelData {
 export interface PrintOptions {
   printerName?: string
   copies?: number
+  labelSize?: 'small' | 'standard' | 'large'
   jobTitle?: string
   flowDirection?: 'LeftToRight' | 'RightToLeft'
   alignment?: 'Left' | 'Center' | 'Right'

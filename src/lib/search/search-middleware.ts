@@ -10,7 +10,7 @@ export function createSearchMiddleware() {
             const result = await query(args)
             
             // Index the new item
-            if (result) {
+            if (result && result.id) {
               await indexItem(result.id)
             }
             
@@ -21,7 +21,7 @@ export function createSearchMiddleware() {
             const result = await query(args)
             
             // Re-index the updated item
-            if (result) {
+            if (result && result.id) {
               await indexItem(result.id)
             }
             
@@ -62,7 +62,7 @@ export function createSearchMiddleware() {
           async create({ args, query }) {
             const result = await query(args)
             
-            if (result) {
+            if (result && result.id) {
               await indexLocation(result.id)
             }
             
@@ -72,7 +72,7 @@ export function createSearchMiddleware() {
           async update({ args, query }) {
             const result = await query(args)
             
-            if (result) {
+            if (result && result.id) {
               await indexLocation(result.id)
             }
             
@@ -95,7 +95,7 @@ export function createSearchMiddleware() {
           async create({ args, query }) {
             const result = await query(args)
             
-            if (result) {
+            if (result && result.id) {
               await indexCategory(result.id)
             }
             
@@ -105,7 +105,7 @@ export function createSearchMiddleware() {
           async update({ args, query }) {
             const result = await query(args)
             
-            if (result) {
+            if (result && result.id) {
               await indexCategory(result.id)
             }
             
@@ -154,7 +154,7 @@ async function indexItem(itemId: string) {
       locationName: item.location?.name,
       tags: item.tags.map(t => t.name),
       price: item.price || undefined,
-      quantity: item.quantity,
+      quantity: item.totalQuantity,
       expiryDate: item.expiryDate?.toISOString(),
       imageUrl: item.imageUrl || undefined,
       createdAt: item.createdAt.toISOString(),
@@ -212,7 +212,6 @@ async function indexCategory(categoryId: string) {
       type: 'category',
       name: category.name,
       description: category.description || undefined,
-      userId: category.userId,
       icon: category.icon || undefined,
       itemCount: category._count.items,
       createdAt: category.createdAt.toISOString(),

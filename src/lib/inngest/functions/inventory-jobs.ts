@@ -155,7 +155,7 @@ export const dailyInventoryMaintenance = inngest.createFunction(
             locationName: item.location?.name,
             tags: item.tags.map(t => t.name),
             price: item.price || undefined,
-            quantity: item.quantity,
+            quantity: item.totalQuantity,
             expiryDate: item.expiryDate?.toISOString(),
             imageUrl: item.imageUrl || undefined,
             createdAt: item.createdAt.toISOString(),
@@ -248,24 +248,9 @@ export const weeklyInventoryCleanup = inngest.createFunction(
         issues.push(`${itemsWithoutCategory} items without category`)
       }
 
-      // Check for items without locations
-      const itemsWithoutLocation = await db.item.count({
-        where: { locationId: null }
-      })
-      if (itemsWithoutLocation > 0) {
-        issues.push(`${itemsWithoutLocation} items without location`)
-      }
+      // Note: locationId is required in schema, so no need to check for items without locations
 
-      // Check for orphaned loans (items deleted but loans still active)
-      const orphanedLoans = await db.loan.count({
-        where: {
-          item: null,
-          status: { in: ['OUT', 'OVERDUE'] }
-        }
-      })
-      if (orphanedLoans > 0) {
-        issues.push(`${orphanedLoans} orphaned loans`)
-      }
+      // Note: Loans have cascade delete on items, so no orphaned loans possible
 
       console.log(`Data consistency check: ${issues.length} issues found`)
       return issues
@@ -313,7 +298,7 @@ export const onItemCreated = inngest.createFunction(
           locationName: item.location?.name,
           tags: item.tags.map(t => t.name),
           price: item.price || undefined,
-          quantity: item.quantity,
+          quantity: item.totalQuantity,
           expiryDate: item.expiryDate?.toISOString(),
           imageUrl: item.imageUrl || undefined,
           createdAt: item.createdAt.toISOString(),
@@ -396,12 +381,12 @@ export const sendUserNotification = inngest.createFunction(
             type: 'SYSTEM_NOTIFICATION',
             description: `Varsel sendt: ${title}`,
             userId,
-            metadata: {
+            metadata: JSON.stringify({
               notificationType: type,
               title,
               message,
               data
-            }
+            })
           }
         })
         

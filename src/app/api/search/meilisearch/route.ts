@@ -1,11 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '../../auth/[...nextauth]/route'
+import { auth } from '@/lib/auth'
 import { meilisearchService } from '@/lib/search/meilisearch-service'
 
 export async function POST(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions)
+    const session = await auth()
 
     if (!session?.user?.id) {
       return NextResponse.json(
@@ -58,7 +57,7 @@ export async function POST(request: NextRequest) {
 // GET endpoint for facets and suggestions
 export async function GET(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions)
+    const session = await auth()
 
     if (!session?.user?.id) {
       return NextResponse.json(

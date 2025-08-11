@@ -53,10 +53,12 @@ function CreateLoanDialog({ itemId, isOpen, onClose }: LoanDialogProps) {
   const [notes, setNotes] = useState('')
   const [selectedItemId, setSelectedItemId] = useState(itemId || '')
 
-  const { data: availableItems } = trpc.items.getAll.useQuery({
+  const { data: availableItemsData } = trpc.items.getAll.useQuery({
     // Only get items that are not currently loaned out
     filter: 'available'
   })
+  
+  const availableItems = availableItemsData?.items || []
 
   const createLoan = trpc.loans.create.useMutation({
     onSuccess: () => {
@@ -171,9 +173,9 @@ function CreateLoanDialog({ itemId, isOpen, onClose }: LoanDialogProps) {
           </Button>
           <Button 
             onClick={handleSubmit}
-            disabled={!selectedItemId || !loanedTo.trim() || createLoan.isLoading}
+            disabled={!selectedItemId || !loanedTo.trim() || createLoan.isPending}
           >
-            {createLoan.isLoading ? (
+            {createLoan.isPending ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 Registrerer...
@@ -227,12 +229,12 @@ export default function LoansPage() {
   })
 
   const handleReturnLoan = (loanId: string) => {
-    returnLoan.mutate({ loanId })
+    returnLoan.mutate({ loanId: loanId })
   }
 
   const handleDeleteLoan = (loanId: string) => {
     if (confirm('Er du sikker på at du vil slette dette utlånet?')) {
-      deleteLoan.mutate({ loanId })
+      deleteLoan.mutate(loanId)
     }
   }
 
@@ -457,7 +459,7 @@ export default function LoansPage() {
                             variant="default"
                             size="sm"
                             onClick={() => handleReturnLoan(loan.id)}
-                            disabled={returnLoan.isLoading}
+                            disabled={returnLoan.isPending}
                           >
                             <CheckCircle className="w-4 h-4 mr-1" />
                             Marker som returnert

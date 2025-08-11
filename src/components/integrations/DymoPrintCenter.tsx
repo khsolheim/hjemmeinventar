@@ -68,7 +68,8 @@ export function DymoPrintCenter() {
   const [previewType, setPreviewType] = useState<'qr' | 'barcode'>('qr')
 
   // Get items for bulk printing
-  const { data: items = [] } = trpc.items.getAll.useQuery({ limit: 1000 })
+  const { data: itemsData } = trpc.items.getAll.useQuery({ limit: 1000 })
+  const items = itemsData?.items || []
   const { data: locations = [] } = trpc.locations.getAll.useQuery()
 
   useEffect(() => {

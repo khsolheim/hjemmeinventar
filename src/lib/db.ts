@@ -92,7 +92,7 @@ export async function logActivity({
 
 // Transaction helper for complex operations
 export async function withTransaction<T>(
-  fn: (tx: PrismaClient) => Promise<T>
+  fn: (tx: Omit<PrismaClient, '$connect' | '$disconnect' | '$on' | '$transaction' | '$use' | '$extends'>) => Promise<T>
 ): Promise<T> {
   return await db.$transaction(fn)
 }

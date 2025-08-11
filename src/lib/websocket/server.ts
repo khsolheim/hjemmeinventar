@@ -1,7 +1,6 @@
 import { Server as HTTPServer } from 'http'
 import { Server as SocketIOServer, Socket } from 'socket.io'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
+import { auth } from '@/lib/auth'
 import { db } from '@/lib/db'
 
 interface SocketUser {

@@ -137,13 +137,13 @@ export const loansRouter = createTRPCRouter({
       status: z.enum(['OUT', 'RETURNED', 'OVERDUE']).optional(),
       limit: z.number().min(1).max(100).default(50),
       offset: z.number().min(0).default(0)
-    }))
+    }).optional())
     .query(async ({ ctx, input }) => {
       const where: any = {
         userId: ctx.user.id
       }
       
-      if (input.status) {
+      if (input?.status) {
         where.status = input.status
       }
       
@@ -166,8 +166,8 @@ export const loansRouter = createTRPCRouter({
             }
           },
           orderBy: { loanDate: 'desc' },
-          take: input.limit,
-          skip: input.offset
+          take: input?.limit || 50,
+          skip: input?.offset || 0
         }),
         ctx.db.loan.count({ where })
       ])
@@ -333,11 +333,12 @@ export const loansRouter = createTRPCRouter({
   // Get loan statistics
   getStats: protectedProcedure
     .input(z.object({
-      days: z.number().min(1).max(365).default(30)
-    }))
-    .query(async ({ ctx, input }) => {
+      days: z.number().min(1).max(365).optional()
+    }).optional())
+    .query(async ({ ctx, input = {} }) => {
+      const days = input.days || 30
       const startDate = new Date()
-      startDate.setDate(startDate.getDate() - input.days)
+      startDate.setDate(startDate.getDate() - days)
       
       const [
         activeLoans,

@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '../../auth/[...nextauth]/route'
+import { auth } from '@/lib/auth'
 import webpush from 'web-push'
 
 // Configure web-push with VAPID keys
@@ -20,7 +19,7 @@ if (vapidKeys.publicKey && vapidKeys.privateKey) {
 
 export async function POST(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions)
+    const session = await auth()
 
     if (!session?.user?.id) {
       return NextResponse.json(
@@ -108,7 +107,7 @@ export async function POST(request: NextRequest) {
           // })
         }
         
-        return { success: false, endpoint: subscription.endpoint, error: error.message }
+        return { success: false, endpoint: subscription.endpoint, error: error instanceof Error ? error.message : 'Unknown error' }
       }
     })
 
@@ -139,7 +138,7 @@ export async function POST(request: NextRequest) {
 // GET endpoint to test the notification system
 export async function GET(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions)
+    const session = await auth()
 
     if (!session?.user?.id) {
       return NextResponse.json(

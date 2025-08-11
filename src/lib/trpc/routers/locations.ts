@@ -11,6 +11,7 @@ export const locationsRouter = createTRPCRouter({
       const locations = await ctx.db.location.findMany({
         where: { userId: ctx.user.id },
         include: {
+          parent: true,
           children: {
             include: {
               children: true,
@@ -121,14 +122,45 @@ export const locationsRouter = createTRPCRouter({
       parentId: z.string().optional()
     }))
     .mutation(async ({ ctx, input }) => {
+      // Clean parentId - convert empty string to undefined and validate
+      let parentId = input.parentId
+      if (!parentId || parentId === '' || parentId === null || (typeof parentId === 'string' && parentId.trim() === '')) {
+        parentId = undefined
+      }
+      
+      console.log('Creating location with parentId:', parentId, 'original:', input.parentId)
+      console.log('User ID:', ctx.user.id)
+      
+      // Verify user exists
+      const userExists = await ctx.db.user.findUnique({
+        where: { id: ctx.user.id }
+      })
+      
+      if (!userExists) {
+        throw new TRPCError({
+          code: 'UNAUTHORIZED',
+          message: 'Bruker ikke funnet'
+        })
+      }
+      
+      const cleanedInput = {
+        name: input.name,
+        description: input.description,
+        type: input.type,
+        parentId: parentId
+      }
+      
       // Verify parent location if specified
-      if (input.parentId) {
+      if (cleanedInput.parentId) {
+        console.log('Verifying parent location:', cleanedInput.parentId)
         const parent = await ctx.db.location.findFirst({
           where: {
-            id: input.parentId,
+            id: cleanedInput.parentId,
             userId: ctx.user.id
           }
         })
+        
+        console.log('Parent found:', !!parent)
         
         if (!parent) {
           throw new TRPCError({
@@ -143,7 +175,7 @@ export const locationsRouter = createTRPCRouter({
       
       const location = await ctx.db.location.create({
         data: {
-          ...input,
+          ...cleanedInput,
           qrCode,
           userId: ctx.user.id
         },

@@ -232,7 +232,10 @@ export const categoriesRouter = createTRPCRouter({
         
         if (!existing) {
           const category = await ctx.db.category.create({
-            data: categoryData
+            data: {
+              ...categoryData,
+              fieldSchema: categoryData.fieldSchema ? JSON.stringify(categoryData.fieldSchema) : null
+            }
           })
           created.push(category)
         }

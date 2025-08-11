@@ -108,6 +108,7 @@ export const yarnRouter = createTRPCRouter({
       const pattern = await ctx.db.yarnPattern.create({
         data: {
           ...input,
+          imageUrls: input.imageUrls ? JSON.stringify(input.imageUrls) : undefined,
           userId: ctx.user.id
         }
       })
@@ -147,9 +148,15 @@ export const yarnRouter = createTRPCRouter({
         })
       }
       
+      const { imageUrls, ...otherData } = updateData
+      const processedUpdateData = {
+        ...otherData,
+        ...(imageUrls && { imageUrls: JSON.stringify(imageUrls) })
+      }
+      
       const updatedPattern = await ctx.db.yarnPattern.update({
         where: { id },
-        data: updateData
+        data: processedUpdateData
       })
       
       return updatedPattern
@@ -355,14 +362,22 @@ export const yarnRouter = createTRPCRouter({
         })
       }
       
+      // Process image arrays to JSON strings
+      const { progressImages, finalImages, ...otherData } = updateData
+      const processedUpdateData = {
+        ...otherData,
+        ...(progressImages && { progressImages: JSON.stringify(progressImages) }),
+        ...(finalImages && { finalImages: JSON.stringify(finalImages) })
+      }
+
       // Auto-set completion date if status changes to COMPLETED
-      if (updateData.status === 'COMPLETED' && project.status !== 'COMPLETED') {
-        updateData.completedDate = new Date()
+      if (processedUpdateData.status === 'COMPLETED' && project.status !== 'COMPLETED') {
+        processedUpdateData.completedDate = new Date()
       }
       
       const updatedProject = await ctx.db.yarnProject.update({
         where: { id },
-        data: updateData,
+        data: processedUpdateData,
         include: {
           pattern: true,
           yarnUsage: {

@@ -9,6 +9,9 @@ import superjson from 'superjson'
 export async function createTRPCContext() {
   const session = await auth()
   
+  // Debug logging
+  console.log('tRPC Context - Session:', session?.user?.email, 'ID:', session?.user?.id)
+  
   return {
     db,
     session,

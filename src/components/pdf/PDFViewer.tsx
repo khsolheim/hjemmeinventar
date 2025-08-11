@@ -297,7 +297,7 @@ export function PDFViewer({
       <CardContent className="p-0">
         <div 
           className="pdf-container overflow-auto border-t"
-          style={{ height: viewerHeight - 120 }}
+          style={{ height: Number(viewerHeight) - 120 }}
         >
           {isLoading && (
             <div className="flex items-center justify-center h-full">

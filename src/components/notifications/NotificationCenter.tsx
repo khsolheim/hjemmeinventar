@@ -47,7 +47,8 @@ export function NotificationCenter({ className = '' }: NotificationCenterProps) 
   const [lastChecked, setLastChecked] = useState<Date>(new Date())
 
   // Hent gjenstander som snart utløper eller har andre problemer
-  const { data: items = [] } = trpc.items.getAll.useQuery({ limit: 1000 })
+  const { data: itemsData } = trpc.items.getAll.useQuery({ limit: 1000 })
+  const items = itemsData?.items || []
   const { data: loans = [] } = trpc.loans.getActiveLoans.useQuery()
 
   // Generer notifikasjoner basert på data
@@ -376,7 +377,8 @@ export function NotificationCenter({ className = '' }: NotificationCenterProps) 
 
 // Enklere notifikasjonskomponent for dashboard
 export function NotificationSummary({ className = '' }: NotificationCenterProps) {
-  const { data: items = [] } = trpc.items.getAll.useQuery({ limit: 1000 })
+  const { data: itemsData } = trpc.items.getAll.useQuery({ limit: 1000 })
+  const items = itemsData?.items || []
   
   const now = new Date()
   const sevenDaysFromNow = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000)

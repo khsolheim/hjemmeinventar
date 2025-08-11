@@ -14,43 +14,52 @@ export const itemsRouter = createTRPCRouter({
       categoryId: z.string().optional(),
       search: z.string().optional(),
       filter: z.enum(['available', 'loaned']).optional(),
-      limit: z.number().min(1).max(100).default(50),
-      offset: z.number().min(0).default(0)
-    }))
+      limit: z.number().min(1).max(10000).optional(),
+      offset: z.number().min(0).optional()
+    }).optional())
     .query(async ({ ctx, input }) => {
+      // Ensure input is defined
+      const safeInput = input || {}
       const where: any = {
         userId: ctx.user.id
       }
       
-      if (input.locationId) {
-        where.locationId = input.locationId
+      if (safeInput.locationId) {
+        where.locationId = safeInput.locationId
       }
       
-      if (input.categoryId) {
-        where.categoryId = input.categoryId
+      if (safeInput.categoryId) {
+        where.categoryId = safeInput.categoryId
       }
       
-      if (input.search) {
+      if (safeInput.search) {
         where.OR = [
-          { name: { contains: input.search } },
-          { description: { contains: input.search } },
-          { brand: { contains: input.search } }
+          { name: { contains: safeInput.search } },
+          { description: { contains: safeInput.search } },
+          { brand: { contains: safeInput.search } }
         ]
       }
       
-      if (input.filter === 'available') {
+      if (safeInput.filter === 'available') {
         where.loan = null // Items without active loans
-      } else if (input.filter === 'loaned') {
+      } else if (safeInput.filter === 'loaned') {
         where.loan = {
           status: 'OUT'
         }
       }
       
+      const limit = safeInput.limit || 50
+      const offset = safeInput.offset || 0
+      
       const [items, total] = await Promise.all([
         ctx.db.item.findMany({
           where,
           include: {
-            location: true,
+            location: {
+              include: {
+                parent: true
+              }
+            },
             category: true,
             tags: true,
             attachments: true,
@@ -62,8 +71,8 @@ export const itemsRouter = createTRPCRouter({
             }
           },
           orderBy: { createdAt: 'desc' },
-          take: input.limit,
-          skip: input.offset
+          take: limit,
+          skip: offset
         }),
         ctx.db.item.count({ where })
       ])
@@ -184,7 +193,6 @@ export const itemsRouter = createTRPCRouter({
                 filename,
                 filetype: 'image',
                 filesize: 0, // We don't have size info from URL
-                type: 'IMAGE',
                 itemId: item.id
               }
             })

@@ -6,7 +6,7 @@ export interface SearchDocument {
   type: 'item' | 'location' | 'category'
   name: string
   description?: string
-  userId: string
+  userId?: string
   
   // Item specific fields
   barcode?: string

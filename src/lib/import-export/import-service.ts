@@ -72,7 +72,7 @@ export interface ImportOptions {
 
 class ImportService {
   // Parse CSV file
-  async parseCSV<T>(file: File, schema: z.ZodSchema<T>, options: ImportOptions = {}): Promise<ImportResult<T>> {
+  async parseCSV<T extends object>(file: File, schema: z.ZodSchema<T>, options: ImportOptions = {}): Promise<ImportResult<T>> {
     return new Promise((resolve) => {
       const errors: ImportError[] = []
       const validData: T[] = []
@@ -103,7 +103,7 @@ class ImportService {
             validData.push(validatedData)
           } catch (error) {
             if (error instanceof z.ZodError) {
-              error.errors.forEach(err => {
+              error.issues.forEach((err: any) => {
                 errors.push({
                   row: totalRows,
                   field: err.path.join('.'),
@@ -146,7 +146,7 @@ class ImportService {
   }
 
   // Parse Excel file
-  async parseExcel<T>(file: File, schema: z.ZodSchema<T>, options: ImportOptions = {}): Promise<ImportResult<T>> {
+  async parseExcel<T extends object>(file: File, schema: z.ZodSchema<T>, options: ImportOptions = {}): Promise<ImportResult<T>> {
     try {
       const buffer = await file.arrayBuffer()
       const workbook = XLSX.read(buffer, { type: 'buffer' })
@@ -203,7 +203,7 @@ class ImportService {
           validData.push(validatedData)
         } catch (error) {
           if (error instanceof z.ZodError) {
-            error.errors.forEach(err => {
+            error.issues.forEach((err: any) => {
               errors.push({
                 row: rowNumber,
                 field: err.path.join('.'),
@@ -246,7 +246,7 @@ class ImportService {
   }
 
   // Detect file type and parse accordingly
-  async parseFile<T>(file: File, schema: z.ZodSchema<T>, options: ImportOptions = {}): Promise<ImportResult<T>> {
+  async parseFile<T extends object>(file: File, schema: z.ZodSchema<T>, options: ImportOptions = {}): Promise<ImportResult<T>> {
     const extension = file.name.split('.').pop()?.toLowerCase()
     
     switch (extension) {
@@ -288,7 +288,6 @@ class ImportService {
       'prioritet': 'priority',
       
       // Locations
-      'type': 'type',
       'forelder': 'parentName',
       'kapasitet': 'capacity',
       
@@ -297,32 +296,16 @@ class ImportService {
       'farge': 'color',
       
       // English alternatives
-      'name': 'name',
-      'description': 'description',
       'category': 'categoryName',
       'location': 'locationName',
-      'quantity': 'quantity',
       'amount': 'quantity',
       'qty': 'quantity',
-      'unit': 'unit',
-      'price': 'price',
       'cost': 'price',
       'purchase date': 'purchaseDate',
       'expiry date': 'expiryDate',
       'expiration date': 'expiryDate',
-      'brand': 'brand',
-      'model': 'model',
       'serial number': 'serialNumber',
-      'serial': 'serialNumber',
-      'barcode': 'barcode',
-      'tags': 'tags',
-      'notes': 'notes',
-      'condition': 'condition',
-      'priority': 'priority',
-      'parent': 'parentName',
-      'capacity': 'capacity',
-      'icon': 'icon',
-      'color': 'color'
+      'serial': 'serialNumber'
     }
 
     const normalized = header.toLowerCase().trim()
@@ -330,7 +313,7 @@ class ImportService {
   }
 
   // Check if data is duplicate (basic implementation)
-  private isDuplicate<T>(newItem: T, existingItems: T[]): boolean {
+  private isDuplicate<T extends object>(newItem: T, existingItems: T[]): boolean {
     if ('name' in newItem) {
       return existingItems.some(item => 
         'name' in item && (item as any).name === (newItem as any).name
@@ -385,7 +368,7 @@ class ImportService {
   }
 
   // Validate import preview
-  validateImportData<T>(data: T[], existingData: T[], type: string): {
+  validateImportData<T extends object>(data: T[], existingData: T[], type: string): {
     valid: T[]
     duplicates: T[]
     errors: { item: T, error: string }[]

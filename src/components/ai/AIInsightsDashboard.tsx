@@ -217,7 +217,7 @@ export function AIInsightsDashboard() {
                               <Package className="w-4 h-4 text-green-600" />
                               <span className="text-sm font-medium">Totalt</span>
                             </div>
-                            <p className="text-xl font-bold">{analysis.metrics.totalItems}</p>
+                            <p className="text-xl font-bold">{analysis?.metrics && 'totalItems' in analysis.metrics ? analysis.metrics.totalItems : 0}</p>
                             <p className="text-xs text-muted-foreground">gjenstander</p>
                           </div>
 
@@ -226,7 +226,7 @@ export function AIInsightsDashboard() {
                               <PieChart className="w-4 h-4 text-blue-600" />
                               <span className="text-sm font-medium">Kategorier</span>
                             </div>
-                            <p className="text-xl font-bold">{analysis.metrics.categoriesUsed}</p>
+                            <p className="text-xl font-bold">{analysis?.metrics && 'categoriesUsed' in analysis.metrics ? analysis.metrics.categoriesUsed : 0}</p>
                             <p className="text-xs text-muted-foreground">i bruk</p>
                           </div>
 
@@ -235,28 +235,28 @@ export function AIInsightsDashboard() {
                               <Activity className="w-4 h-4 text-purple-600" />
                               <span className="text-sm font-medium">Aktivitet</span>
                             </div>
-                            <p className="text-xl font-bold">{analysis.metrics.recentActivityCount}</p>
+                            <p className="text-xl font-bold">{analysis?.metrics && 'recentActivityCount' in analysis.metrics ? analysis.metrics.recentActivityCount : 0}</p>
                             <p className="text-xs text-muted-foreground">siste uke</p>
                           </div>
 
-                          {analysis.metrics.itemsWithoutLocation > 0 && (
+                          {analysis?.metrics && 'itemsWithoutLocation' in analysis.metrics && analysis.metrics.itemsWithoutLocation > 0 && (
                             <div className="p-3 bg-white rounded-lg border border-orange-200">
                               <div className="flex items-center gap-2 mb-1">
                                 <AlertCircle className="w-4 h-4 text-orange-600" />
                                 <span className="text-sm font-medium">Mangler lokasjon</span>
                               </div>
-                              <p className="text-xl font-bold">{analysis.metrics.itemsWithoutLocation}</p>
+                              <p className="text-xl font-bold">{analysis?.metrics && 'itemsWithoutLocation' in analysis.metrics ? analysis.metrics.itemsWithoutLocation : 0}</p>
                               <p className="text-xs text-muted-foreground">gjenstander</p>
                             </div>
                           )}
 
-                          {analysis.metrics.expiringItems > 0 && (
+                          {analysis?.metrics && 'expiringItems' in analysis.metrics && analysis?.metrics && 'expiringItems' in analysis.metrics ? analysis.metrics.expiringItems : 0 > 0 && (
                             <div className="p-3 bg-white rounded-lg border border-red-200">
                               <div className="flex items-center gap-2 mb-1">
                                 <Clock className="w-4 h-4 text-red-600" />
                                 <span className="text-sm font-medium">Utløper snart</span>
                               </div>
-                              <p className="text-xl font-bold">{analysis.metrics.expiringItems}</p>
+                              <p className="text-xl font-bold">{analysis?.metrics && 'expiringItems' in analysis.metrics ? analysis.metrics.expiringItems : 0}</p>
                               <p className="text-xs text-muted-foreground">neste 30 dager</p>
                             </div>
                           )}

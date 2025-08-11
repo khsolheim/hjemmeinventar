@@ -14,7 +14,7 @@ const signInSchema = z.object({
 })
 
 export const authConfig = {
-  // adapter: PrismaAdapter(db), // Temporarily disable to debug
+  adapter: PrismaAdapter(db), // Re-enable for proper database integration
   providers: [
     Google({
       clientId: process.env.GOOGLE_CLIENT_ID,
@@ -87,7 +87,6 @@ export const authConfig = {
   },
   pages: {
     signIn: '/auth/signin',
-    signUp: '/auth/signup',
     error: '/auth/error'
   },
   session: {
@@ -115,8 +114,12 @@ declare module 'next-auth' {
   }
 }
 
-declare module 'next-auth/jwt' {
-  interface JWT {
-    sub?: string
-  }
-}
+// declare module 'next-auth/jwt' {
+//   interface JWT {
+//     sub?: string
+//   }
+// }
+
+// Export auth function for API routes
+import NextAuth from 'next-auth'
+export const { auth } = NextAuth(authConfig)

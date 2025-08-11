@@ -35,14 +35,14 @@ export function ExportDialog({ isOpen, onClose }: ExportDialogProps) {
   const [includePrivateData, setIncludePrivateData] = useState(true)
   const [isGenerating, setIsGenerating] = useState(false)
 
-  const exportData = trpc.analytics.getExportData.useMutation({
-    onSuccess: (data) => {
+  const exportData = trpc.importExport.exportData.useMutation({
+    onSuccess: (data: any) => {
       generateAndDownloadFile(data)
       setIsGenerating(false)
       toast.success('Eksport fullført')
       onClose()
     },
-    onError: (error) => {
+    onError: (error: any) => {
       toast.error(`Eksport feilet: ${error.message}`)
       setIsGenerating(false)
     }
@@ -155,7 +155,7 @@ export function ExportDialog({ isOpen, onClose }: ExportDialogProps) {
             </tr>
           </thead>
           <tbody>
-            ${data.data.map(item => `
+            ${data.data.map((item: any) => `
               <tr>
                 ${Object.values(item).map(value => `<td>${value || '-'}</td>`).join('')}
               </tr>
@@ -261,19 +261,19 @@ export function ExportDialog({ isOpen, onClose }: ExportDialogProps) {
           <table style="margin: 0;">
             <tr>
               <td><strong>Gjenstander over 10,000 NOK:</strong></td>
-              <td>${itemsWithValue.filter(item => parseFloat(item.pris) > 10000).length}</td>
+              <td>${itemsWithValue.filter((item: any) => parseFloat(item.pris) > 10000).length}</td>
             </tr>
             <tr>
               <td><strong>Gjenstander 5,000-10,000 NOK:</strong></td>
-              <td>${itemsWithValue.filter(item => parseFloat(item.pris) >= 5000 && parseFloat(item.pris) <= 10000).length}</td>
+              <td>${itemsWithValue.filter((item: any) => parseFloat(item.pris) >= 5000 && parseFloat(item.pris) <= 10000).length}</td>
             </tr>
             <tr>
               <td><strong>Gjenstander 1,000-5,000 NOK:</strong></td>
-              <td>${itemsWithValue.filter(item => parseFloat(item.pris) >= 1000 && parseFloat(item.pris) < 5000).length}</td>
+              <td>${itemsWithValue.filter((item: any) => parseFloat(item.pris) >= 1000 && parseFloat(item.pris) < 5000).length}</td>
             </tr>
             <tr>
               <td><strong>Gjenstander under 1,000 NOK:</strong></td>
-              <td>${itemsWithValue.filter(item => parseFloat(item.pris) < 1000).length}</td>
+              <td>${itemsWithValue.filter((item: any) => parseFloat(item.pris) < 1000).length}</td>
             </tr>
           </table>
         </div>
@@ -296,8 +296,8 @@ export function ExportDialog({ isOpen, onClose }: ExportDialogProps) {
   const handleExport = () => {
     setIsGenerating(true)
     exportData.mutate({
-      format: 'json', // Always request JSON from backend
-      includeImages: includeImages
+      template: 'INVENTORY_FULL',
+      format: 'json' // Always request JSON from backend
     })
   }
 

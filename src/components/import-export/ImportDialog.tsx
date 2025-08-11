@@ -130,7 +130,7 @@ export function ImportDialog({ trigger, type, onImportComplete }: ImportDialogPr
     executeImport.mutate({
       type,
       data: validationResult.data,
-      options: { ...importOptions, dryRun: false }
+      options: { ...importOptions }
     })
   }
 

@@ -36,5 +36,4 @@ export const { GET, POST, PUT } = serve({
   logLevel: process.env.NODE_ENV === 'development' ? 'info' : 'warn',
 })
 
-// Export named functions for Next.js App Router
-export { GET, POST, PUT }
+// Functions already exported from serve() above

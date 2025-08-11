@@ -124,7 +124,7 @@ class AdvancedBarcodeScanner {
       }
 
       await new Promise<void>((resolve, reject) => {
-        Quagga.init(quaggaConfig, (err) => {
+        Quagga.init(quaggaConfig, (err: any) => {
           if (err) {
             console.error('Failed to initialize Quagga:', err)
             reject(err)

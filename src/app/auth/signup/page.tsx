@@ -36,10 +36,14 @@ export default function SignUpPage() {
 
         if (result?.error) {
           toast.error('Konto opprettet, men kunne ikke logge inn automatisk. Prøv å logge inn manuelt.')
-          router.push('/auth/signin')
-        } else {
+          window.location.href = '/auth/signin'
+        } else if (result?.ok) {
           toast.success('Velkommen! Du er nå logget inn.')
-          router.push('/dashboard')
+          // Force page reload to ensure session is properly loaded
+          window.location.href = '/dashboard'
+        } else {
+          toast.error('Konto opprettet, men kunne ikke logge inn automatisk. Prøv å logge inn manuelt.')
+          window.location.href = '/auth/signin'
         }
       } catch (error) {
         toast.error('Konto opprettet, men kunne ikke logge inn automatisk. Prøv å logge inn manuelt.')

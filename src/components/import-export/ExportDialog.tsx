@@ -247,7 +247,7 @@ export function ExportDialog({ trigger }: ExportDialogProps) {
                         <SelectValue placeholder="Alle kategorier" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">Alle kategorier</SelectItem>
+                        <SelectItem value="all">Alle kategorier</SelectItem>
                         {categories?.map(category => (
                           <SelectItem key={category.id} value={category.id}>
                             {category.icon && <span className="mr-2">{category.icon}</span>}
@@ -268,7 +268,7 @@ export function ExportDialog({ trigger }: ExportDialogProps) {
                         <SelectValue placeholder="Alle lokasjoner" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">Alle lokasjoner</SelectItem>
+                        <SelectItem value="all">Alle lokasjoner</SelectItem>
                         {locations?.map(location => (
                           <SelectItem key={location.id} value={location.id}>
                             {location.name}
@@ -309,7 +309,7 @@ export function ExportDialog({ trigger }: ExportDialogProps) {
                         <SelectValue placeholder="Alle tilstander" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">Alle tilstander</SelectItem>
+                        <SelectItem value="all">Alle tilstander</SelectItem>
                         <SelectItem value="NEW">Ny</SelectItem>
                         <SelectItem value="USED">Brukt</SelectItem>
                         <SelectItem value="DAMAGED">Skadet</SelectItem>
@@ -329,7 +329,7 @@ export function ExportDialog({ trigger }: ExportDialogProps) {
                         <SelectValue placeholder="Alle prioriteter" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">Alle prioriteter</SelectItem>
+                        <SelectItem value="all">Alle prioriteter</SelectItem>
                         <SelectItem value="LOW">Lav</SelectItem>
                         <SelectItem value="NORMAL">Normal</SelectItem>
                         <SelectItem value="HIGH">Høy</SelectItem>
