@@ -167,7 +167,7 @@ export const itemsRouter = createTRPCRouter({
           price: input.price,
           barcode: input.barcode,
           brand: input.brand,
-          categoryData: input.categoryData,
+          categoryData: input.categoryData ? JSON.stringify(input.categoryData) : undefined,
           userId: ctx.user.id,
           availableQuantity: input.totalQuantity,
           consumedQuantity: 0
@@ -306,9 +306,17 @@ export const itemsRouter = createTRPCRouter({
         }
       }
       
+      // Process categoryData for string storage
+      const processedUpdateData = {
+        ...updateData,
+        categoryData: updateData.categoryData 
+          ? JSON.stringify(updateData.categoryData) 
+          : updateData.categoryData
+      }
+
       const item = await ctx.db.item.update({
         where: { id },
-        data: updateData,
+        data: processedUpdateData,
         include: {
           location: true,
           category: true,

@@ -501,24 +501,50 @@ export function CameraCaptureCompact({
 
   const uploadImage = useCallback(async (file: File): Promise<string | null> => {
     try {
-      const formData = new FormData()
-      formData.append('file', file)
-
+      console.log('Uploading file:', file.name, 'Size:', file.size, 'Type:', file.type)
+      
       const response = await fetch(`/api/upload?filename=${encodeURIComponent(file.name)}`, {
         method: 'POST',
         body: file,
+        headers: {
+          'Content-Type': file.type,
+        },
       })
+
+      console.log('Upload response status:', response.status)
 
       if (!response.ok) {
         const error = await response.json()
-        throw new Error(error.error || 'Upload failed')
+        console.error('Upload API error:', error)
+        
+        // Show more specific error messages
+        const errorMessage = error.error || 'Upload failed'
+        if (errorMessage.includes('BLOB_READ_WRITE_TOKEN')) {
+          toast.error('Opplasting ikke konfigurert. Kontakt administrator.')
+        } else if (errorMessage.includes('Unauthorized')) {
+          toast.error('Du er ikke logget inn. Logg inn og prøv igjen.')
+        } else if (errorMessage.includes('File too large')) {
+          toast.error('Filen er for stor. Maksimal størrelse er 10MB.')
+        } else if (errorMessage.includes('Invalid file type')) {
+          toast.error('Ugyldig filtype. Kun bilder er tillatt.')
+        } else {
+          toast.error(`Opplasting feilet: ${errorMessage}`)
+        }
+        
+        throw new Error(errorMessage)
       }
 
       const result = await response.json()
+      console.log('Upload successful:', result.url)
       return result.url
     } catch (error) {
       console.error('Upload error:', error)
-      toast.error('Kunne ikke laste opp bilde')
+      
+      // Only show generic error if we haven't shown a specific one
+      if (error instanceof Error && !error.message.includes('BLOB_READ_WRITE_TOKEN') && !error.message.includes('Unauthorized')) {
+        toast.error('Kunne ikke laste opp bilde. Prøv igjen.')
+      }
+      
       return null
     }
   }, [])

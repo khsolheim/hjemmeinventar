@@ -23,7 +23,9 @@ import {
   Edit2,
   Trash2,
   Loader2,
-  Image as ImageIcon
+  Image as ImageIcon,
+  Grid,
+  List
 } from 'lucide-react'
 import {
   Select,
@@ -40,9 +42,11 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { CameraCaptureCompact } from '@/components/ui/camera-capture'
 import { BarcodeScannerCompact, type ProductInfo } from '@/components/ui/barcode-scanner'
-import { SmartSuggestions } from '@/components/ai/SmartSuggestions'
+
+import { DynamicFormFields } from '@/components/forms/DynamicFormFields'
 import { trpc } from '@/lib/trpc/client'
 import { toast } from 'sonner'
+import Link from 'next/link'
 
 // Category icons mapping
 const categoryIcons: Record<string, string> = {
@@ -64,6 +68,7 @@ export default function ItemsPage() {
   const [selectedLocation, setSelectedLocation] = useState('all')
   const [showCreateForm, setShowCreateForm] = useState(false)
   const [editingItem, setEditingItem] = useState<any>(null)
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid')
   const [newItem, setNewItem] = useState({
     name: '',
     description: '',
@@ -75,7 +80,8 @@ export default function ItemsPage() {
     images: [] as string[],
     barcode: '',
     brand: '',
-    productInfo: null as ProductInfo | null
+    productInfo: null as ProductInfo | null,
+    categoryData: {} as Record<string, any>
   })
 
   // tRPC queries and mutations
@@ -91,6 +97,18 @@ export default function ItemsPage() {
   
   const { data: locations = [] } = trpc.locations.getAll.useQuery()
   const { data: categories = [] } = trpc.categories.getAll.useQuery()
+  
+  // Get field schema for selected category in create form
+  const { data: categoryFieldSchema } = trpc.categories.getFieldSchema.useQuery(
+    newItem.categoryId,
+    { enabled: !!newItem.categoryId && newItem.categoryId !== 'none' }
+  )
+  
+  // Get field schema for selected category in edit form
+  const { data: editCategoryFieldSchema } = trpc.categories.getFieldSchema.useQuery(
+    editingItem?.categoryId || '',
+    { enabled: !!editingItem?.categoryId && editingItem.categoryId !== 'none' }
+  )
 
   const createItemMutation = trpc.items.create.useMutation({
     onSuccess: () => {
@@ -107,7 +125,8 @@ export default function ItemsPage() {
         images: [],
         barcode: '',
         brand: '',
-        productInfo: null
+        productInfo: null,
+        categoryData: {}
       })
       refetch()
     },
@@ -147,6 +166,28 @@ export default function ItemsPage() {
       return
     }
 
+    // Validate category-specific required fields
+    if (categoryFieldSchema?.fieldSchema) {
+      try {
+        const schema = typeof categoryFieldSchema.fieldSchema === 'string' 
+          ? JSON.parse(categoryFieldSchema.fieldSchema)
+          : categoryFieldSchema.fieldSchema
+
+        if (schema.required && Array.isArray(schema.required)) {
+          for (const requiredField of schema.required) {
+            const value = newItem.categoryData[requiredField]
+            if (!value || (typeof value === 'string' && !value.trim())) {
+              const fieldLabel = schema.properties?.[requiredField]?.label || requiredField
+              toast.error(`${fieldLabel} er påkrevd for ${categoryFieldSchema.name}`)
+              return
+            }
+          }
+        }
+      } catch (error) {
+        console.error('Failed to validate category fields:', error)
+      }
+    }
+
     createItemMutation.mutate({
       name: newItem.name,
       description: newItem.description || undefined,
@@ -157,7 +198,8 @@ export default function ItemsPage() {
       price: newItem.price || undefined,
       images: newItem.images.length > 0 ? newItem.images : undefined,
       barcode: newItem.barcode || undefined,
-      brand: newItem.brand || undefined
+      brand: newItem.brand || undefined,
+      categoryData: Object.keys(newItem.categoryData).length > 0 ? newItem.categoryData : undefined
     })
   }
 
@@ -165,6 +207,28 @@ export default function ItemsPage() {
     if (!editingItem?.name.trim()) {
       toast.error('Navn er påkrevd')
       return
+    }
+
+    // Validate category-specific required fields
+    if (editCategoryFieldSchema?.fieldSchema && editingItem) {
+      try {
+        const schema = typeof editCategoryFieldSchema.fieldSchema === 'string' 
+          ? JSON.parse(editCategoryFieldSchema.fieldSchema)
+          : editCategoryFieldSchema.fieldSchema
+
+        if (schema.required && Array.isArray(schema.required)) {
+          for (const requiredField of schema.required) {
+            const value = editingItem.categoryData?.[requiredField]
+            if (!value || (typeof value === 'string' && !value.trim())) {
+              const fieldLabel = schema.properties?.[requiredField]?.label || requiredField
+              toast.error(`${fieldLabel} er påkrevd for ${editCategoryFieldSchema.name}`)
+              return
+            }
+          }
+        }
+      } catch (error) {
+        console.error('Failed to validate category fields:', error)
+      }
     }
 
     updateItemMutation.mutate({
@@ -175,7 +239,10 @@ export default function ItemsPage() {
       unit: editingItem.unit,
       locationId: editingItem.locationId,
       categoryId: editingItem.categoryId || undefined,
-      price: editingItem.price || undefined
+      price: editingItem.price || undefined,
+      categoryData: editingItem.categoryData && Object.keys(editingItem.categoryData).length > 0 
+        ? editingItem.categoryData 
+        : undefined
     })
   }
 
@@ -248,13 +315,32 @@ export default function ItemsPage() {
             Administrer alle dine eiendeler og hold oversikt
           </p>
         </div>
-        <AccessibleButton 
-          onClick={() => setShowCreateForm(true)}
-          aria-label="Legg til ny gjenstand"
-        >
-          <Plus className="w-4 h-4 mr-2" />
-          Ny gjenstand
-        </AccessibleButton>
+        <div className="flex items-center gap-4">
+          {/* View Controls */}
+          <div className="flex items-center gap-2">
+            <Button
+              variant={viewMode === 'grid' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setViewMode('grid')}
+            >
+              <Grid className="w-4 h-4" />
+            </Button>
+            <Button
+              variant={viewMode === 'list' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setViewMode('list')}
+            >
+              <List className="w-4 h-4" />
+            </Button>
+          </div>
+          <AccessibleButton 
+            onClick={() => setShowCreateForm(true)}
+            aria-label="Legg til ny gjenstand"
+          >
+            <Plus className="w-4 h-4 mr-2" />
+            Ny gjenstand
+          </AccessibleButton>
+        </div>
       </div>
 
       {/* Search and Filters */}
@@ -297,6 +383,8 @@ export default function ItemsPage() {
           </SelectContent>
         </Select>
       </div>
+
+
 
       {/* Create Item Form */}
       {showCreateForm && (
@@ -354,34 +442,7 @@ export default function ItemsPage() {
                 placeholder="Beskrivelse av gjenstanden"
               />
             </div>
-            
-            {/* AI Smart Suggestions */}
-            {newItem.name && (
-              <SmartSuggestions
-                itemName={newItem.name}
-                description={newItem.description}
-                onCategorySuggestion={(categoryId, categoryName) => {
-                  setNewItem(prev => ({ ...prev, categoryId }))
-                  toast.success(`AI foreslår kategori: ${categoryName}`)
-                }}
-                onLocationSuggestion={(locationId, locationName) => {
-                  setNewItem(prev => ({ ...prev, locationId }))
-                  toast.success(`AI foreslår lokasjon: ${locationName}`)
-                }}
-                onTagsSuggestion={(tags) => {
-                  // For now, just show the tags - could be integrated with a tags system later
-                  toast.success(`AI foreslår tags: ${tags.join(', ')}`)
-                }}
-                onDuplicateWarning={(duplicates) => {
-                  if (duplicates.length > 0) {
-                    toast.warning(`Advarsel: ${duplicates.length} mulige duplikater funnet!`, {
-                      description: duplicates.map(d => d.itemName).join(', ')
-                    })
-                  }
-                }}
-                className="border-blue-200 bg-blue-50/30"
-              />
-            )}
+
             
             {/* Image Upload Section */}
             <div>
@@ -402,7 +463,9 @@ export default function ItemsPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <Label htmlFor="item-category">Kategori</Label>
-                <Select value={newItem.categoryId} onValueChange={(value) => setNewItem({...newItem, categoryId: value})}>
+                <Select value={newItem.categoryId} onValueChange={(value) => {
+                  setNewItem({...newItem, categoryId: value, categoryData: {}}) // Reset category data when category changes
+                }}>
                   <SelectTrigger>
                     <SelectValue placeholder="Velg kategori" />
                   </SelectTrigger>
@@ -434,6 +497,27 @@ export default function ItemsPage() {
                 </Select>
               </div>
             </div>
+            
+            {/* Category-specific fields */}
+            {categoryFieldSchema?.fieldSchema && (
+              <DynamicFormFields
+                schema={(() => {
+                  try {
+                    if (typeof categoryFieldSchema.fieldSchema === 'string') {
+                      return JSON.parse(categoryFieldSchema.fieldSchema)
+                    }
+                    return categoryFieldSchema.fieldSchema
+                  } catch (error) {
+                    console.error('Failed to parse field schema:', error)
+                    return null
+                  }
+                })()}
+                values={newItem.categoryData}
+                onChange={(categoryData) => setNewItem({...newItem, categoryData})}
+                categoryName={categoryFieldSchema.name}
+                disabled={createItemMutation.isPending}
+              />
+            )}
             <div className="flex gap-2">
               <AccessibleButton 
                 onClick={handleCreateItem} 
@@ -521,7 +605,13 @@ export default function ItemsPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <Label htmlFor="edit-item-category">Kategori</Label>
-                <Select value={editingItem.categoryId || ''} onValueChange={(value) => setEditingItem({...editingItem, categoryId: value})}>
+                <Select value={editingItem.categoryId || ''} onValueChange={(value) => {
+                  setEditingItem({
+                    ...editingItem, 
+                    categoryId: value,
+                    categoryData: value !== editingItem.categoryId ? {} : editingItem.categoryData // Reset if different category
+                  })
+                }}>
                   <SelectTrigger>
                     <SelectValue placeholder="Velg kategori" />
                   </SelectTrigger>
@@ -553,6 +643,27 @@ export default function ItemsPage() {
                 </Select>
               </div>
             </div>
+            
+            {/* Category-specific fields for edit */}
+            {editCategoryFieldSchema?.fieldSchema && editingItem && (
+              <DynamicFormFields
+                schema={(() => {
+                  try {
+                    if (typeof editCategoryFieldSchema.fieldSchema === 'string') {
+                      return JSON.parse(editCategoryFieldSchema.fieldSchema)
+                    }
+                    return editCategoryFieldSchema.fieldSchema
+                  } catch (error) {
+                    console.error('Failed to parse field schema:', error)
+                    return null
+                  }
+                })()}
+                values={editingItem.categoryData || {}}
+                onChange={(categoryData) => setEditingItem({...editingItem, categoryData})}
+                categoryName={editCategoryFieldSchema.name}
+                disabled={updateItemMutation.isPending}
+              />
+            )}
             <div className="flex gap-2">
               <AccessibleButton 
                 onClick={handleUpdateItem} 
@@ -581,56 +692,63 @@ export default function ItemsPage() {
         </Card>
       )}
 
-      {/* Items Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {items.map((item) => (
-          <Card key={item.id} className="hover:shadow-md transition-shadow">
-            <CardHeader className="pb-3">
-              <div className="flex items-start justify-between">
-                <div className="flex-1">
-                  <div className="flex items-center gap-2 mb-1">
-                    <span className="text-lg">
-                      {item.category?.icon || categoryIcons[item.category?.name || ''] || '📦'}
-                    </span>
-                    <CardTitle className="text-lg line-clamp-1">{item.name}</CardTitle>
+      {/* Items Display */}
+      {viewMode === 'grid' ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {items.map((item) => (
+          <Card key={item.id} className="hover:shadow-md transition-shadow group cursor-pointer">
+            <Link href={`/items/${item.id}`} className="block">
+              <CardHeader className="pb-3">
+                <div className="flex items-start justify-between">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="text-lg">
+                        {item.category?.icon || categoryIcons[item.category?.name || ''] || '📦'}
+                      </span>
+                      <CardTitle className="text-lg line-clamp-1 group-hover:text-primary transition-colors">{item.name}</CardTitle>
+                    </div>
+                    <CardDescription className="line-clamp-2">
+                      {item.description}
+                    </CardDescription>
                   </div>
-                  <CardDescription className="line-clamp-2">
-                    {item.description}
-                  </CardDescription>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        aria-label={`Mer handlinger for ${item.name}`}
+                        onClick={(e) => e.preventDefault()}
+                      >
+                        <MoreVertical className="w-4 h-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent>
+                      <DropdownMenuItem onClick={() => setEditingItem(item)}>
+                        <Edit2 className="w-4 h-4 mr-2" />
+                        Rediger
+                      </DropdownMenuItem>
+                      <DropdownMenuItem 
+                        onClick={() => handleDeleteItem(item.id)}
+                        className="text-red-600"
+                        disabled={deleteItemMutation.isPending}
+                      >
+                        <Trash2 className="w-4 h-4 mr-2" />
+                        Slett
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 </div>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="sm" aria-label={`Mer handlinger for ${item.name}`}>
-                      <MoreVertical className="w-4 h-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent>
-                    <DropdownMenuItem onClick={() => setEditingItem(item)}>
-                      <Edit2 className="w-4 h-4 mr-2" />
-                      Rediger
-                    </DropdownMenuItem>
-                    <DropdownMenuItem 
-                      onClick={() => handleDeleteItem(item.id)}
-                      className="text-red-600"
-                      disabled={deleteItemMutation.isPending}
-                    >
-                      <Trash2 className="w-4 h-4 mr-2" />
-                      Slett
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </div>
-              <div className="flex items-center gap-2 flex-wrap">
-                {item.category && <Badge variant="secondary">{item.category.name}</Badge>}
-                {getStatusBadge(item)}
-                {item.tags?.map((tag) => (
-                  <Badge key={tag.id} variant="outline" className="text-xs">
-                    <Tag className="w-3 h-3 mr-1" />
-                    {tag.name}
-                  </Badge>
-                ))}
-              </div>
-            </CardHeader>
+                <div className="flex items-center gap-2 flex-wrap">
+                  {item.category && <Badge variant="secondary">{item.category.name}</Badge>}
+                  {getStatusBadge(item)}
+                  {item.tags?.map((tag) => (
+                    <Badge key={tag.id} variant="outline" className="text-xs">
+                      <Tag className="w-3 h-3 mr-1" />
+                      {tag.name}
+                    </Badge>
+                  ))}
+                </div>
+              </CardHeader>
             
             {/* Images Section */}
             {item.attachments && item.attachments.filter((att: any) => att.type === 'IMAGE').length > 0 && (
@@ -746,9 +864,59 @@ export default function ItemsPage() {
                 </div>
               )}
             </CardContent>
+            </Link>
           </Card>
-        ))}
-      </div>
+          ))}
+        </div>
+      ) : (
+        <Card>
+          <CardContent className="p-0">
+            <div className="space-y-0">
+              {items.map((item, index) => (
+                <Link href={`/items/${item.id}`} key={item.id}>
+                  <div 
+                    className={`flex items-center gap-4 p-4 hover:bg-muted/50 transition-colors cursor-pointer ${index !== items.length - 1 ? 'border-b' : ''}`}
+                  >
+                    <div className="w-10 h-10 bg-primary/10 rounded flex items-center justify-center">
+                      <span className="text-lg">{item.category?.icon || categoryIcons[item.category?.name || ''] || '📦'}</span>
+                    </div>
+                    
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-1">
+                        <h3 className="font-medium line-clamp-1">{item.name}</h3>
+                        {getStatusBadge(item)}
+                      </div>
+                      <p className="text-sm text-muted-foreground line-clamp-1">
+                        {item.description || 'Ingen beskrivelse'}
+                      </p>
+                    </div>
+                    
+                    <div className="text-right">
+                      <div className="text-sm font-medium">
+                        {item.availableQuantity} {item.unit}
+                      </div>
+                      <div className="text-xs text-muted-foreground">
+                        {item.location.name}
+                      </div>
+                    </div>
+                    
+                    <div className="text-right">
+                      {item.price && (
+                        <div className="text-sm font-medium">
+                          {Number(item.price)} kr
+                        </div>
+                      )}
+                      <div className="text-xs text-muted-foreground">
+                        {new Date(item.createdAt).toLocaleDateString('no-NO')}
+                      </div>
+                    </div>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Empty State */}
       {items.length === 0 && (

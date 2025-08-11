@@ -66,6 +66,43 @@ export default function DashboardPage() {
     return createdDate.getMonth() === now.getMonth() && createdDate.getFullYear() === now.getFullYear()
   }).length
 
+  // Check if onboarding is completed
+  // Create a flat list of all locations including children
+  const allLocations = locations.reduce((acc: any[], location: any) => {
+    acc.push(location)
+    if (location.children) {
+      const flattenChildren = (children: any[]): any[] => {
+        return children.reduce((childAcc: any[], child: any) => {
+          childAcc.push(child)
+          if (child.children) {
+            childAcc.push(...flattenChildren(child.children))
+          }
+          return childAcc
+        }, [])
+      }
+      acc.push(...flattenChildren(location.children))
+    }
+    return acc
+  }, [])
+
+  const hasRooms = allLocations.some(location => location.type === 'ROOM')
+  const hasStorageLocations = allLocations.some(location => location.type !== 'ROOM')
+  const hasItems = totalItems > 0
+  const isOnboardingCompleted = hasRooms && hasStorageLocations && hasItems
+
+  // Debug: Console log for troubleshooting (remove in production)
+  if (typeof window !== 'undefined') {
+    console.log('Dashboard Debug:', {
+      totalLocations: locations.length,
+      allLocationsCount: allLocations.length,
+      locationTypes: allLocations.map(loc => ({ name: loc.name, type: loc.type })),
+      hasRooms,
+      hasStorageLocations,
+      hasItems,
+      isOnboardingCompleted
+    })
+  }
+
   return (
     <div className="container mx-auto px-4 py-8">
       {/* Error Display */}
@@ -217,66 +254,80 @@ export default function DashboardPage() {
 
       {/* Quick Actions */}
       <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6 mb-8">
-        <Card>
-          <CardHeader>
-            <CardTitle>Kom i gang</CardTitle>
-            <CardDescription>
-              Sett opp ditt første inventar på noen enkle steg
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex items-center space-x-4">
-              <div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center text-primary-foreground text-sm font-medium">
-                1
+        {!isOnboardingCompleted && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Kom i gang</CardTitle>
+              <CardDescription>
+                Sett opp ditt første inventar på noen enkle steg
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex items-center space-x-4">
+                <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
+                  hasRooms ? 'bg-green-500 text-white' : 'bg-primary text-primary-foreground'
+                }`}>
+                  {hasRooms ? '✓' : '1'}
+                </div>
+                <div>
+                  <h3 className="font-medium">Opprett ditt første rom</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Start med å lage rom som kjøkken, soverom eller bod
+                  </p>
+                </div>
+                {!hasRooms && (
+                  <Link href="/locations">
+                    <Button variant="outline" size="sm">
+                      Opprett rom
+                    </Button>
+                  </Link>
+                )}
               </div>
-              <div>
-                <h3 className="font-medium">Opprett ditt første rom</h3>
-                <p className="text-sm text-muted-foreground">
-                  Start med å lage rom som kjøkken, soverom eller bod
-                </p>
-              </div>
-              <Link href="/locations">
-                <Button variant="outline" size="sm">
-                  Opprett rom
-                </Button>
-              </Link>
-            </div>
 
-            <div className="flex items-center space-x-4">
-              <div className="w-8 h-8 bg-muted rounded-full flex items-center justify-center text-muted-foreground text-sm font-medium">
-                2
+              <div className="flex items-center space-x-4">
+                <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
+                  hasStorageLocations ? 'bg-green-500 text-white' : hasRooms ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'
+                }`}>
+                  {hasStorageLocations ? '✓' : '2'}
+                </div>
+                <div>
+                  <h3 className="font-medium">Legg til oppbevaringssteder</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Lag hyller, bokser og skuffer i rommene dine
+                  </p>
+                </div>
+                {!hasStorageLocations && hasRooms && (
+                  <Link href="/locations">
+                    <Button variant="outline" size="sm">
+                      Legg til hyller
+                    </Button>
+                  </Link>
+                )}
               </div>
-              <div>
-                <h3 className="font-medium">Legg til oppbevaringssteder</h3>
-                <p className="text-sm text-muted-foreground">
-                  Lag hyller, bokser og skuffer i rommene dine
-                </p>
-              </div>
-              <Link href="/locations">
-                <Button variant="outline" size="sm" disabled={totalLocations === 0}>
-                  Legg til hyller
-                </Button>
-              </Link>
-            </div>
 
-            <div className="flex items-center space-x-4">
-              <div className="w-8 h-8 bg-muted rounded-full flex items-center justify-center text-muted-foreground text-sm font-medium">
-                3
+              <div className="flex items-center space-x-4">
+                <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
+                  hasItems ? 'bg-green-500 text-white' : hasStorageLocations ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'
+                }`}>
+                  {hasItems ? '✓' : '3'}
+                </div>
+                <div>
+                  <h3 className="font-medium">Registrer dine første gjenstander</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Ta bilder og legg til beskrivelser av tingene dine
+                  </p>
+                </div>
+                {!hasItems && hasStorageLocations && (
+                  <Link href="/items">
+                    <Button variant="outline" size="sm">
+                      Legg til gjenstander
+                    </Button>
+                  </Link>
+                )}
               </div>
-              <div>
-                <h3 className="font-medium">Registrer dine første gjenstander</h3>
-                <p className="text-sm text-muted-foreground">
-                  Ta bilder og legg til beskrivelser av tingene dine
-                </p>
-              </div>
-              <Link href="/items">
-                <Button variant="outline" size="sm" disabled={totalLocations === 0}>
-                  Legg til gjenstander
-                </Button>
-              </Link>
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        )}
 
         <Card>
           <CardHeader>
@@ -326,82 +377,76 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
 
+        {/* Recent Items */}
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between">
+            <div>
+              <CardTitle>Nylig lagt til</CardTitle>
+              <CardDescription>
+                Dine sist registrerte gjenstander
+              </CardDescription>
+            </div>
+            <Link href="/items">
+              <Button variant="outline" size="sm">
+                <Search className="w-4 h-4 mr-2" />
+                Søk i inventar
+              </Button>
+            </Link>
+          </CardHeader>
+          <CardContent>
+            {isLoading ? (
+              <div className="flex items-center justify-center py-8">
+                <Loader2 className="w-6 h-6 animate-spin" />
+                <span className="ml-2">Laster gjenstander...</span>
+              </div>
+            ) : items.length > 0 ? (
+              <div className="space-y-3">
+                {items.slice(0, 5).map((item) => (
+                  <div key={item.id} className="flex items-center gap-3 p-2 rounded hover:bg-muted/50">
+                    <div className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center">
+                      <span className="text-sm">
+                        {item.category?.icon || '📦'}
+                      </span>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium line-clamp-1">{item.name}</p>
+                      <p className="text-xs text-muted-foreground line-clamp-1">
+                        {item.description || 'Ingen beskrivelse'}
+                      </p>
+                      <div className="flex items-center gap-2 mt-1">
+                        <span className="text-xs text-muted-foreground">
+                          {item.availableQuantity} {item.unit}
+                        </span>
+                        <span className="text-xs text-muted-foreground">•</span>
+                        <span className="text-xs text-muted-foreground">
+                          {item.location.name}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="text-xs text-muted-foreground">
+                      {new Date(item.createdAt).toLocaleDateString('no-NO', { 
+                        day: 'numeric', 
+                        month: 'short' 
+                      })}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-8 text-muted-foreground">
+                <Package className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                <p>Ingen gjenstander ennå</p>
+                <p className="text-sm">
+                  Gjenstander vil vises her når du legger dem til
+                </p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
         {/* Notification Test */}
         <NotificationTest />
       </div>
-
-      {/* Recent Items */}
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
-          <div>
-            <CardTitle>Nylig lagt til</CardTitle>
-            <CardDescription>
-              Dine sist registrerte gjenstander
-            </CardDescription>
-          </div>
-          <Link href="/items">
-            <Button variant="outline" size="sm">
-              <Search className="w-4 h-4 mr-2" />
-              Søk i inventar
-            </Button>
-          </Link>
-        </CardHeader>
-        <CardContent>
-          {isLoading ? (
-            <div className="flex items-center justify-center py-12">
-              <Loader2 className="w-8 h-8 animate-spin" />
-              <span className="ml-2">Laster gjenstander...</span>
-            </div>
-          ) : items.length > 0 ? (
-            <div className="space-y-3">
-              {items.slice(0, 5).map((item) => (
-                <div key={item.id} className="flex items-center gap-3 p-3 rounded border hover:bg-muted/50">
-                  <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center">
-                    <span className="text-lg">
-                      {item.category?.icon || '📦'}
-                    </span>
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <h3 className="font-medium line-clamp-1">{item.name}</h3>
-                    <p className="text-sm text-muted-foreground line-clamp-1">
-                      {item.description || 'Ingen beskrivelse'}
-                    </p>
-                    <div className="flex items-center gap-2 mt-1">
-                      <span className="text-xs text-muted-foreground">
-                        {item.availableQuantity} {item.unit}
-                      </span>
-                      <span className="text-xs text-muted-foreground">•</span>
-                      <span className="text-xs text-muted-foreground">
-                        {item.location.name}
-                      </span>
-                    </div>
-                  </div>
-                  <div className="text-xs text-muted-foreground">
-                    {new Date(item.createdAt).toLocaleDateString('no-NO', { 
-                      day: 'numeric', 
-                      month: 'short' 
-                    })}
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="text-center py-12 text-muted-foreground">
-              <Package className="w-16 h-16 mx-auto mb-4 opacity-30" />
-              <h3 className="text-lg font-medium mb-2">Inventaret ditt er tomt</h3>
-              <p className="text-sm mb-6">
-                Begynn med å legge til dine første gjenstander for å holde oversikt
-              </p>
-              <Link href="/items">
-                <AccessibleButton aria-label="Legg til din første gjenstand">
-                  <Plus className="w-4 h-4 mr-2" />
-                  Legg til første gjenstand
-                </AccessibleButton>
-              </Link>
-            </div>
-          )}
-        </CardContent>
-      </Card>
     </div>
   )
 }

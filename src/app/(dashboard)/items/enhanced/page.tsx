@@ -357,59 +357,65 @@ export default function EnhancedItemsPage() {
       {viewMode === 'grid' ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
           {filteredItems.map((item) => (
-            <Card key={item.id} className="hover:shadow-md transition-shadow">
-              <CardHeader className="pb-3">
-                <div className="flex items-start justify-between">
-                  <div className="flex items-center gap-2 flex-1">
-                    {isSelectionMode && (
-                      <Checkbox
-                        checked={selectedItems.includes(item.id)}
-                        onCheckedChange={(checked) => {
-                          if (checked) {
-                            setSelectedItems(prev => [...prev, item.id])
-                          } else {
-                            setSelectedItems(prev => prev.filter(id => id !== item.id))
-                          }
-                        }}
-                      />
-                    )}
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-1">
-                        <span className="text-lg">
-                          {item.category?.icon || '📦'}
-                        </span>
-                        <CardTitle className="text-lg line-clamp-1">{item.name}</CardTitle>
+            <Card key={item.id} className="hover:shadow-md transition-shadow group cursor-pointer">
+              <Link href={`/items/${item.id}`} className="block">
+                <CardHeader className="pb-3">
+                  <div className="flex items-start justify-between">
+                    <div className="flex items-center gap-2 flex-1">
+                      {isSelectionMode && (
+                        <Checkbox
+                          checked={selectedItems.includes(item.id)}
+                          onCheckedChange={(checked) => {
+                            if (checked) {
+                              setSelectedItems(prev => [...prev, item.id])
+                            } else {
+                              setSelectedItems(prev => prev.filter(id => id !== item.id))
+                            }
+                          }}
+                          onClick={(e) => e.stopPropagation()}
+                        />
+                      )}
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="text-lg">
+                            {item.category?.icon || '📦'}
+                          </span>
+                          <CardTitle className="text-lg line-clamp-1 group-hover:text-primary transition-colors">{item.name}</CardTitle>
+                        </div>
+                        <CardDescription className="line-clamp-2">
+                          {item.description}
+                        </CardDescription>
                       </div>
-                      <CardDescription className="line-clamp-2">
-                        {item.description}
-                      </CardDescription>
                     </div>
+                    {!isSelectionMode && (
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button 
+                            variant="ghost" 
+                            size="sm"
+                            onClick={(e) => e.preventDefault()}
+                          >
+                            <MoreVertical className="w-4 h-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent>
+                          <DropdownMenuItem>
+                            <Edit2 className="w-4 h-4 mr-2" />
+                            Rediger
+                          </DropdownMenuItem>
+                          <DropdownMenuItem className="text-red-600">
+                            <Trash2 className="w-4 h-4 mr-2" />
+                            Slett
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    )}
                   </div>
-                  {!isSelectionMode && (
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="sm">
-                          <MoreVertical className="w-4 h-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent>
-                        <DropdownMenuItem>
-                          <Edit2 className="w-4 h-4 mr-2" />
-                          Rediger
-                        </DropdownMenuItem>
-                        <DropdownMenuItem className="text-red-600">
-                          <Trash2 className="w-4 h-4 mr-2" />
-                          Slett
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  )}
-                </div>
-                <div className="flex items-center gap-2 flex-wrap">
-                  {item.category && <Badge variant="secondary">{item.category.name}</Badge>}
-                  {getStatusBadge(item)}
-                </div>
-              </CardHeader>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    {item.category && <Badge variant="secondary">{item.category.name}</Badge>}
+                    {getStatusBadge(item)}
+                  </div>
+                </CardHeader>
               
               <CardContent className="space-y-3">
                 {/* Quantity and Progress */}
@@ -456,6 +462,7 @@ export default function EnhancedItemsPage() {
                   )}
                 </div>
               </CardContent>
+              </Link>
             </Card>
           ))}
         </div>
@@ -464,22 +471,23 @@ export default function EnhancedItemsPage() {
           <CardContent className="p-0">
             <div className="space-y-0">
               {filteredItems.map((item, index) => (
-                <div 
-                  key={item.id} 
-                  className={`flex items-center gap-4 p-4 ${index !== filteredItems.length - 1 ? 'border-b' : ''}`}
-                >
-                  {isSelectionMode && (
-                    <Checkbox
-                      checked={selectedItems.includes(item.id)}
-                      onCheckedChange={(checked) => {
-                        if (checked) {
-                          setSelectedItems(prev => [...prev, item.id])
-                        } else {
-                          setSelectedItems(prev => prev.filter(id => id !== item.id))
-                        }
-                      }}
-                    />
-                  )}
+                <Link href={`/items/${item.id}`} key={item.id}>
+                  <div 
+                    className={`flex items-center gap-4 p-4 hover:bg-muted/50 transition-colors cursor-pointer ${index !== filteredItems.length - 1 ? 'border-b' : ''}`}
+                  >
+                    {isSelectionMode && (
+                      <Checkbox
+                        checked={selectedItems.includes(item.id)}
+                        onCheckedChange={(checked) => {
+                          if (checked) {
+                            setSelectedItems(prev => [...prev, item.id])
+                          } else {
+                            setSelectedItems(prev => prev.filter(id => id !== item.id))
+                          }
+                        }}
+                        onClick={(e) => e.stopPropagation()}
+                      />
+                    )}
                   
                   <div className="w-10 h-10 bg-primary/10 rounded flex items-center justify-center">
                     <span className="text-lg">{item.category?.icon || '📦'}</span>
@@ -515,26 +523,31 @@ export default function EnhancedItemsPage() {
                     </div>
                   </div>
                   
-                  {!isSelectionMode && (
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="sm">
-                          <MoreVertical className="w-4 h-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent>
-                        <DropdownMenuItem>
-                          <Edit2 className="w-4 h-4 mr-2" />
-                          Rediger
-                        </DropdownMenuItem>
-                        <DropdownMenuItem className="text-red-600">
-                          <Trash2 className="w-4 h-4 mr-2" />
-                          Slett
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  )}
-                </div>
+                    {!isSelectionMode && (
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button 
+                            variant="ghost" 
+                            size="sm"
+                            onClick={(e) => e.preventDefault()}
+                          >
+                            <MoreVertical className="w-4 h-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent>
+                          <DropdownMenuItem>
+                            <Edit2 className="w-4 h-4 mr-2" />
+                            Rediger
+                          </DropdownMenuItem>
+                          <DropdownMenuItem className="text-red-600">
+                            <Trash2 className="w-4 h-4 mr-2" />
+                            Slett
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    )}
+                  </div>
+                </Link>
               ))}
             </div>
           </CardContent>

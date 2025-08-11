@@ -72,8 +72,27 @@ export async function POST(request: NextRequest) {
 
   } catch (error) {
     console.error('Upload error:', error)
+    
+    // More specific error handling
+    let errorMessage = 'Upload failed'
+    if (error instanceof Error) {
+      errorMessage = error.message
+      
+      // Check for specific Vercel Blob errors
+      if (error.message.includes('BLOB_READ_WRITE_TOKEN')) {
+        errorMessage = 'Blob storage not configured. Missing BLOB_READ_WRITE_TOKEN environment variable.'
+      } else if (error.message.includes('Network')) {
+        errorMessage = 'Network error during upload. Please try again.'
+      } else if (error.message.includes('authorization')) {
+        errorMessage = 'Storage authorization failed. Please check configuration.'
+      }
+    }
+    
     return NextResponse.json(
-      { error: 'Upload failed' },
+      { 
+        error: errorMessage,
+        details: process.env.NODE_ENV === 'development' ? error instanceof Error ? error.stack : String(error) : undefined
+      },
       { status: 500 }
     )
   }

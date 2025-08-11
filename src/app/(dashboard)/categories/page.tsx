@@ -16,7 +16,9 @@ import {
   Loader2,
   Database,
   CheckCircle,
-  AlertCircle
+  AlertCircle,
+  ChevronRight,
+  Edit
 } from 'lucide-react'
 import {
   DropdownMenu,
@@ -24,9 +26,11 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
+import { FieldSchemaBuilder } from '@/components/categories/FieldSchemaBuilder'
 import { trpc } from '@/lib/trpc/client'
 import { toast } from 'sonner'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 
 // Category Field Schema Viewer Component
 function FieldSchemaViewer({ schema, categoryName }: { schema: any; categoryName: string }) {
@@ -57,7 +61,9 @@ function FieldSchemaViewer({ schema, categoryName }: { schema: any; categoryName
 
 export default function CategoriesPage() {
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null)
+  const [editingFieldsCategory, setEditingFieldsCategory] = useState<string | null>(null)
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid')
+  const router = useRouter()
 
   // tRPC queries and mutations
   const { data: categories = [], isLoading, error, refetch } = trpc.categories.getAll.useQuery()
@@ -80,10 +86,28 @@ export default function CategoriesPage() {
     }
   })
 
+  const updateFieldSchemaMutation = trpc.categories.updateFieldSchema.useMutation({
+    onSuccess: () => {
+      toast.success('Kategori-felt oppdatert!')
+      setEditingFieldsCategory(null)
+      refetch()
+    },
+    onError: (error) => {
+      toast.error(`Feil: ${error.message}`)
+    }
+  })
+
   const handleInitializeDefaults = () => {
     if (confirm('Dette vil opprette standard-kategorier hvis de ikke allerede eksisterer. Fortsette?')) {
       initializeDefaultsMutation.mutate()
     }
+  }
+
+  const handleFieldSchemaUpdate = (categoryId: string, fieldSchema: any) => {
+    updateFieldSchemaMutation.mutate({
+      categoryId,
+      fieldSchema
+    })
   }
 
   if (isLoading) {
@@ -190,89 +214,117 @@ export default function CategoriesPage() {
       {/* Categories Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
         {categories.map((category) => (
-          <Card key={category.id} className="hover:shadow-md transition-shadow">
-            <CardHeader className="pb-3">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center">
-                    <span className="text-xl">{category.icon || '📦'}</span>
+          <Card key={category.id} className="group hover:shadow-lg hover:scale-[1.02] transition-all duration-200 cursor-pointer border-2 hover:border-primary/20">
+            <div 
+              onClick={() => router.push(`/categories/${category.id}`)}
+              className="h-full"
+            >
+              <CardHeader className="pb-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center group-hover:bg-primary/20 transition-colors">
+                      <span className="text-2xl">{category.icon || '📦'}</span>
+                    </div>
+                    <div className="flex-1">
+                      <CardTitle className="text-lg group-hover:text-primary transition-colors">
+                        {category.name}
+                      </CardTitle>
+                      <CardDescription className="line-clamp-2">
+                        {category.description}
+                      </CardDescription>
+                    </div>
                   </div>
-                  <div>
-                    <CardTitle className="text-lg">{category.name}</CardTitle>
-                    <CardDescription className="line-clamp-1">
-                      {category.description}
-                    </CardDescription>
+                  <div className="flex items-center gap-2">
+                    <ChevronRight className="w-5 h-5 text-muted-foreground group-hover:text-primary transition-colors" />
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          aria-label={`Mer handlinger for ${category.name}`}
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <MoreVertical className="w-4 h-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent>
+                        <DropdownMenuItem onClick={(e) => {
+                          e.stopPropagation()
+                          router.push(`/categories/${category.id}`)
+                        }}>
+                          <Eye className="w-4 h-4 mr-2" />
+                          Se detaljer
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={(e) => {
+                          e.stopPropagation()
+                          setEditingFieldsCategory(category.id)
+                        }}>
+                          <Edit className="w-4 h-4 mr-2" />
+                          Rediger felt
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={(e) => {
+                          e.stopPropagation()
+                          router.push(`/items?category=${category.id}`)
+                        }}>
+                          <Package className="w-4 h-4 mr-2" />
+                          Administrer gjenstander
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={(e) => {
+                          e.stopPropagation()
+                          setSelectedCategory(category.id)
+                        }}>
+                          <BarChart3 className="w-4 h-4 mr-2" />
+                          Vis statistikker
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </div>
                 </div>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="sm" aria-label={`Mer handlinger for ${category.name}`}>
-                      <MoreVertical className="w-4 h-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent>
-                    <DropdownMenuItem onClick={() => setSelectedCategory(category.id)}>
-                      <Eye className="w-4 h-4 mr-2" />
-                      Se gjenstander
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => {
-                      // Navigate to items page with category filter
-                      window.location.href = `/items?category=${category.id}`
-                    }}>
-                      <Package className="w-4 h-4 mr-2" />
-                      Administrer gjenstander
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => setSelectedCategory(category.id)}>
-                      <BarChart3 className="w-4 h-4 mr-2" />
-                      Vis statistikker
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </div>
-            </CardHeader>
-            
-            <CardContent className="space-y-4">
-              {/* Item Count and Stats */}
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Package className="w-4 h-4 text-muted-foreground" />
-                  <span className="text-sm font-medium">
-                    {category._count.items} gjenstander
-                  </span>
+              </CardHeader>
+              
+              <CardContent className="space-y-4">
+                {/* Item Count and Stats */}
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Package className="w-4 h-4 text-muted-foreground" />
+                    <span className="text-sm font-medium">
+                      {category._count.items} gjenstander
+                    </span>
+                  </div>
+                  {category.fieldSchema && (
+                    <Badge variant="secondary" className="text-xs">
+                      <Settings className="w-3 h-3 mr-1" />
+                      Smart kategori
+                    </Badge>
+                  )}
                 </div>
+
+                {/* Field Schema Preview */}
                 {category.fieldSchema && (
-                  <Badge variant="secondary" className="text-xs">
-                    <Settings className="w-3 h-3 mr-1" />
-                    Smart kategori
-                  </Badge>
+                  <FieldSchemaViewer 
+                    schema={category.fieldSchema} 
+                    categoryName={category.name}
+                  />
                 )}
-              </div>
 
-              {/* Field Schema Preview */}
-              {category.fieldSchema && (
-                <FieldSchemaViewer 
-                  schema={category.fieldSchema} 
-                  categoryName={category.name}
-                />
-              )}
-
-              {/* Quick Actions */}
-              <div className="flex gap-2">
-                <Link href={`/items?category=${category.id}`} className="flex-1">
-                  <Button variant="outline" size="sm" className="w-full">
-                    <Package className="w-3 h-3 mr-1" />
-                    Se gjenstander
-                  </Button>
-                </Link>
-                <Button 
-                  variant="outline" 
-                  size="sm"
-                  onClick={() => setSelectedCategory(category.id)}
-                >
-                  <BarChart3 className="w-3 h-3" />
-                </Button>
-              </div>
-            </CardContent>
+                {/* Call to Action */}
+                <div className="flex items-center justify-between pt-2 border-t border-border/50">
+                  <div className="text-xs text-muted-foreground">
+                    Klikk for å se detaljer
+                  </div>
+                  <div className="flex gap-1">
+                    <Badge variant="outline" className="text-xs">
+                      {category._count.items}
+                    </Badge>
+                    {category.fieldSchema && (
+                      <Badge variant="outline" className="text-xs">
+                        Smart
+                      </Badge>
+                    )}
+                  </div>
+                </div>
+              </CardContent>
+            </div>
           </Card>
         ))}
       </div>
@@ -376,6 +428,44 @@ export default function CategoriesPage() {
                 </Link>
               </div>
             )}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Field Editor */}
+      {editingFieldsCategory && (
+        <Card className="mb-6">
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <CardTitle>
+                Rediger felt for: {categories.find(c => c.id === editingFieldsCategory)?.name}
+              </CardTitle>
+              <Button 
+                variant="outline" 
+                onClick={() => setEditingFieldsCategory(null)}
+                disabled={updateFieldSchemaMutation.isPending}
+              >
+                {updateFieldSchemaMutation.isPending ? 'Lagrer...' : 'Lukk'}
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <FieldSchemaBuilder
+              initialSchema={(() => {
+                const category = categories.find(c => c.id === editingFieldsCategory)
+                if (!category?.fieldSchema) return null
+                try {
+                  return typeof category.fieldSchema === 'string' 
+                    ? JSON.parse(category.fieldSchema)
+                    : category.fieldSchema
+                } catch {
+                  return null
+                }
+              })()}
+              onChange={(schema) => handleFieldSchemaUpdate(editingFieldsCategory, schema)}
+              disabled={updateFieldSchemaMutation.isPending}
+              categoryName={categories.find(c => c.id === editingFieldsCategory)?.name}
+            />
           </CardContent>
         </Card>
       )}

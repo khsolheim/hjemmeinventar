@@ -318,5 +318,105 @@ export const categoriesRouter = createTRPCRouter({
         totalValue: totalValue._sum.price || 0,
         fieldStats: stats
       }
+    }),
+
+  // Update category field schema
+  updateFieldSchema: protectedProcedure
+    .input(z.object({
+      categoryId: z.string(),
+      fieldSchema: z.any().optional()
+    }))
+    .mutation(async ({ ctx, input }) => {
+      // Verify this is a user's custom category or allow updating predefined ones
+      // For now, we'll allow updating any category that exists
+      const existingCategory = await ctx.db.category.findUnique({
+        where: { id: input.categoryId }
+      })
+      
+      if (!existingCategory) {
+        throw new TRPCError({
+          code: 'NOT_FOUND',
+          message: 'Kategori ikke funnet'
+        })
+      }
+      
+      // Convert fieldSchema to string if it's an object
+      const fieldSchemaString = input.fieldSchema 
+        ? JSON.stringify(input.fieldSchema)
+        : null
+      
+      const updatedCategory = await ctx.db.category.update({
+        where: { id: input.categoryId },
+        data: {
+          fieldSchema: fieldSchemaString
+        },
+        include: {
+          _count: { select: { items: true } }
+        }
+      })
+      
+      return updatedCategory
+    }),
+
+  // Create custom category
+  create: protectedProcedure
+    .input(z.object({
+      name: z.string().min(1, 'Navn er påkrevd'),
+      description: z.string().optional(),
+      icon: z.string().optional(),
+      fieldSchema: z.any().optional()
+    }))
+    .mutation(async ({ ctx, input }) => {
+      // Convert fieldSchema to string if it's an object
+      const fieldSchemaString = input.fieldSchema 
+        ? JSON.stringify(input.fieldSchema)
+        : null
+      
+      const category = await ctx.db.category.create({
+        data: {
+          name: input.name,
+          description: input.description,
+          icon: input.icon,
+          fieldSchema: fieldSchemaString
+        },
+        include: {
+          _count: { select: { items: true } }
+        }
+      })
+      
+      return category
+    }),
+
+  // Update category basic info
+  update: protectedProcedure
+    .input(z.object({
+      id: z.string(),
+      name: z.string().min(1, 'Navn er påkrevd').optional(),
+      description: z.string().optional(),
+      icon: z.string().optional()
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const { id, ...updateData } = input
+      
+      const existingCategory = await ctx.db.category.findUnique({
+        where: { id }
+      })
+      
+      if (!existingCategory) {
+        throw new TRPCError({
+          code: 'NOT_FOUND',
+          message: 'Kategori ikke funnet'
+        })
+      }
+      
+      const updatedCategory = await ctx.db.category.update({
+        where: { id },
+        data: updateData,
+        include: {
+          _count: { select: { items: true } }
+        }
+      })
+      
+      return updatedCategory
     })
 })
