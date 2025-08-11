@@ -30,7 +30,24 @@ import {
   Grid3x3,
   Loader2
 } from 'lucide-react'
-import { PDFViewer, YarnPatternViewer } from '@/components/pdf/PDFViewer'
+import dynamic from 'next/dynamic'
+
+// Dynamisk import for å unngå SSR problemer
+const PDFViewer = dynamic(
+  () => import('@/components/pdf/PDFViewer').then(mod => ({ default: mod.PDFViewer })),
+  { 
+    ssr: false,
+    loading: () => <div className="flex items-center justify-center h-64"><Loader2 className="w-8 h-8 animate-spin" /></div>
+  }
+)
+
+const YarnPatternViewer = dynamic(
+  () => import('@/components/pdf/PDFViewer').then(mod => ({ default: mod.YarnPatternViewer })),
+  { 
+    ssr: false,
+    loading: () => <div className="flex items-center justify-center h-64"><Loader2 className="w-8 h-8 animate-spin" /></div>
+  }
+)
 import { trpc } from '@/lib/trpc/client'
 import { toast } from 'sonner'
 
