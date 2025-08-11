@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -86,6 +86,11 @@ export default function PatternsPage() {
   const [selectedDifficulty, setSelectedDifficulty] = useState<string>('all')
   const [selectedPattern, setSelectedPattern] = useState<any>(null)
   const [isViewerOpen, setIsViewerOpen] = useState(false)
+  const [isClient, setIsClient] = useState(false)
+
+  useEffect(() => {
+    setIsClient(true)
+  }, [])
 
   // In a real app, these would come from tRPC
   const patterns = mockPatterns
@@ -126,11 +131,12 @@ export default function PatternsPage() {
     }
   }
 
-  if (isLoading) {
+  if (!isClient || isLoading) {
     return (
       <div className="container mx-auto px-4 py-8">
         <div className="flex items-center justify-center h-64">
           <Loader2 className="w-8 h-8 animate-spin" />
+          <p className="ml-2 text-muted-foreground">Laster mønster...</p>
         </div>
       </div>
     )
