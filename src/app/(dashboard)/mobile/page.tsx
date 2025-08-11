@@ -41,6 +41,7 @@ export default function MobileDemoPage() {
   const [touchCount, setTouchCount] = useState(0)
   const [vibrationSupported, setVibrationSupported] = useState(false)
   const [selectedTab, setSelectedTab] = useState('overview')
+  const [isClient, setIsClient] = useState(false)
 
   const { isOnline, connectionQuality } = useOfflineStatus()
 
@@ -50,9 +51,12 @@ export default function MobileDemoPage() {
   const { data: sampleLocations = [] } = trpc.locations.getAll.useQuery()
 
   useEffect(() => {
-    detectDeviceCapabilities()
-    measurePerformance()
-    initializeOfflineManager()
+    setIsClient(true)
+    if (typeof window !== 'undefined') {
+      detectDeviceCapabilities()
+      measurePerformance()
+      initializeOfflineManager()
+    }
   }, [])
 
   const detectDeviceCapabilities = () => {
@@ -155,6 +159,7 @@ export default function MobileDemoPage() {
   }
 
   const getDeviceType = () => {
+    if (typeof window === 'undefined') return { type: 'unknown', icon: Monitor }
     const width = window.innerWidth
     if (width < 768) return { type: 'mobile', icon: Smartphone }
     if (width < 1024) return { type: 'tablet', icon: Tablet }
@@ -162,6 +167,20 @@ export default function MobileDemoPage() {
   }
 
   const device = getDeviceType()
+
+  // Don't render until client is ready
+  if (!isClient) {
+    return (
+      <div className="container mx-auto px-4 py-8 max-w-4xl">
+        <div className="flex items-center justify-center min-h-64">
+          <div className="text-center">
+            <RefreshCw className="w-8 h-8 animate-spin mx-auto mb-4 text-muted-foreground" />
+            <p className="text-muted-foreground">Laster mobile funksjoner...</p>
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="container mx-auto px-4 py-8 max-w-4xl">
