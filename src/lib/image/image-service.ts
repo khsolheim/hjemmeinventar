@@ -67,18 +67,31 @@ export class ImageService {
       const filename = `${prefix}-${timestamp}-${hash}.webp`
 
       // Upload to Vercel Blob
-      const blob = await put(filename, processedImage.buffer, {
-        access: 'public',
-        contentType: 'image/webp'
-      })
+      try {
+        const blob = await put(filename, processedImage.buffer, {
+          access: 'public',
+          contentType: 'image/webp'
+        })
 
-      return {
-        url: blob.url,
-        filename: filename,
-        filesize: processedImage.buffer.length,
-        filetype: 'image/webp',
-        width: processedImage.width,
-        height: processedImage.height
+        return {
+          url: blob.url,
+          filename: filename,
+          filesize: processedImage.buffer.length,
+          filetype: 'image/webp',
+          width: processedImage.width,
+          height: processedImage.height
+        }
+      } catch (blobError) {
+        // Hvis Vercel Blob feiler, returner original URL som fallback
+        console.warn('Vercel Blob upload failed, using original URL as fallback:', blobError)
+        return {
+          url: imageUrl, // Bruk original URL som fallback
+          filename: filename,
+          filesize: processedImage.buffer.length,
+          filetype: 'image/webp',
+          width: processedImage.width,
+          height: processedImage.height
+        }
       }
 
     } catch (error) {
@@ -163,37 +176,62 @@ export class ImageService {
     const images: DownloadedImage[] = []
     const seenUrls = new Set<string>()
 
-    // Common image selectors for product pages
+    console.log('Extracting images from HTML for URL:', baseUrl)
+
+    // Enhanced image selectors for various e-commerce sites including Adlibris
     const imageSelectors = [
       // Primary product image
       '.product-image img',
       '[data-testid="product-image"]',
       '.main-image img',
       '.hero-image img',
+      '.primary-image img',
       
       // Gallery images
       '.product-gallery img',
       '.image-gallery img',
       '.thumbnail img',
       '.product-images img',
+      '.gallery img',
+      
+      // Adlibris specific
+      '.product-details img',
+      '.product-media img',
+      '.cover-image img',
+      '.book-cover img',
       
       // Generic images in product area
       '.product img',
       '.item img',
+      'main img',
+      'article img',
+      
+      // Any images with product-related data
+      'img[data-src]',
+      'img[data-lazy-src]',
       
       // Fallback: any img with product-related attributes
       'img[alt*="product"], img[alt*="garn"], img[alt*="yarn"]',
-      'img[src*="product"], img[src*="garn"], img[src*="yarn"]'
+      'img[src*="product"], img[src*="garn"], img[src*="yarn"]',
+      'img[alt*="melody"], img[alt*="drops"]',
+      
+      // Very broad fallback for any reasonable sized images
+      'img'
     ]
 
-    imageSelectors.forEach(selector => {
-      $(selector).each((index: number, element: any) => {
+    imageSelectors.forEach((selector, selectorIndex) => {
+      const elements = $(selector)
+      console.log(`Checking selector "${selector}": found ${elements.length} elements`)
+      
+      elements.each((index: number, element: any) => {
         const $img = $(element)
-        const src = $img.attr('src') || $img.attr('data-src') || $img.attr('data-lazy')
+        const src = $img.attr('src') || $img.attr('data-src') || $img.attr('data-lazy-src') || $img.attr('data-original')
         const alt = $img.attr('alt') || ''
         
         if (src) {
+          console.log(`Found image source: ${src}`)
           const fullUrl = this.resolveImageUrl(src, baseUrl)
+          console.log(`Resolved to: ${fullUrl}`)
           
           // Skip duplicates and invalid URLs
           if (!seenUrls.has(fullUrl) && this.isValidImageUrl(fullUrl)) {
@@ -203,13 +241,18 @@ export class ImageService {
             const isPrimary = selector.includes('product-image') || 
                              selector.includes('main-image') || 
                              selector.includes('hero-image') ||
-                             index === 0
+                             selector.includes('primary-image') ||
+                             (selectorIndex < 5 && index === 0) // First image from high-priority selectors
+
+            console.log(`Adding image: ${fullUrl} (primary: ${isPrimary})`)
 
             images.push({
               url: fullUrl,
               alt: alt.trim(),
               isPrimary
             })
+          } else {
+            console.log(`Skipping image: ${fullUrl} (duplicate: ${seenUrls.has(fullUrl)}, valid: ${this.isValidImageUrl(fullUrl)})`)
           }
         }
       })
@@ -256,27 +299,67 @@ export class ImageService {
    */
   private isValidImageUrl(url: string): boolean {
     try {
+      if (!url || url.length < 10) return false
+      
       const urlObj = new URL(url)
       const pathname = urlObj.pathname.toLowerCase()
+      const search = urlObj.search.toLowerCase()
       
       // Check file extension
-      const imageExtensions = ['.jpg', '.jpeg', '.png', '.webp', '.gif', '.svg']
+      const imageExtensions = ['.jpg', '.jpeg', '.png', '.webp', '.gif', '.svg', '.bmp', '.tiff']
       const hasImageExtension = imageExtensions.some(ext => pathname.endsWith(ext))
       
       // Check if URL contains image-related keywords
       const hasImageKeywords = pathname.includes('image') || 
                               pathname.includes('photo') || 
                               pathname.includes('product') ||
-                              pathname.includes('thumb')
+                              pathname.includes('thumb') ||
+                              pathname.includes('cover') ||
+                              pathname.includes('media') ||
+                              search.includes('image') ||
+                              search.includes('photo')
+
+      // Check for CDN patterns
+      const isCdnImage = urlObj.hostname.includes('cloudfront') ||
+                        urlObj.hostname.includes('cloudinary') ||
+                        urlObj.hostname.includes('imgix') ||
+                        urlObj.hostname.includes('amazonaws') ||
+                        urlObj.hostname.includes('blob.core') ||
+                        urlObj.hostname.includes('images.') ||
+                        urlObj.hostname.includes('img.') ||
+                        urlObj.hostname.includes('cdn.')
 
       // Exclude obvious non-images
       const isNotImage = pathname.includes('.css') || 
                         pathname.includes('.js') || 
                         pathname.includes('.json') ||
-                        url.includes('data:')
+                        pathname.includes('.xml') ||
+                        pathname.includes('.txt') ||
+                        url.includes('data:text') ||
+                        url.includes('favicon') ||
+                        pathname.endsWith('.html') ||
+                        pathname.endsWith('.php')
 
-      return !isNotImage && (hasImageExtension || hasImageKeywords)
-    } catch {
+      // Accept if it has image extension, or keywords, or is from CDN
+      const isLikelyImage = hasImageExtension || hasImageKeywords || isCdnImage
+      
+      // Additional size heuristics - skip very small images (likely icons)
+      const hasGoodDimensions = !search.includes('w=1') && 
+                               !search.includes('width=1') &&
+                               !pathname.includes('1x1') &&
+                               !pathname.includes('spacer')
+
+      console.log(`Validating image URL: ${url}`)
+      console.log(`  - Extension: ${hasImageExtension}`)
+      console.log(`  - Keywords: ${hasImageKeywords}`)
+      console.log(`  - CDN: ${isCdnImage}`)
+      console.log(`  - Not image: ${isNotImage}`)
+      console.log(`  - Good dimensions: ${hasGoodDimensions}`)
+      console.log(`  - Result: ${!isNotImage && isLikelyImage && hasGoodDimensions}`)
+
+      return !isNotImage && isLikelyImage && hasGoodDimensions
+    } catch (error) {
+      console.error('Error validating image URL:', url, error)
       return false
     }
   }

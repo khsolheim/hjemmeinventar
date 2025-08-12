@@ -56,7 +56,13 @@ export async function POST(request: NextRequest) {
       } catch (imageError) {
         console.error('Failed to download images:', imageError)
         // Continue without images rather than failing entirely
-        downloadedImages = null
+        // Bruk original bilder som fallback
+        downloadedImages = productData.images.map(img => ({
+          url: img.url,
+          filename: img.url.split('/').pop() || 'unknown.jpg',
+          filesize: 0,
+          filetype: 'image/jpeg'
+        }))
       }
     }
 

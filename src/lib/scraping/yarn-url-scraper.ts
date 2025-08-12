@@ -11,9 +11,21 @@ export interface YarnProductData {
   producer?: string
   composition?: string
   weight?: string
+  weightCategory?: string
   yardage?: string
   needleSize?: string
+  gauge?: string
   price?: number
+  originalPrice?: number // Hvis det er tilbud
+  currency?: string
+  sku?: string // Produktkode/artikkelkode
+  availability?: string // Lagerstatus
+  countryOfOrigin?: string // Produksjonsland
+  certifications?: string[] // Sertifiseringer som OEKO-TEX
+  rating?: number // Kundevurdering
+  reviewCount?: number // Antall anmeldelser
+  relatedPatterns?: string[] // Lenker til oppskrifter
+  deliveryInfo?: string // Leveringsinformasjon
   imageUrl?: string
   images?: Array<{
     url: string
@@ -24,9 +36,11 @@ export interface YarnProductData {
     name: string
     colorCode?: string
     available?: boolean
+    sku?: string
   }>
   description?: string
   careInstructions?: string
+  specifications?: Record<string, string> // Ekstra tekniske detaljer
   source: {
     url: string
     siteName: string
@@ -61,8 +75,11 @@ class AdlibrsScraper implements Scraper {
     // Hent produsent fra varemerke eller produktnavn
     const producer = this.extractProducer($, name)
     
-    // Hent tekniske detaljer fra produktbeskrivelse
-    const technicalInfo = this.extractTechnicalInfo(description)
+    // Hent tekniske detaljer fra både beskrivelse og hele siden
+    const technicalInfo = this.extractTechnicalInfo(description, $)
+    
+    // Hent utvidet produktinformasjon
+    const extendedInfo = this.extractExtendedInfo($, url)
     
     // Hent farger hvis tilgjengelig
     const colors = this.extractColors($)
@@ -82,6 +99,7 @@ class AdlibrsScraper implements Scraper {
       images: images.length > 0 ? images : undefined,
       colors: colors.length > 0 ? colors : undefined,
       ...technicalInfo,
+      ...extendedInfo,
       source: {
         url,
         siteName: 'Adlibris',
@@ -91,61 +109,229 @@ class AdlibrsScraper implements Scraper {
   }
 
   private extractPrice($: any): number | undefined {
-    const priceSelectors = [
-      '.price',
-      '[data-testid="price"]',
-      '.product-price',
-      '.current-price'
-    ]
+    // Forbedret pris-ekstraktering spesielt for Adlibris
     
-    for (const selector of priceSelectors) {
-      const priceText = $(selector).text()
-      const match = priceText.match(/(\d+[\.,]?\d*)/)?.[1]
-      if (match) {
-        return parseFloat(match.replace(',', '.'))
+    // Først, sjekk om elementet har data-price attributt
+    const priceAttribute = $('[data-price]').attr('data-price')
+    if (priceAttribute) {
+      const price = parseFloat(priceAttribute)
+      if (price >= 5 && price <= 1000) {
+        return price
       }
     }
+    
+    // Søk etter spesifikke Adlibris pris-selektorer
+    const adlibrisSelectors = [
+      '.price-display',
+      '.current-price',
+      '.price-current',
+      '.price-final',
+      '.sale-price',
+      '.price',
+      '[class*="price"]:not([class*="original"]):not([class*="was"])'
+    ]
+    
+    for (const selector of adlibrisSelectors) {
+      const elements = $(selector)
+      elements.each((i, elem) => {
+        const priceText = $(elem).text().trim()
+        console.log(`Checking selector ${selector}: "${priceText}"`)
+        
+        // Søk etter norske kroner spesifikt
+        const norwegianPriceMatch = priceText.match(/(\d+[\.,]?\d*)\s*kr(?![a-z])/i)
+        if (norwegianPriceMatch) {
+          const price = parseFloat(norwegianPriceMatch[1].replace(',', '.'))
+          if (price >= 5 && price <= 1000) {
+            console.log(`Found price from selector ${selector}: ${price}`)
+            return price
+          }
+        }
+      })
+    }
+    
+    // Søk i strukturert JSON-LD data
+    $('script[type="application/ld+json"]').each((i, script) => {
+      try {
+        const jsonData = JSON.parse($(script).html() || '{}')
+        if (jsonData.offers && jsonData.offers.price) {
+          const price = parseFloat(jsonData.offers.price)
+          if (price >= 5 && price <= 1000) {
+            console.log(`Found price from JSON-LD: ${price}`)
+            return price
+          }
+        }
+      } catch (e) {
+        // Ignorer JSON parsing feil
+      }
+    })
+    
+    // Søk etter spesifikke norske pris-mønstre i hele dokumentet
+    const allText = $('body').text()
+    console.log('Searching in full text for price patterns...')
+    
+    // Prøv flere norske pris-mønstre - forbedret for Adlibris
+    const pricePatterns = [
+      /(?:pris|koster|kr\.?)[:\s]*(\d+[\.,]?\d*)\s*kr/gi,
+      /(\d+[\.,]?\d*)\s*kr(?!\w)/gi,
+      /(\d+[\.,]?\d*)\s*kroner/gi,
+      /(\d+[\.,]?\d*)\s*NOK/gi,
+      // Nye mønstre spesifikt for Adlibris
+      /(\d+[\.,]?\d*)\s*kr\s*(?:inkl\.?\s*mva)?/gi,
+      /(\d+[\.,]?\d*)\s*kr\s*(?:eks\.?\s*mva)?/gi,
+      /(\d+[\.,]?\d*)\s*kr\s*(?:fratrekk)?/gi,
+      /(\d+[\.,]?\d*)\s*kr\s*(?:rabatt)?/gi,
+      /(\d+[\.,]?\d*)\s*kr\s*(?:pris)?/gi
+    ]
+    
+    const foundPrices: number[] = []
+    
+    for (const pattern of pricePatterns) {
+      const matches = allText.match(pattern)
+      if (matches) {
+        matches.forEach(match => {
+          const priceMatch = match.match(/(\d+[\.,]?\d*)/)
+          if (priceMatch) {
+            const price = parseFloat(priceMatch[1].replace(',', '.'))
+            if (price >= 5 && price <= 1000) {
+              foundPrices.push(price)
+              console.log(`Found price pattern "${match}": ${price}`)
+            }
+          }
+        })
+      }
+    }
+    
+    if (foundPrices.length > 0) {
+      // Returner den mest forekommende prisen eller laveste hvis det er flere
+      const priceFrequency = foundPrices.reduce((acc, price) => {
+        acc[price] = (acc[price] || 0) + 1
+        return acc
+      }, {} as Record<number, number>)
+      
+      const mostFrequent = Object.entries(priceFrequency)
+        .sort(([, a], [, b]) => b - a)[0]
+      
+      console.log(`Returning most frequent price: ${mostFrequent[0]}`)
+      return parseFloat(mostFrequent[0])
+    }
+    
+    console.log('No price found in text patterns')
     return undefined
   }
 
   private extractProducer($: any, name: string): string | undefined {
     // Forbedret produsent ekstraktering for Adlibris
+    console.log('Extracting producer from:', name)
     
-    // Prøv å finne varemerke fra tekst som inneholder "Varemerke:"
-    $('*').each((i, elem) => {
-      const text = $(elem).text()
-      const brandMatch = text.match(/varemerke[:\s]*([^\\n]+)/i)
-      if (brandMatch) {
-        const brand = brandMatch[1].trim().replace(/[:\-].*/, '').trim()
-        if (brand && brand.length > 1 && brand !== 'Varemerke') {
-          return brand
+    // Først, sjekk JSON-LD strukturert data
+    $('script[type="application/ld+json"]').each((i, script) => {
+      try {
+        const jsonData = JSON.parse($(script).html() || '{}')
+        if (jsonData.brand) {
+          const brand = typeof jsonData.brand === 'string' ? jsonData.brand : jsonData.brand.name
+          if (brand && brand.length > 1 && brand.length < 50) {
+            console.log(`Found brand from JSON-LD: ${brand}`)
+            return brand
+          }
         }
+      } catch (e) {
+        // Ignorer JSON parsing feil
       }
     })
     
-    // Søk i strukturerte elementer
+    // Søk etter spesifikke Adlibris varemerke-mønstre
+    const brandPatterns = [
+      /varemerke[:\s]*([A-Za-zøæåØÆÅ\s&\-]+?)(?:[,.]|$|\n|Farge|Hot|Pink)/i,
+      /brand[:\s]*([A-Za-z\s&\-]+?)(?:[,.]|$|\n)/i,
+      /av\s+([A-Za-zøæåØÆÅ\s&\-]+?)(?:\s|$)/i, // "av Drops Design"
+      /fra\s+([A-Za-zøæåØÆÅ\s&\-]+?)(?:\s|$)/i // "fra Drops Design"
+    ]
+    
+    const allText = $('body').text()
+    console.log('Searching for brand patterns in text...')
+    
+    for (const pattern of brandPatterns) {
+      const match = allText.match(pattern)
+      if (match && match[1]) {
+        let brand = match[1].trim()
+        
+        // Rens varemerke-navnet
+        brand = brand
+          .replace(/^(av|fra|by)\s+/i, '')
+          .replace(/\s*(design|yarn|garn)s?$/i, ' Design')
+          .trim()
+        
+        // Valider varemerke
+        if (brand && 
+            brand.length > 1 && 
+            brand.length < 50 && 
+            brand !== 'Varemerke' &&
+            !/^(hot|pink|rosa|blå|rød|grønn|gul|sort|hvit|beige)$/i.test(brand)) {
+          console.log(`Found brand from pattern: ${brand}`)
+          return brand
+        }
+      }
+    }
+    
+    // Søk i spesifikke DOM-elementer
     const brandSelectors = [
       '[data-testid="brand"]',
       '.brand',
       '.manufacturer',
-      '.producer'
+      '.producer',
+      '.brand-name',
+      'meta[property="product:brand"]',
+      'meta[name="brand"]'
     ]
     
     for (const selector of brandSelectors) {
-      const brand = $(selector).text().trim()
-      if (brand && brand.length > 1) {
-        return brand
+      const element = $(selector)
+      if (element.length > 0) {
+        let brand = element.attr('content') || element.text().trim()
+        
+        // Fjern "Varemerke:" prefix hvis det finnes
+        brand = brand.replace(/^varemerke[:\s]*/i, '').trim()
+        
+        if (brand && brand.length > 1 && brand.length < 50) {
+          console.log(`Found brand from selector ${selector}: ${brand}`)
+          return brand
+        }
       }
     }
     
-    // Fallback: utled fra produktnavn
-    const nameUpper = name.toLowerCase()
-    if (nameUpper.includes('drops')) return 'Drops Design'
-    if (nameUpper.includes('hobbii')) return 'Hobbii'
-    if (nameUpper.includes('sandnes')) return 'Sandnes Garn'
-    if (nameUpper.includes('caron')) return 'Caron'
-    if (nameUpper.includes('patons')) return 'Patons'
+    // Avansert søk - se etter tekst som ser ut som varemerke i produktnavn
+    const productNameWords = name.split(/\s+/)
+    const knownBrands = [
+      'Drops', 'Hobbii', 'Sandnes', 'Caron', 'Patons', 'Garnstudio', 
+      'Phildar', 'Rowan', 'Katia', 'Schachenmayr', 'Debbie Bliss',
+      'King Cole', 'Stylecraft', 'Red Heart', 'Bernat', 'Lion Brand'
+    ]
     
+    for (const word of productNameWords) {
+      for (const knownBrand of knownBrands) {
+        if (word.toLowerCase().includes(knownBrand.toLowerCase())) {
+          const brand = knownBrand === 'Drops' ? 'Drops Design' : 
+                      knownBrand === 'Sandnes' ? 'Sandnes Garn' : knownBrand
+          console.log(`Found brand from product name: ${brand}`)
+          return brand
+        }
+      }
+    }
+    
+    // Fallback: utled fra produktnavn med flere varianter
+    const nameLower = name.toLowerCase()
+    if (nameLower.includes('drops')) return 'Drops Design'
+    if (nameLower.includes('hobbii')) return 'Hobbii'
+    if (nameLower.includes('sandnes')) return 'Sandnes Garn'
+    if (nameLower.includes('caron')) return 'Caron'
+    if (nameLower.includes('patons')) return 'Patons'
+    if (nameLower.includes('garnstudio')) return 'Garnstudio'
+    if (nameLower.includes('phildar')) return 'Phildar'
+    if (nameLower.includes('rowan')) return 'Rowan'
+    if (nameLower.includes('katia')) return 'Katia'
+    if (nameLower.includes('melody')) return 'Drops Design' // Melody er en Drops serie
+    
+    console.log('No producer found')
     return undefined
   }
 
@@ -205,10 +391,18 @@ class AdlibrsScraper implements Scraper {
           const isAvailable = !linkText.toLowerCase().includes('utsolgt') && 
                              !linkText.toLowerCase().includes('ikke tilgjengelig')
           
+          // Forsøk å finne SKU/produktkode for denne fargen
+          let colorSku: string | undefined
+          const skuMatch = href.match(/\/([A-Z0-9\-]+)$/) || href.match(/product\/([A-Z0-9\-]+)/)
+          if (skuMatch && skuMatch[1].length >= 5) {
+            colorSku = skuMatch[1]
+          }
+          
           colors.push({
             name: colorName,
             colorCode: colorCode || undefined,
-            available: isAvailable
+            available: isAvailable,
+            sku: colorSku
           })
         }
       }
@@ -302,47 +496,371 @@ class AdlibrsScraper implements Scraper {
     return description || ''
   }
 
-  private extractTechnicalInfo(description: string) {
+  private extractTechnicalInfo(description: string, $?: any) {
     const info: Partial<YarnProductData> = {}
     
-    // Løpelengde/meter
-    const yardageMatch = description.match(/(\d+)\s*m(?![a-z])/i)
-    if (yardageMatch) {
-      info.yardage = `${yardageMatch[1]}m`
+    // Søk både i beskrivelse og hele siden hvis $ er tilgjengelig
+    const textSources = [description]
+    if ($) {
+      // Legg til tekst fra hele produktsiden
+      const pageText = $('body').text()
+      textSources.push(pageText)
+      
+      // Legg til spesifikke produktdetalj-seksjoner
+      const productDetails = $('.product-details, .specifications, .tech-specs, .product-info').text()
+      if (productDetails) textSources.push(productDetails)
     }
     
-    // Vekt
-    const weightMatch = description.match(/(\d+)\s*g(?![a-z])/i)
-    if (weightMatch) {
-      info.weight = `${weightMatch[1]}g`
+    console.log('Searching in text sources for technical info...')
+    console.log('Description length:', description.length)
+    if ($) {
+      console.log('Page text length:', $('body').text().length)
     }
     
-    // Pinnestørrelse
-    const needleMatch = description.match(/(?:pinne[r]?|needle)[:\s]*(\d+[\.,]?\d*)\s*mm/i) ||
-                       description.match(/(\d+[\.,]?\d*)\s*mm\s*(?:pinne|needle)/i)
-    if (needleMatch) {
-      info.needleSize = `${needleMatch[1].replace(',', '.')}mm`
+    // Løpelengde/meter - forbedret søk for Adlibris
+    const yardagePatterns = [
+      /løpelengde[\/\s]*nøste[:\s]*.*?(\d+)\s*m(?![a-z])/i,
+      /(\d+)\s*m(?![a-z]).*?(?:nøste|skein)/i,
+      /ca\.?\s*(\d+)\s*gr?\s*=\s*(\d+)\s*m/i,
+      /(\d+)\s*meter/i,
+      /(\d+)\s*m\s*(?:per|\/)/i,
+      // Nye mønstre spesifikt for Adlibris
+      /(\d+)\s*m\s*(?:løpelengde|lengde)/i,
+      /løpelengde[:\s]*(\d+)\s*m/i,
+      /(\d+)\s*m\s*(?:garn|nøste)/i,
+      /(\d+)\s*m\s*(?:i\s*nøste|per\s*nøste)/i,
+      // Spesifikt mønster for "ca 50 gr = 140 m"
+      /ca\.?\s*(\d+)\s*gr?\s*=\s*(\d+)\s*m/i,
+      /(\d+)\s*gr?\s*=\s*(\d+)\s*m/i
+    ]
+    
+    for (const textSource of textSources) {
+      if (info.yardage) break
+      for (const pattern of yardagePatterns) {
+        const match = textSource.match(pattern)
+        if (match) {
+          const meters = match[2] || match[1] // Ta andre gruppe hvis tilgjengelig
+          info.yardage = `${meters}m`
+          console.log(`Found yardage: ${info.yardage} using pattern: ${pattern}`)
+          break
+        }
+      }
     }
     
-    // Sammensetning - forbedret regex
-    const compositionMatch = description.match(/sammensetning[:\s]*([^\\n]*%[^\\n]*)/i) ||
-                            description.match(/(\d+%[\s\w,]+\d+%[\s\w]*)/i)
-    if (compositionMatch) {
-      info.composition = compositionMatch[1].trim().replace(/\\s+/g, ' ')
+    // Vekt - søk i alle tekstkilder
+    const weightPatterns = [
+      /(\d+)\s*g(?![a-z]).*?(?:nøste|skein)/i,
+      /ca\.?\s*(\d+)\s*gr/i,
+      /(\d+)\s*gram/i,
+      /(\d+)\s*g\s*(?:per|\/)/i
+    ]
+    
+    for (const textSource of textSources) {
+      if (info.weight) break
+      for (const pattern of weightPatterns) {
+        const match = textSource.match(pattern)
+        if (match) {
+          info.weight = `${match[1]}g`
+          console.log(`Found weight: ${info.weight} using pattern: ${pattern}`)
+          break
+        }
+      }
     }
     
-    // Strikkefasthet (gauge)
-    const gaugeMatch = description.match(/strikkefasthet[:\s]*([^\\n]*10cm[^\\n]*)/i) ||
-                      description.match(/(\d+\s*m\s*x\s*\d+\s*v\s*=\s*10cm)/i)
-    if (gaugeMatch) {
-      info.gauge = gaugeMatch[1].trim()
+    // Pinnestørrelse - søk i alle tekstkilder
+    const needlePatterns = [
+      /anbefalte?\s*pinner?[:\s]*(\d+[\.,]?\d*)\s*mm/i,
+      /pinne[r]?[:\s]*(\d+[\.,]?\d*)\s*mm/i,
+      /(\d+[\.,]?\d*)\s*mm\s*(?:pinne|needle)/i,
+      /needle\s*size[:\s]*(\d+[\.,]?\d*)\s*mm/i,
+      /(\d+[\.,]?\d*)\s*mm(?!\s*x)/i, // Ikke del av dimensjoner
+      // Spesifikt mønster for "Anbefalte pinner: 7 mm"
+      /anbefalte?\s*pinner?[:\s]*(\d+[\.,]?\d*)\s*mm/i,
+      /(\d+[\.,]?\d*)\s*mm\s*(?:anbefalte?\s*pinner?)/i
+    ]
+    
+    for (const textSource of textSources) {
+      if (info.needleSize) break
+      for (const pattern of needlePatterns) {
+        const match = textSource.match(pattern)
+        if (match) {
+          info.needleSize = `${match[1].replace(',', '.')}mm`
+          console.log(`Found needle size: ${info.needleSize} using pattern: ${pattern}`)
+          break
+        }
+      }
     }
     
-    // Vaskeråd
-    const careMatch = description.match(/vaskeråd[:\s]*([^\\n]*)/i) ||
-                     description.match(/(håndvask[^\\n]*)/i)
-    if (careMatch) {
-      info.careInstructions = careMatch[1].trim()
+    // Sammensetning - søk i alle tekstkilder
+    const compositionPatterns = [
+      /sammensetning[:\s]*([^\\n]*%[^\\n]*)/i,
+      /(\d+%[^\\n]*\d+%[^\\n]*)/i,
+      /material[:\s]*([^\\n]*%[^\\n]*)/i,
+      /fiber[:\s]*([^\\n]*%[^\\n]*)/i,
+      /(\d+%\s*[A-Za-zøæåØÆÅ]+(?:[,\s]+\d+%\s*[A-Za-zøæåØÆÅ]+)*)/i,
+      // Spesifikt mønster for "71% Alpakka, 25% Ull, 4% Polyamid"
+      /(\d+%\s*[A-Za-zøæåØÆÅ]+(?:[,\s]+\d+%\s*[A-Za-zøæåØÆÅ]+)*)/i,
+      /sammensetning[:\s]*([^\\n]*)/i
+    ]
+    
+    for (const textSource of textSources) {
+      if (info.composition) break
+      for (const pattern of compositionPatterns) {
+        const match = textSource.match(pattern)
+        if (match) {
+          info.composition = match[1].trim()
+            .replace(/\\s+/g, ' ')
+            .replace(/,\s*/g, ', ')
+          console.log(`Found composition: ${info.composition} using pattern: ${pattern}`)
+          break
+        }
+      }
+    }
+    
+    // Strikkefasthet (gauge) - søk i alle tekstkilder
+    const gaugePatterns = [
+      /strikkefasthet[:\s]*([^\\n]*10cm[^\\n]*)/i,
+      /gauge[:\s]*([^\\n]*10cm[^\\n]*)/i,
+      /(\d+\s*m(?:asker)?\s*x\s*\d+\s*r(?:ader|v)?\s*=\s*10cm)/i,
+      /(\d+\s*(?:st|m)\s*x\s*\d+\s*(?:r|v)\s*=\s*10\s*x\s*10\s*cm)/i,
+      /(\d+\s*x\s*\d+\s*=\s*10cm)/i,
+      // Spesifikt mønster for "14 m x 19 v = 10cm²"
+      /(\d+\s*m\s*x\s*\d+\s*v\s*=\s*10cm²)/i,
+      /(\d+\s*m\s*x\s*\d+\s*v\s*=\s*10cm)/i,
+      /strikkefasthet[:\s]*([^\\n]*)/i
+    ]
+    
+    for (const textSource of textSources) {
+      if (info.gauge) break
+      for (const pattern of gaugePatterns) {
+        const match = textSource.match(pattern)
+        if (match) {
+          info.gauge = match[1].trim()
+          console.log(`Found gauge: ${info.gauge} using pattern: ${pattern}`)
+          break
+        }
+      }
+    }
+    
+    // Vaskeråd - forbedret søk for Adlibris
+    const carePatterns = [
+      /vaskeråd[:\s]*([^\\n]*)/i,
+      /care\s*instructions?[:\s]*([^\\n]*)/i,
+      /wash[:\s]*([^\\n]*)/i,
+      /(håndvask[^\\n]*)/i,
+      /(plantørking[^\\n]*)/i,
+      /(maskinvask[^\\n]*)/i,
+      // Nye mønstre spesifikt for Adlibris
+      /vask[:\s]*([^\\n]*)/i,
+      /(hå[^\\n]*)/i, // Forkortelse for håndvask
+      /(maskin[^\\n]*)/i,
+      /(30°[^\\n]*)/i,
+      /(40°[^\\n]*)/i,
+      /(vask\s*[^\\n]*)/i,
+      // Spesifikt mønster for "Håndvask maks 30°C. Plantørking."
+      /(håndvask\s*maks\s*\d+°C[^\\n]*)/i,
+      /(håndvask[^\\n]*plantørking[^\\n]*)/i,
+      /(håndvask[^\\n]*maks[^\\n]*)/i
+    ]
+    
+    for (const textSource of textSources) {
+      if (info.careInstructions) break
+      for (const pattern of carePatterns) {
+        const match = textSource.match(pattern)
+        if (match) {
+          info.careInstructions = match[1].trim()
+            .replace(/\s+/g, ' ')
+            .substring(0, 200) // Begrens lengde
+          console.log(`Found care instructions: ${info.careInstructions} using pattern: ${pattern}`)
+          break
+        }
+      }
+    }
+    
+    // Garntykkelse/kategori - søk i alle tekstkilder
+    const weightCategoryPatterns = [
+      /gauge\s*vekt[:\s]*([^\\n]*)/i,
+      /(bulky|aran|dk|light|lace|worsted|fingering)/i,
+      /garngruppe\s*([A-F])/i,
+      // Spesifikt mønster for "Bulky/Aran"
+      /(bulky\/aran|aran\/bulky)/i,
+      /gauge\s*vekt[:\s]*([^\\n]*)/i
+    ]
+    
+    for (const textSource of textSources) {
+      if (info.weightCategory) break
+      for (const pattern of weightCategoryPatterns) {
+        const match = textSource.match(pattern)
+        if (match) {
+          info.weightCategory = match[1].trim()
+          console.log(`Found weight category: ${info.weightCategory} using pattern: ${pattern}`)
+          break
+        }
+      }
+    }
+    
+    return info
+  }
+
+  private extractExtendedInfo($: any, url: string): Partial<YarnProductData> {
+    const info: Partial<YarnProductData> = {}
+    
+    // Hent produktkode/SKU
+    const skuPatterns = [
+      /(?:artikkel|produkt|item|sku)[:\s#]*([A-Z0-9\-]+)/i,
+      /(?:art\.?\s*nr\.?|artikel\s*nr\.?)[:\s]*([A-Z0-9\-]+)/i,
+      /(?:product\s*code|item\s*code)[:\s]*([A-Z0-9\-]+)/i
+    ]
+    
+    const pageText = $('body').text()
+    for (const pattern of skuPatterns) {
+      const match = pageText.match(pattern)
+      if (match && match[1].length >= 3 && match[1].length <= 20) {
+        info.sku = match[1].trim()
+        break
+      }
+    }
+    
+    // Hent lagerstatus/tilgjengelighet
+    const availabilityPatterns = [
+      /(ikke\s+tilgjengelig|utsolgt|out\s+of\s+stock)/i,
+      /(på\s+lager|in\s+stock|tilgjengelig)/i,
+      /(snart\s+tilbake|back\s+soon|kommer\s+snart)/i,
+      /(bestillingsvare|special\s+order)/i
+    ]
+    
+    for (const pattern of availabilityPatterns) {
+      const match = pageText.match(pattern)
+      if (match) {
+        info.availability = match[1].trim()
+        break
+      }
+    }
+    
+    // Hent produksjonsland
+    const countryPatterns = [
+      /produsert\s+i\s+([A-Za-zøæåØÆÅ\s]+)/i,
+      /made\s+in\s+([A-Za-z\s]+)/i,
+      /origin[:\s]*([A-Za-z\s]+)/i,
+      /fra\s+([A-Za-zøæåØÆÅ\s]+)(?:\s*$|\s*[,.])/i
+    ]
+    
+    for (const pattern of countryPatterns) {
+      const match = pageText.match(pattern)
+      if (match && match[1].length < 30) {
+        info.countryOfOrigin = match[1].trim()
+        break
+      }
+    }
+    
+    // Hent sertifiseringer
+    const certificationPatterns = [
+      /(OEKO[-\s]TEX[^\s,]*)/gi,
+      /(GOTS[^\s,]*)/gi,
+      /(Økologisk|Organic)/gi,
+      /(Fair\s+Trade)/gi,
+      /(Mulesing\s+free)/gi
+    ]
+    
+    const certifications: string[] = []
+    for (const pattern of certificationPatterns) {
+      const matches = pageText.match(pattern)
+      if (matches) {
+        certifications.push(...matches.map(m => m.trim()))
+      }
+    }
+    
+    if (certifications.length > 0) {
+      info.certifications = [...new Set(certifications)] // Fjern duplikater
+    }
+    
+    // Hent originalspris (ved tilbud)
+    const originalPriceMatch = pageText.match(/(?:før|was|original)[:\s]*(\d+[\.,]?\d*)\s*kr/i)
+    if (originalPriceMatch) {
+      info.originalPrice = parseFloat(originalPriceMatch[1].replace(',', '.'))
+    }
+    
+    // Hent valuta
+    if (pageText.includes('kr') || pageText.includes('NOK')) {
+      info.currency = 'NOK'
+    }
+    
+    // Hent kundevurdering og antall anmeldelser
+    const ratingMatch = pageText.match(/(\d+[\.,]?\d*)\s*av\s*5\s*stjerner?/i) ||
+                       pageText.match(/(\d+[\.,]?\d*)\s*\/\s*5/i)
+    if (ratingMatch) {
+      info.rating = parseFloat(ratingMatch[1].replace(',', '.'))
+    }
+    
+    const reviewMatch = pageText.match(/(\d+)\s*(?:anmeldelser?|reviews?|vurderinger?)/i)
+    if (reviewMatch) {
+      info.reviewCount = parseInt(reviewMatch[1])
+    }
+    
+    // Hent leveringsinformasjon
+    const deliveryPatterns = [
+      /(levering[^.]*\d+[^.]*dager?[^.]*)/i,
+      /(fri\s+frakt[^.]*)/i,
+      /(delivery[^.]*\d+[^.]*days?[^.]*)/i
+    ]
+    
+    for (const pattern of deliveryPatterns) {
+      const match = pageText.match(pattern)
+      if (match) {
+        info.deliveryInfo = match[1].trim().substring(0, 100)
+        break
+      }
+    }
+    
+    // Hent lenker til oppskrifter/mønstre
+    const patternLinks: string[] = []
+    $('a[href*="oppskrift"], a[href*="pattern"], a[href*="drops"], a:contains("oppskrift"), a:contains("pattern")').each((i, elem) => {
+      const href = $(elem).attr('href')
+      const text = $(elem).text().toLowerCase()
+      
+      if (href && (text.includes('oppskrift') || text.includes('pattern'))) {
+        const fullUrl = href.startsWith('http') ? href : new URL(href, url).toString()
+        patternLinks.push(fullUrl)
+      }
+    })
+    
+    if (patternLinks.length > 0) {
+      info.relatedPatterns = [...new Set(patternLinks)].slice(0, 10) // Max 10 lenker
+    }
+    
+    // Hent ekstra spesifikasjoner
+    const specifications: Record<string, string> = {}
+    
+    // Søk etter strukturerte produktdetaljer
+    $('.product-details dl dt, .specifications dt, .tech-specs dt').each((i, elem) => {
+      const key = $(elem).text().trim().replace(':', '')
+      const value = $(elem).next('dd').text().trim()
+      
+      if (key && value && key.length < 50 && value.length < 200) {
+        specifications[key] = value
+      }
+    })
+    
+    // Søk etter andre strukturerte data
+    $('*:contains(":")').each((i, elem) => {
+      const text = $(elem).text().trim()
+      const colonMatch = text.match(/^([^:]+):\s*([^:]+)$/)
+      
+      if (colonMatch && colonMatch[1].length < 30 && colonMatch[2].length < 100) {
+        const key = colonMatch[1].trim()
+        const value = colonMatch[2].trim()
+        
+        // Unngå å ta med navigasjon og generisk tekst
+        const isUseful = /(?:størrelse|size|lengde|length|tykkelse|thickness|tekstur|texture|finish|behandling|treatment)/i.test(key)
+        
+        if (isUseful && !specifications[key]) {
+          specifications[key] = value
+        }
+      }
+    })
+    
+    if (Object.keys(specifications).length > 0) {
+      info.specifications = specifications
     }
     
     return info
@@ -539,3 +1057,4 @@ export class YarnUrlScraper {
 
 // Singleton instans
 export const yarnUrlScraper = new YarnUrlScraper()
+

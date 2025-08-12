@@ -216,7 +216,14 @@ export function YarnUrlImporter({ onImport, disabled }: YarnUrlImporterProps) {
                     <DollarSign className="h-4 w-4" />
                     Pris
                   </Label>
-                  <p className="mt-1 font-semibold">{scrapedData.price} kr</p>
+                  <div className="mt-1">
+                    <span className="font-semibold">{scrapedData.price} {scrapedData.currency || 'kr'}</span>
+                    {scrapedData.originalPrice && scrapedData.originalPrice > scrapedData.price && (
+                      <span className="ml-2 text-sm text-muted-foreground line-through">
+                        {scrapedData.originalPrice} {scrapedData.currency || 'kr'}
+                      </span>
+                    )}
+                  </div>
                 </div>
               )}
 
@@ -250,7 +257,108 @@ export function YarnUrlImporter({ onImport, disabled }: YarnUrlImporterProps) {
                   <p className="mt-1">{scrapedData.composition}</p>
                 </div>
               )}
+
+              {scrapedData.weightCategory && (
+                <div>
+                  <Label className="text-sm font-medium">Garnkategori</Label>
+                  <p className="mt-1">{scrapedData.weightCategory}</p>
+                </div>
+              )}
+
+              {scrapedData.gauge && (
+                <div>
+                  <Label className="text-sm font-medium">Strikkefasthet</Label>
+                  <p className="mt-1">{scrapedData.gauge}</p>
+                </div>
+              )}
+
+              {scrapedData.sku && (
+                <div>
+                  <Label className="text-sm font-medium">Produktkode</Label>
+                  <p className="mt-1 font-mono text-sm">{scrapedData.sku}</p>
+                </div>
+              )}
+
+              {scrapedData.availability && (
+                <div>
+                  <Label className="text-sm font-medium">Tilgjengelighet</Label>
+                  <p className="mt-1">
+                    <Badge variant={
+                      scrapedData.availability.toLowerCase().includes('lager') ? 'default' :
+                      scrapedData.availability.toLowerCase().includes('utsolgt') ? 'destructive' : 'secondary'
+                    }>
+                      {scrapedData.availability}
+                    </Badge>
+                  </p>
+                </div>
+              )}
+
+              {scrapedData.countryOfOrigin && (
+                <div>
+                  <Label className="text-sm font-medium">Produksjonsland</Label>
+                  <p className="mt-1">{scrapedData.countryOfOrigin}</p>
+                </div>
+              )}
+
+              {scrapedData.rating && (
+                <div>
+                  <Label className="text-sm font-medium">Kundevurdering</Label>
+                  <p className="mt-1">
+                    ⭐ {scrapedData.rating}/5
+                    {scrapedData.reviewCount && (
+                      <span className="text-sm text-muted-foreground ml-1">
+                        ({scrapedData.reviewCount} anmeldelser)
+                      </span>
+                    )}
+                  </p>
+                </div>
+              )}
             </div>
+
+            {/* Vaskeråd */}
+            {scrapedData.careInstructions && (
+              <div>
+                <Label className="text-sm font-medium">Vaskeråd</Label>
+                <p className="mt-1 text-sm">{scrapedData.careInstructions}</p>
+              </div>
+            )}
+
+            {/* Sertifiseringer */}
+            {scrapedData.certifications && scrapedData.certifications.length > 0 && (
+              <div>
+                <Label className="text-sm font-medium">Sertifiseringer</Label>
+                <div className="flex flex-wrap gap-1 mt-1">
+                  {scrapedData.certifications.map((cert, index) => (
+                    <Badge key={index} variant="outline" className="text-xs">
+                      {cert}
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Leveringsinformasjon */}
+            {scrapedData.deliveryInfo && (
+              <div>
+                <Label className="text-sm font-medium">Levering</Label>
+                <p className="mt-1 text-sm text-muted-foreground">{scrapedData.deliveryInfo}</p>
+              </div>
+            )}
+
+            {/* Ekstra spesifikasjoner */}
+            {scrapedData.specifications && Object.keys(scrapedData.specifications).length > 0 && (
+              <div>
+                <Label className="text-sm font-medium mb-2">Ekstra spesifikasjoner</Label>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm">
+                  {Object.entries(scrapedData.specifications).map(([key, value], index) => (
+                    <div key={index} className="flex justify-between">
+                      <span className="text-muted-foreground">{key}:</span>
+                      <span>{value}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {/* Farger */}
             {scrapedData.colors && scrapedData.colors.length > 0 && (
@@ -284,6 +392,32 @@ export function YarnUrlImporter({ onImport, disabled }: YarnUrlImporterProps) {
               </div>
             )}
 
+            {/* Relaterte oppskrifter */}
+            {scrapedData.relatedPatterns && scrapedData.relatedPatterns.length > 0 && (
+              <div>
+                <Label className="text-sm font-medium">Relaterte oppskrifter</Label>
+                <div className="mt-1 space-y-1">
+                  {scrapedData.relatedPatterns.slice(0, 3).map((pattern, index) => (
+                    <a 
+                      key={index} 
+                      href={pattern} 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="text-sm text-blue-600 hover:underline flex items-center gap-1"
+                    >
+                      <ExternalLink className="h-3 w-3" />
+                      Oppskrift {index + 1}
+                    </a>
+                  ))}
+                  {scrapedData.relatedPatterns.length > 3 && (
+                    <p className="text-xs text-muted-foreground">
+                      +{scrapedData.relatedPatterns.length - 3} flere oppskrifter
+                    </p>
+                  )}
+                </div>
+              </div>
+            )}
+
             {/* Produktbilder */}
             {downloadedImages && downloadedImages.length > 0 && (
               <div>
@@ -299,6 +433,11 @@ export function YarnUrlImporter({ onImport, disabled }: YarnUrlImporterProps) {
                         alt={`Produktbilde ${index + 1}`}
                         className="w-full h-full object-cover hover:scale-105 transition-transform cursor-pointer"
                         loading="lazy"
+                        onError={(e) => {
+                          console.error('Feil ved lasting av bilde:', image.url)
+                          const target = e.target as HTMLImageElement
+                          target.style.display = 'none'
+                        }}
                       />
                       {index === 0 && (
                         <div className="absolute top-1 left-1 bg-blue-600 text-white text-xs px-1 py-0.5 rounded">
@@ -315,6 +454,32 @@ export function YarnUrlImporter({ onImport, disabled }: YarnUrlImporterProps) {
                 </div>
                 <p className="text-xs text-muted-foreground mt-1">
                   Bildene er automatisk optimalisert og lagret i høy kvalitet
+                </p>
+              </div>
+            )}
+            
+            {/* Viser også hovedproduktbilde hvis tilgjengelig */}
+            {scrapedData.imageUrl && (!downloadedImages || downloadedImages.length === 0) && (
+              <div>
+                <Label className="text-sm font-medium flex items-center gap-1 mb-2">
+                  <Package className="h-4 w-4" />
+                  Produktbilde
+                </Label>
+                <div className="relative w-32 h-32 bg-gray-100 rounded-lg overflow-hidden">
+                  <img
+                    src={scrapedData.imageUrl}
+                    alt="Produktbilde"
+                    className="w-full h-full object-cover"
+                    loading="lazy"
+                    onError={(e) => {
+                      console.error('Feil ved lasting av hovedbilde:', scrapedData.imageUrl)
+                      const target = e.target as HTMLImageElement
+                      target.style.display = 'none'
+                    }}
+                  />
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Originalbilde fra nettsiden
                 </p>
               </div>
             )}
