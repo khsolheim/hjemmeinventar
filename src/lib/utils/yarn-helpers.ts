@@ -47,10 +47,21 @@ export async function getBatchesForMaster(
   masterId: string,
   userId: string
 ) {
-  return await db.item.findMany({
+  // Find batch category first
+  const batchCategory = await db.category.findFirst({
+    where: { name: 'Garn Batch' }
+  })
+
+  if (!batchCategory) {
+    return []
+  }
+
+  // Try to find batches using relatedItems relation first
+  let batches = await db.item.findMany({
     where: {
       userId,
-      relatedTo: {
+      categoryId: batchCategory.id,
+      relatedItems: {
         some: {
           id: masterId
         }
@@ -65,6 +76,34 @@ export async function getBatchesForMaster(
       { createdAt: 'desc' }
     ]
   })
+
+  // Fallback: Search by categoryData if no batches found via relation
+  if (batches.length === 0) {
+    batches = await db.item.findMany({
+      where: {
+        userId,
+        categoryId: batchCategory.id,
+        categoryData: {
+          contains: `"masterItemId":"${masterId}"`
+        }
+      },
+      include: {
+        location: true,
+        tags: true,
+        category: true
+      },
+      orderBy: [
+        { createdAt: 'desc' }
+      ]
+    })
+  }
+
+  // Debug logging
+  if (process.env.NODE_ENV === 'development') {
+    console.log(`[DEBUG] getBatchesForMaster(${masterId}): Found ${batches.length} batches`)
+  }
+
+  return batches
 }
 
 /**

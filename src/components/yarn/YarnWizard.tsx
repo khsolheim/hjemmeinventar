@@ -4,7 +4,7 @@ import React, { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { Check, ChevronLeft, ChevronRight, Package2, Palette } from 'lucide-react'
+import { Check, ChevronLeft, ChevronRight, Package2, Palette, Globe } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -16,6 +16,8 @@ import { Badge } from '@/components/ui/badge'
 import { trpc } from '@/lib/trpc/client'
 import { toast } from 'sonner'
 import { useSession } from 'next-auth/react'
+import { YarnUrlImporter } from './YarnUrlImporter'
+import type { YarnProductData } from '@/lib/scraping/yarn-url-scraper'
 
 // Schema for Master creation
 const masterSchema = z.object({
@@ -51,14 +53,15 @@ interface YarnWizardProps {
   existingMasterId?: string // If adding batch to existing master
 }
 
-type WizardStep = 'choose-type' | 'master-details' | 'batch-details' | 'summary'
+type WizardStep = 'choose-type' | 'url-import' | 'master-details' | 'batch-details' | 'summary'
 
 export function YarnWizard({ onComplete, existingMasterId }: YarnWizardProps) {
   const { data: session } = useSession()
   const [currentStep, setCurrentStep] = useState<WizardStep>(existingMasterId ? 'batch-details' : 'choose-type')
-  const [creationType, setCreationType] = useState<'new-master' | 'existing-master' | null>(null)
+  const [creationType, setCreationType] = useState<'new-master' | 'existing-master' | 'url-import' | null>(null)
   const [selectedMasterId, setSelectedMasterId] = useState<string>(existingMasterId || '')
   const [createdMaster, setCreatedMaster] = useState<any>(null)
+  const [importedData, setImportedData] = useState<YarnProductData | null>(null)
 
   // Fetch data
   const { data: locationsData, isLoading: locationsLoading, error: locationsError } = trpc.locations.getAll.useQuery()
@@ -211,6 +214,11 @@ export function YarnWizard({ onComplete, existingMasterId }: YarnWizardProps) {
 
       setCurrentStep('summary')
       toast.success('Batch opprettet!')
+      
+      // Auto-complete after a short delay to let user see the success message
+      setTimeout(() => {
+        handleComplete()
+      }, 2000)
     } catch (error) {
       toast.error('Feil ved opprettelse av batch')
       console.error(error)
@@ -221,11 +229,44 @@ export function YarnWizard({ onComplete, existingMasterId }: YarnWizardProps) {
     onComplete()
   }
 
+  // Håndter URL import
+  const handleUrlImport = (productData: YarnProductData & { downloadedImages?: any[] }) => {
+    setImportedData(productData)
+    
+    // Pre-fill master form med importerte data
+    masterForm.reset({
+      name: productData.name,
+      producer: productData.producer || '',
+      composition: productData.composition || '',
+      yardage: productData.yardage || '',
+      weight: productData.weight || '',
+      needleSize: productData.needleSize || '',
+      careInstructions: productData.careInstructions || '',
+      store: productData.source.siteName || '',
+      notes: productData.description || '',
+      locationId: locations[0]?.id || '',
+    })
+    
+    setCurrentStep('master-details')
+    
+    const imageCount = productData.downloadedImages?.length || 0
+    if (imageCount > 0) {
+      toast.success(`Produktdata og ${imageCount} bilder importert! Sjekk og juster informasjonen.`)
+    } else {
+      toast.success('Produktdata importert! Sjekk og juster informasjonen.')
+    }
+  }
+
   const nextStep = () => {
     if (currentStep === 'choose-type' && creationType === 'new-master') {
       setCurrentStep('master-details')
     } else if (currentStep === 'choose-type' && creationType === 'existing-master') {
       setCurrentStep('batch-details')
+    } else if (currentStep === 'choose-type' && creationType === 'url-import') {
+      setCurrentStep('url-import')
+    } else if (currentStep === 'url-import') {
+      // URL import navigerer automatisk via handleUrlImport
+      return
     } else if (currentStep === 'master-details') {
       masterForm.handleSubmit(handleMasterSubmit)()
     } else if (currentStep === 'batch-details') {
@@ -234,10 +275,16 @@ export function YarnWizard({ onComplete, existingMasterId }: YarnWizardProps) {
   }
 
   const prevStep = () => {
-    if (currentStep === 'master-details') {
+    if (currentStep === 'url-import') {
       setCurrentStep('choose-type')
+    } else if (currentStep === 'master-details') {
+      if (creationType === 'url-import') {
+        setCurrentStep('url-import')
+      } else {
+        setCurrentStep('choose-type')
+      }
     } else if (currentStep === 'batch-details') {
-      if (creationType === 'new-master') {
+      if (creationType === 'new-master' || creationType === 'url-import') {
         setCurrentStep('master-details')
       } else {
         setCurrentStep('choose-type')
@@ -248,6 +295,7 @@ export function YarnWizard({ onComplete, existingMasterId }: YarnWizardProps) {
   const getStepTitle = () => {
     switch (currentStep) {
       case 'choose-type': return 'Velg type registrering'
+      case 'url-import': return 'Importer fra URL'
       case 'master-details': return 'Garn-type detaljer'
       case 'batch-details': return 'Batch detaljer'
       case 'summary': return 'Fullført!'
@@ -257,8 +305,9 @@ export function YarnWizard({ onComplete, existingMasterId }: YarnWizardProps) {
 
   const getStepDescription = () => {
     switch (currentStep) {
-      case 'choose-type': return 'Vil du opprette en ny garn-type eller legge til batch til eksisterende?'
-      case 'master-details': return 'Fyll inn felles informasjon om garn-typen'
+      case 'choose-type': return 'Velg hvordan du vil registrere garnet'
+      case 'url-import': return 'Lim inn link til produktsiden for automatisk import'
+      case 'master-details': return importedData ? 'Sjekk og juster den importerte informasjonen' : 'Fyll inn felles informasjon om garn-typen'
       case 'batch-details': return 'Fyll inn informasjon om denne spesifikke batchen'
       case 'summary': return 'Garnet ditt er registrert og klart til bruk!'
       default: return ''
@@ -303,7 +352,31 @@ export function YarnWizard({ onComplete, existingMasterId }: YarnWizardProps) {
           
           {/* Step 1: Choose type */}
           {currentStep === 'choose-type' && (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <Card 
+                className={`cursor-pointer transition-all ${
+                  creationType === 'url-import' ? 'ring-2 ring-purple-600 bg-purple-50' : 'hover:shadow-md'
+                }`}
+                onClick={() => setCreationType('url-import')}
+              >
+                <CardHeader>
+                  <div className="flex items-center space-x-3">
+                    <Globe className="h-8 w-8 text-purple-600" />
+                    <div>
+                      <CardTitle className="text-lg">Importer fra URL</CardTitle>
+                      <CardDescription>
+                        Hent automatisk fra produktside
+                      </CardDescription>
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-sm text-muted-foreground">
+                    Lim inn link fra Adlibris, Hobbii eller andre nettsider.
+                  </p>
+                </CardContent>
+              </Card>
+
               <Card 
                 className={`cursor-pointer transition-all ${
                   creationType === 'new-master' ? 'ring-2 ring-blue-600 bg-blue-50' : 'hover:shadow-md'
@@ -316,14 +389,14 @@ export function YarnWizard({ onComplete, existingMasterId }: YarnWizardProps) {
                     <div>
                       <CardTitle className="text-lg">Ny Garn-type</CardTitle>
                       <CardDescription>
-                        Opprett en helt ny garn-type med første batch
+                        Opprett manuelt med første batch
                       </CardDescription>
                     </div>
                   </div>
                 </CardHeader>
                 <CardContent>
                   <p className="text-sm text-muted-foreground">
-                    Ideelt når du registrerer et garn du aldri har hatt før.
+                    Registrer alt manuelt når du ikke har produktlink.
                   </p>
                 </CardContent>
               </Card>
@@ -340,18 +413,26 @@ export function YarnWizard({ onComplete, existingMasterId }: YarnWizardProps) {
                     <div>
                       <CardTitle className="text-lg">Ny Batch</CardTitle>
                       <CardDescription>
-                        Legg til batch til eksisterende garn-type
+                        Legg til batch til eksisterende type
                       </CardDescription>
                     </div>
                   </div>
                 </CardHeader>
                 <CardContent>
                   <p className="text-sm text-muted-foreground">
-                    Perfekt når du kjøper samme garn i ny farge eller batch.
+                    Perfekt når du kjøper samme garn i ny farge.
                   </p>
                 </CardContent>
               </Card>
             </div>
+          )}
+
+          {/* Step 1.5: URL Import */}
+          {currentStep === 'url-import' && (
+            <YarnUrlImporter 
+              onImport={handleUrlImport}
+              disabled={createMasterMutation.isPending || createBatchMutation.isPending}
+            />
           )}
 
           {/* Step 2: Master details */}
@@ -730,14 +811,18 @@ export function YarnWizard({ onComplete, existingMasterId }: YarnWizardProps) {
         <Button 
           variant="outline" 
           onClick={prevStep}
-          disabled={currentStep === 'choose-type' || currentStep === 'summary' || (existingMasterId && currentStep === 'batch-details')}
+          disabled={
+            currentStep === 'choose-type' || 
+            currentStep === 'summary' || 
+            (existingMasterId && currentStep === 'batch-details')
+          }
         >
           <ChevronLeft className="h-4 w-4 mr-2" />
           Tilbake
         </Button>
 
         <div className="space-x-2">
-          {currentStep !== 'summary' && (
+          {currentStep !== 'summary' && currentStep !== 'url-import' && (
             <Button 
               onClick={nextStep}
               disabled={
@@ -761,7 +846,8 @@ export function YarnWizard({ onComplete, existingMasterId }: YarnWizardProps) {
           )}
 
           {currentStep === 'summary' && (
-            <Button onClick={handleComplete}>
+            <Button onClick={handleComplete} size="lg" className="bg-green-600 hover:bg-green-700">
+              <Check className="h-4 w-4 mr-2" />
               Ferdig
             </Button>
           )}

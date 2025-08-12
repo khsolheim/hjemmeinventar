@@ -44,6 +44,10 @@ export function YarnMasterDashboard() {
     limit: 50,
     offset: 0,
     search: searchTerm || undefined
+  }, {
+    refetchOnWindowFocus: true,
+    refetchOnMount: true,
+    staleTime: 0 // Always refetch to ensure fresh data
   })
 
   const handleAdvancedSearch = (filters: any) => {
