@@ -106,7 +106,7 @@ export function BatchGrid({ masterId, hideMasterHeader = false, hideTotals = fal
 
   if (isLoading) {
     return (
-      <div className="space-y-6">
+      <div className="space-y-4">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {[...Array(3)].map((_, i) => (
             <Card key={i} className="animate-pulse">
@@ -157,7 +157,7 @@ export function BatchGrid({ masterId, hideMasterHeader = false, hideTotals = fal
             </div>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
               <div>
                 <div className="text-muted-foreground">Vekt</div>
                 <div className="font-medium">{masterData.weight || 'Ikke angitt'}</div>
@@ -188,7 +188,7 @@ export function BatchGrid({ masterId, hideMasterHeader = false, hideTotals = fal
 
       {/* Summary Statistics */}
       {totals && !hideTotals && (
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           <Card>
             <CardContent className="pt-6">
               <div className="flex items-center space-x-2">
@@ -258,7 +258,7 @@ export function BatchGrid({ masterId, hideMasterHeader = false, hideTotals = fal
             </CardContent>
           </Card>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
             {batches.map((batch) => {
               const batchData = getBatchData(batch.categoryData)
               if (filterColorName && (batchData.color || '').toLowerCase() !== filterColorName.toLowerCase()) {
@@ -270,7 +270,7 @@ export function BatchGrid({ masterId, hideMasterHeader = false, hideTotals = fal
 
               return (
                 <Card key={batch.id} className="relative">
-                  <CardHeader className="pb-3">
+                  <CardHeader className="pb-2">
                     <div className="flex justify-between items-start">
                       <div className="flex-1">
                         <CardTitle className="text-base flex items-center gap-2">
@@ -369,7 +369,7 @@ export function BatchGrid({ masterId, hideMasterHeader = false, hideTotals = fal
                     </div>
                   </CardHeader>
                   
-                  <CardContent className="space-y-3">
+                  <CardContent className="space-y-2.5">
                     {/* Quantity and availability */}
                     <div className="flex justify-between items-center">
                       <span className="text-sm text-muted-foreground">Antall:</span>

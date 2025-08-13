@@ -38,16 +38,16 @@ export default function YarnDetailPage() {
       </div>
 
       <Card>
-        <CardContent className="pt-6">
+        <CardContent className="pt-4">
           {/* Compact header: text left, image right */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-start">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-start">
             {/* Text */}
             <div className="md:col-span-2 space-y-2">
               <h1 className="text-2xl font-semibold leading-tight">{master?.name}</h1>
               <div className="text-sm text-muted-foreground">
                 {data.producer || 'Ukjent produsent'}{data.composition ? ` • ${data.composition}` : ''}
               </div>
-              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 text-sm mt-2">
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 text-sm mt-1">
                 <div>
                   <div className="text-muted-foreground">Vekt</div>
                   <div className="font-medium">{data.weight || '—'}</div>
@@ -66,7 +66,7 @@ export default function YarnDetailPage() {
                 </div>
               </div>
               {data.careInstructions && (
-                <div className="text-sm mt-2">
+                <div className="text-sm mt-1">
                   <span className="text-muted-foreground">Vaskeråd: </span>
                   {data.careInstructions}
                 </div>
@@ -74,7 +74,7 @@ export default function YarnDetailPage() {
 
               {/* Minimal stats row placed last */}
               {totals && (
-                <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 text-sm mt-2">
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 text-sm mt-1">
                   <div>
                     <div className="text-muted-foreground">Totalt nøster</div>
                     <div className="font-medium">{totals.totalSkeins}</div>
@@ -107,7 +107,7 @@ export default function YarnDetailPage() {
                   </div>
                 )}
               </div>
-              <div className="mt-3 grid grid-cols-2 gap-2">
+              <div className="mt-2 grid grid-cols-2 gap-1.5">
                 <Button size="sm" variant="secondary">
                   <Download className="h-3 w-3 mr-1" /> Last ned bilde
                 </Button>
@@ -170,12 +170,12 @@ export default function YarnDetailPage() {
 
           {/* Colors grid (compact) */}
           {colors && colors.length > 0 && (
-            <div className="mt-6">
+            <div className="mt-4">
               <div className="flex items-center justify-between mb-2">
                 <h3 className="text-sm font-medium">Farger</h3>
                 <div className="text-xs text-muted-foreground">Filter: {selectedColor || 'Ingen'}</div>
               </div>
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
                 {colors.map((c) => (
                   <button key={c.id} onClick={() => setSelectedColor(prev => prev === c.name ? '' : c.name)} className={`rounded-lg border p-3 text-left transition-colors ${selectedColor === c.name ? 'bg-muted' : 'hover:bg-muted/40'}`}>
                     <div className="flex items-center gap-2">
@@ -193,7 +193,7 @@ export default function YarnDetailPage() {
           )}
 
           {/* Batches */}
-          <div className="mt-6">
+          <div className="mt-4">
             <BatchGrid masterId={id} hideMasterHeader hideTotals filterColorName={selectedColor || undefined} />
           </div>
         </CardContent>
