@@ -403,7 +403,10 @@ export function BatchGrid({ masterId }: BatchGridProps) {
         <div className="mt-8">
           <YarnBulkOperations 
             items={batches}
-            onRefresh={refetch}
+            onRefresh={() => {
+              refetchBatches()
+              refetchTotals()
+            }}
             itemType="batches"
           />
         </div>

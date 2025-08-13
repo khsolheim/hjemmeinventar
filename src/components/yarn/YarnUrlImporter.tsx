@@ -42,6 +42,16 @@ export function YarnUrlImporter({ onImport, disabled }: YarnUrlImporterProps) {
   // Build proxied URL for preview to avoid hotlink/CORS issues
   const getPreviewSrc = (rawUrl: string) => `/api/proxy-image?url=${encodeURIComponent(rawUrl)}`
 
+  // Ensure URL is valid for schema: add https:// if missing
+  const normalizeUrl = (value: string) => {
+    const trimmed = value.trim()
+    if (!trimmed) return trimmed
+    if (!/^https?:\/\//i.test(trimmed)) {
+      return `https://${trimmed}`
+    }
+    return trimmed
+  }
+
   const handleScrapeUrl = async () => {
     if (!url.trim()) {
       toast.error('Vennligst skriv inn en URL')
@@ -59,7 +69,7 @@ export function YarnUrlImporter({ onImport, disabled }: YarnUrlImporterProps) {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
-          url: url.trim(),
+          url: normalizeUrl(url),
           downloadImages: false // Start uten å laste ned bilder
         })
       })
@@ -120,7 +130,7 @@ export function YarnUrlImporter({ onImport, disabled }: YarnUrlImporterProps) {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
-          url: url.trim(),
+          url: normalizeUrl(url),
           downloadImages: true,
           selectedImageIndex: imageIndex
         })
