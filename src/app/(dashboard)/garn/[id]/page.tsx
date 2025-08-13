@@ -97,7 +97,7 @@ export default function YarnDetailPage() {
 
             {/* Image + actions under */}
             <div className="md:col-span-1">
-              <div className="aspect-square w-full overflow-hidden rounded-md bg-muted">
+              <div className="aspect-square w-full overflow-hidden rounded-md bg-muted md:w-56 md:h-56 md:mx-auto">
                 {master?.imageUrl ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img src={master.imageUrl} alt={master.name} className="h-full w-full object-cover" />
