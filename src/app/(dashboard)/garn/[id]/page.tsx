@@ -194,7 +194,7 @@ export default function YarnDetailPage() {
                 <h3 className="text-sm font-medium">Farger</h3>
                 <div className="text-xs text-muted-foreground">Filter: {selectedColor || 'Ingen'}</div>
               </div>
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
+              <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2">
                 {colors.map((c) => (
                   <button key={c.id} onClick={() => setSelectedColor(prev => prev === c.name ? '' : c.name)} className={`rounded-lg border p-3 text-left transition-colors ${selectedColor === c.name ? 'bg-muted' : 'hover:bg-muted/40'}`}>
                     <div className="flex items-center gap-2">
