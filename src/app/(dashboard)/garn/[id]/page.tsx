@@ -3,7 +3,7 @@
 import { useParams } from 'next/navigation'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { ChevronLeft, Download, CheckCircle } from 'lucide-react'
+import { ChevronLeft, Download, CheckCircle, Hash, Package, DollarSign } from 'lucide-react'
 import Link from 'next/link'
 import { BatchGrid } from '@/components/yarn/BatchGrid'
 import { trpc } from '@/lib/trpc/client'
