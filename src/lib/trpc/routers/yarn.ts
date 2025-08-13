@@ -884,59 +884,68 @@ export const yarnRouter = createTRPCRouter({
 
   // Hent alle farger for en master med summer
   getColorsForMaster: protectedProcedure
-    .input(z.object({ masterId: z.string() }))
+    .input(z.any().optional())
     .query(async ({ ctx, input }) => {
-      const [colorCategory, batchCategory] = await Promise.all([
-        ctx.db.category.findFirst({ where: { name: 'Garn Farge' } }),
-        ctx.db.category.findFirst({ where: { name: 'Garn Batch' } })
-      ])
-
-      if (!colorCategory) return []
-
-      const colors = await ctx.db.item.findMany({
-        where: {
-          userId: ctx.user.id,
-          categoryId: colorCategory.id,
-          OR: [
-            { relatedItems: { some: { id: input.masterId } } },
-            { relatedTo: { some: { id: input.masterId } } }
-          ]
+      try {
+        const masterId = typeof input === 'object' && input ? (input as any).masterId : undefined
+        if (!masterId) {
+          return []
         }
-      })
+        const [colorCategory, batchCategory] = await Promise.all([
+          ctx.db.category.findFirst({ where: { name: 'Garn Farge' } }),
+          ctx.db.category.findFirst({ where: { name: 'Garn Batch' } })
+        ])
 
-      if (!batchCategory) {
-        return colors.map(c => ({
-          id: c.id,
-          name: c.name,
-          colorCode: safeParseColorCode(c.categoryData),
-          batchCount: 0,
-          skeinCount: 0
-        }))
-      }
+        if (!colorCategory) return []
 
-      const results = [] as Array<{ id: string, name: string, colorCode?: string, batchCount: number, skeinCount: number }>
-      for (const color of colors) {
-        const batches = await ctx.db.item.findMany({
+        const colors = await ctx.db.item.findMany({
           where: {
             userId: ctx.user.id,
-            categoryId: batchCategory.id,
+            categoryId: colorCategory.id,
             OR: [
-              { relatedItems: { some: { id: color.id } } },
-              { relatedTo: { some: { id: color.id } } }
+              { relatedItems: { some: { id: masterId } } },
+              { relatedTo: { some: { id: masterId } } }
             ]
           }
         })
-        const skeins = batches.reduce((sum, b) => sum + (b.availableQuantity || 0), 0)
-        results.push({
-          id: color.id,
-          name: color.name,
-          colorCode: safeParseColorCode(color.categoryData),
-          batchCount: batches.length,
-          skeinCount: Math.round(skeins)
-        })
-      }
 
-      return results
+        if (!batchCategory) {
+          return colors.map(c => ({
+            id: c.id,
+            name: c.name,
+            colorCode: safeParseColorCode(c.categoryData),
+            batchCount: 0,
+            skeinCount: 0
+          }))
+        }
+
+        const results = [] as Array<{ id: string, name: string, colorCode?: string, batchCount: number, skeinCount: number }>
+        for (const color of colors) {
+          const batches = await ctx.db.item.findMany({
+            where: {
+              userId: ctx.user.id,
+              categoryId: batchCategory.id,
+              OR: [
+                { relatedItems: { some: { id: color.id } } },
+                { relatedTo: { some: { id: color.id } } }
+              ]
+            }
+          })
+          const skeins = batches.reduce((sum, b) => sum + (b.availableQuantity || 0), 0)
+          results.push({
+            id: color.id,
+            name: color.name,
+            colorCode: safeParseColorCode(color.categoryData),
+            batchCount: batches.length,
+            skeinCount: Math.round(skeins)
+          })
+        }
+
+        return results
+      } catch (e) {
+        console.error('getColorsForMaster failed', e)
+        return []
+      }
     }),
 
   // Hent alle batches for en farge

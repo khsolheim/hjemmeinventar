@@ -1,7 +1,9 @@
 'use client'
 
 import { useState } from 'react'
-import { Plus, Edit, Trash2, Package, MapPin, Calendar, DollarSign, Hash } from 'lucide-react'
+import Link from 'next/link'
+import { useRouter } from 'next/navigation'
+import { Plus, Edit, Trash2, Package, MapPin, Calendar, DollarSign, Hash, QrCode } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -26,6 +28,7 @@ interface BatchGridProps {
 
 export function BatchGrid({ masterId, hideMasterHeader = false, hideTotals = false, filterColorName }: BatchGridProps) {
   const [isAddBatchOpen, setIsAddBatchOpen] = useState(false)
+  const router = useRouter()
 
   // Fetch master data
   const { data: master, refetch: refetchMaster } = trpc.items.getById.useQuery(masterId)
@@ -268,8 +271,20 @@ export function BatchGrid({ masterId, hideMasterHeader = false, hideTotals = fal
                 ? { backgroundColor: batchData.colorCode }
                 : undefined
 
+              const handleCardClick = (e: React.MouseEvent) => {
+                const el = e.target as HTMLElement
+                if (el.closest('button') || el.closest('a') || el.closest('input') || el.closest('label') || el.closest('[role="button"]')) {
+                  return
+                }
+                router.push(`/garn/batch/${batch.id}`)
+              }
+
               return (
-                <Card key={batch.id} className="relative">
+                <Card 
+                  key={batch.id} 
+                  className="relative cursor-pointer hover:ring-1 hover:ring-muted"
+                  onClick={handleCardClick}
+                >
                   <CardHeader className="px-3 py-2">
                     <div className="flex justify-between items-start">
                       <div className="flex-1">
@@ -286,6 +301,11 @@ export function BatchGrid({ masterId, hideMasterHeader = false, hideTotals = fal
                         </CardDescription>
                       </div>
                        <div className="flex items-center gap-1">
+                         <Link href={`/garn/batch/${batch.id}`} className="inline-flex">
+                           <Button variant="ghost" size="sm" title="Åpne detaljer">
+                             <QrCode className="h-3 w-3" />
+                           </Button>
+                         </Link>
                         <Dialog>
                           <DialogTrigger asChild>
                             <Button variant="ghost" size="sm">

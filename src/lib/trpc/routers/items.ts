@@ -389,6 +389,138 @@ export const itemsRouter = createTRPCRouter({
       return { success: true }
     }),
 
+  // Add item distribution (split quantity across locations)
+  addDistribution: protectedProcedure
+    .input(z.object({
+      itemId: z.string(),
+      locationId: z.string(),
+      quantity: z.number().min(0.0001),
+      notes: z.string().optional()
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const item = await ctx.db.item.findFirst({
+        where: { id: input.itemId, userId: ctx.user.id },
+        include: { distributions: true }
+      })
+      if (!item) {
+        throw new TRPCError({ code: 'NOT_FOUND', message: 'Gjenstand ikke funnet' })
+      }
+
+      const location = await ctx.db.location.findFirst({
+        where: { id: input.locationId, userId: ctx.user.id }
+      })
+      if (!location) {
+        throw new TRPCError({ code: 'NOT_FOUND', message: 'Lokasjon ikke funnet' })
+      }
+
+      const currentTotalDistributed = item.distributions.reduce((sum, d) => sum + Number(d.quantity || 0), 0)
+      if (currentTotalDistributed + input.quantity > item.totalQuantity + 1e-6) {
+        throw new TRPCError({ code: 'BAD_REQUEST', message: 'Fordelt mengde kan ikke overstige totalt antall' })
+      }
+
+      const created = await ctx.db.itemDistribution.create({
+        data: {
+          itemId: item.id,
+          locationId: location.id,
+          quantity: input.quantity,
+          notes: input.notes
+        },
+        include: { location: true }
+      })
+
+      await logActivity({
+        type: 'ITEM_MOVED',
+        description: `La til fordeling (${input.quantity} ${item.unit}) til ${location.name}`,
+        userId: ctx.user.id,
+        itemId: item.id,
+        locationId: location.id
+      })
+
+      return created
+    }),
+
+  // Update item distribution
+  updateDistribution: protectedProcedure
+    .input(z.object({
+      distributionId: z.string(),
+      locationId: z.string().optional(),
+      quantity: z.number().min(0.0001).optional(),
+      notes: z.string().optional()
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const distribution = await ctx.db.itemDistribution.findFirst({
+        where: { id: input.distributionId },
+        include: { item: { include: { distributions: true } } }
+      })
+      if (!distribution || distribution.item.userId !== ctx.user.id) {
+        throw new TRPCError({ code: 'NOT_FOUND', message: 'Fordeling ikke funnet' })
+      }
+
+      if (input.locationId) {
+        const location = await ctx.db.location.findFirst({
+          where: { id: input.locationId, userId: ctx.user.id }
+        })
+        if (!location) {
+          throw new TRPCError({ code: 'NOT_FOUND', message: 'Ny lokasjon ikke funnet' })
+        }
+      }
+
+      // Validate total does not exceed item.totalQuantity
+      if (input.quantity !== undefined) {
+        const othersTotal = distribution.item.distributions
+          .filter(d => d.id !== distribution.id)
+          .reduce((sum, d) => sum + Number(d.quantity || 0), 0)
+        if (othersTotal + input.quantity > distribution.item.totalQuantity + 1e-6) {
+          throw new TRPCError({ code: 'BAD_REQUEST', message: 'Fordelt mengde kan ikke overstige totalt antall' })
+        }
+      }
+
+      const updated = await ctx.db.itemDistribution.update({
+        where: { id: input.distributionId },
+        data: {
+          ...(input.locationId !== undefined ? { locationId: input.locationId } : {}),
+          ...(input.quantity !== undefined ? { quantity: input.quantity } : {}),
+          ...(input.notes !== undefined ? { notes: input.notes } : {})
+        },
+        include: { location: true }
+      })
+
+      await logActivity({
+        type: 'ITEM_MOVED',
+        description: `Oppdaterte fordeling (${updated.quantity} ${distribution.item.unit}) i ${updated.locationId === distribution.locationId ? 'samme lokasjon' : 'ny lokasjon'}`,
+        userId: ctx.user.id,
+        itemId: distribution.itemId,
+        locationId: updated.locationId
+      })
+
+      return updated
+    }),
+
+  // Remove item distribution
+  removeDistribution: protectedProcedure
+    .input(z.object({ distributionId: z.string() }))
+    .mutation(async ({ ctx, input }) => {
+      const distribution = await ctx.db.itemDistribution.findFirst({
+        where: { id: input.distributionId },
+        include: { item: true, location: true }
+      })
+      if (!distribution || distribution.item.userId !== ctx.user.id) {
+        throw new TRPCError({ code: 'NOT_FOUND', message: 'Fordeling ikke funnet' })
+      }
+
+      await ctx.db.itemDistribution.delete({ where: { id: input.distributionId } })
+
+      await logActivity({
+        type: 'ITEM_MOVED',
+        description: `Fjernet fordeling (${distribution.quantity} ${distribution.item.unit}) fra ${distribution.location.name}`,
+        userId: ctx.user.id,
+        itemId: distribution.itemId,
+        locationId: distribution.locationId
+      })
+
+      return { success: true }
+    }),
+
   // Bulk operations
   bulkMove: protectedProcedure
     .input(z.object({
