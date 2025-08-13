@@ -178,45 +178,31 @@ export class ImageService {
 
     console.log('Extracting images from HTML for URL:', baseUrl)
 
-    // Enhanced image selectors for various e-commerce sites including Adlibris
+    // Fokus kun på faktiske produktbilder
     const imageSelectors = [
-      // Primary product image
+      // Spesifikke produktbilde-selectorer
+      'img[alt*="melody"], img[alt*="drops"]',
+      'img[src*="melody"], img[src*="drops"]', 
+      'img[src*="garn"], img[src*="yarn"]',
+      'img[alt*="garn"], img[alt*="yarn"]',
+      'img[src*="alpakkamiks"]',
+      'img[alt*="alpakkamiks"]',
+      
+      // Primære produktbilder
       '.product-image img',
-      '[data-testid="product-image"]',
       '.main-image img',
       '.hero-image img',
       '.primary-image img',
       
-      // Gallery images
+      // Produktgalleri
       '.product-gallery img',
       '.image-gallery img',
-      '.thumbnail img',
-      '.product-images img',
       '.gallery img',
       
-      // Adlibris specific
-      '.product-details img',
-      '.product-media img',
-      '.cover-image img',
-      '.book-cover img',
-      
-      // Generic images in product area
+      // Adlibris produktområde
       '.product img',
-      '.item img',
       'main img',
-      'article img',
-      
-      // Any images with product-related data
-      'img[data-src]',
-      'img[data-lazy-src]',
-      
-      // Fallback: any img with product-related attributes
-      'img[alt*="product"], img[alt*="garn"], img[alt*="yarn"]',
-      'img[src*="product"], img[src*="garn"], img[src*="yarn"]',
-      'img[alt*="melody"], img[alt*="drops"]',
-      
-      // Very broad fallback for any reasonable sized images
-      'img'
+      'article img'
     ]
 
     imageSelectors.forEach((selector, selectorIndex) => {
@@ -270,24 +256,36 @@ export class ImageService {
       return 0
     })
 
-    return images.slice(0, 10) // Limit to max 10 images
+    return images.slice(0, 5) // Tillat opptil 5 produktbilder
   }
 
   /**
-   * Resolve relative image URLs to absolute URLs
+   * Resolve relative image URLs to absolute URLs and optimize size
    */
   private resolveImageUrl(imageUrl: string, baseUrl: string): string {
     try {
-      if (imageUrl.startsWith('http')) return imageUrl
-      if (imageUrl.startsWith('//')) return `https:${imageUrl}`
-      if (imageUrl.startsWith('/')) {
+      let resolvedUrl = imageUrl
+      
+      if (imageUrl.startsWith('http')) {
+        resolvedUrl = imageUrl
+      } else if (imageUrl.startsWith('//')) {
+        resolvedUrl = `https:${imageUrl}`
+      } else if (imageUrl.startsWith('/')) {
         const url = new URL(baseUrl)
-        return `${url.protocol}//${url.host}${imageUrl}`
+        resolvedUrl = `${url.protocol}//${url.host}${imageUrl}`
+      } else {
+        // Relative URL
+        const url = new URL(baseUrl)
+        resolvedUrl = new URL(imageUrl, url.href).href
       }
       
-      // Relative URL
-      const url = new URL(baseUrl)
-      return new URL(imageUrl, url.href).href
+      // Optimaliser Adlibris bilder - øk størrelsen
+      if (resolvedUrl.includes('adlibris.com') && resolvedUrl.includes('?w=')) {
+        resolvedUrl = resolvedUrl.replace(/\?w=\d+/, '?w=500')
+        console.log(`Optimized Adlibris image size: ${resolvedUrl}`)
+      }
+      
+      return resolvedUrl
     } catch (error) {
       console.error('Failed to resolve image URL:', imageUrl, error)
       return imageUrl
@@ -319,6 +317,22 @@ export class ImageService {
                               search.includes('image') ||
                               search.includes('photo')
 
+      // Spesifikke produktbilde-indikatorer
+      const isProductImage = pathname.includes('product') ||
+                            pathname.includes('item') ||
+                            pathname.includes('cover') ||
+                            // Garn-spesifikke termer
+                            pathname.includes('garn') ||
+                            pathname.includes('yarn') ||
+                            pathname.includes('melody') ||
+                            pathname.includes('drops') ||
+                            // Alt-tekst indikatorer
+                            url.includes('garn') ||
+                            url.includes('yarn') ||
+                            // Adlibris spesifikke mønstre
+                            pathname.includes('melody-uni-colour') ||
+                            pathname.includes('alpakkamiks')
+
       // Check for CDN patterns
       const isCdnImage = urlObj.hostname.includes('cloudfront') ||
                         urlObj.hostname.includes('cloudinary') ||
@@ -329,7 +343,7 @@ export class ImageService {
                         urlObj.hostname.includes('img.') ||
                         urlObj.hostname.includes('cdn.')
 
-      // Exclude obvious non-images
+      // Ekskluder kun åpenbare ikke-bilder - vær liberal for produktbilder
       const isNotImage = pathname.includes('.css') || 
                         pathname.includes('.js') || 
                         pathname.includes('.json') ||
@@ -338,12 +352,23 @@ export class ImageService {
                         url.includes('data:text') ||
                         url.includes('favicon') ||
                         pathname.endsWith('.html') ||
-                        pathname.endsWith('.php')
+                        pathname.endsWith('.php') ||
+                        // Ekskluder betalings- og leveringsikoner
+                        pathname.includes('visa') ||
+                        pathname.includes('mastercard') ||
+                        pathname.includes('klarna') ||
+                        pathname.includes('posten') ||
+                        pathname.includes('helthjem') ||
+                        pathname.includes('instabox') ||
+                        pathname.includes('payment') ||
+                        pathname.includes('shipping') ||
+                        pathname.includes('delivery')
 
       // Accept if it has image extension, or keywords, or is from CDN
-      const isLikelyImage = hasImageExtension || hasImageKeywords || isCdnImage
+      // Prioriter produktbilder høyere
+      const isLikelyImage = hasImageExtension || hasImageKeywords || isCdnImage || isProductImage
       
-      // Additional size heuristics - skip very small images (likely icons)
+      // Liberal størrelsesvalidering - kun ekskluder helt små ikoner
       const hasGoodDimensions = !search.includes('w=1') && 
                                !search.includes('width=1') &&
                                !pathname.includes('1x1') &&
@@ -352,6 +377,7 @@ export class ImageService {
       console.log(`Validating image URL: ${url}`)
       console.log(`  - Extension: ${hasImageExtension}`)
       console.log(`  - Keywords: ${hasImageKeywords}`)
+      console.log(`  - Product image: ${isProductImage}`)
       console.log(`  - CDN: ${isCdnImage}`)
       console.log(`  - Not image: ${isNotImage}`)
       console.log(`  - Good dimensions: ${hasGoodDimensions}`)
@@ -362,6 +388,15 @@ export class ImageService {
       console.error('Error validating image URL:', url, error)
       return false
     }
+  }
+
+  /**
+   * Extract size parameter from URL query string
+   */
+  private extractSizeFromUrl(search: string, param: string): number {
+    const regex = new RegExp(`[?&]${param}=(\\d+)`, 'i')
+    const match = search.match(regex)
+    return match ? parseInt(match[1], 10) : 0
   }
 }
 

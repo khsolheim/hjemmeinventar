@@ -10,7 +10,8 @@ import { z } from 'zod'
 
 const scrapeRequestSchema = z.object({
   url: z.string().url('Ugyldig URL'),
-  downloadImages: z.boolean().default(true)
+  downloadImages: z.boolean().default(false), // Default til false så brukeren kan velge
+  selectedImageIndex: z.number().optional() // Index for hvilket bilde som skal lastes ned
 })
 
 export async function POST(request: NextRequest) {
@@ -43,26 +44,52 @@ export async function POST(request: NextRequest) {
     // Scrape produktinformasjon
     const productData = await yarnUrlScraper.scrapeUrl(validatedData.url)
 
-    // Last ned og lagre bilder hvis ønsket
+    // Håndter bilder basert på brukervalg
     let downloadedImages = null
     if (validatedData.downloadImages && productData.images && productData.images.length > 0) {
       try {
-        console.log(`Downloading ${productData.images.length} images for product: ${productData.name}`)
-        downloadedImages = await imageService.downloadAndStoreImages(
-          productData.images,
-          'yarn-product'
-        )
-        console.log(`Successfully downloaded ${downloadedImages.length} images`)
+        // Hvis et spesifikt bilde er valgt, last kun det ned
+        if (validatedData.selectedImageIndex !== undefined) {
+          const selectedImage = productData.images[validatedData.selectedImageIndex]
+          if (selectedImage) {
+            console.log(`Downloading selected image ${validatedData.selectedImageIndex}: ${selectedImage.url}`)
+            const downloadedImage = await imageService.downloadAndStoreImage(
+              selectedImage.url,
+              'yarn-product',
+              selectedImage.alt
+            )
+            downloadedImages = [downloadedImage]
+            console.log(`Successfully downloaded selected image`)
+          }
+        } else {
+          // Last ned alle bilder (gammel oppførsel for bakoverkompatibilitet)
+          console.log(`Downloading ${productData.images.length} images for product: ${productData.name}`)
+          downloadedImages = await imageService.downloadAndStoreImages(
+            productData.images,
+            'yarn-product'
+          )
+          console.log(`Successfully downloaded ${downloadedImages.length} images`)
+        }
       } catch (imageError) {
         console.error('Failed to download images:', imageError)
         // Continue without images rather than failing entirely
         // Bruk original bilder som fallback
-        downloadedImages = productData.images.map(img => ({
-          url: img.url,
-          filename: img.url.split('/').pop() || 'unknown.jpg',
-          filesize: 0,
-          filetype: 'image/jpeg'
-        }))
+        if (validatedData.selectedImageIndex !== undefined) {
+          const selectedImage = productData.images[validatedData.selectedImageIndex]
+          downloadedImages = selectedImage ? [{
+            url: selectedImage.url,
+            filename: selectedImage.url.split('/').pop() || 'unknown.jpg',
+            filesize: 0,
+            filetype: 'image/jpeg'
+          }] : null
+        } else {
+          downloadedImages = productData.images.map(img => ({
+            url: img.url,
+            filename: img.url.split('/').pop() || 'unknown.jpg',
+            filesize: 0,
+            filetype: 'image/jpeg'
+          }))
+        }
       }
     }
 

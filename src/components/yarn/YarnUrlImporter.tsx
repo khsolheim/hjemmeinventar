@@ -36,6 +36,8 @@ export function YarnUrlImporter({ onImport, disabled }: YarnUrlImporterProps) {
   const [scrapedData, setScrapedData] = useState<YarnProductData | null>(null)
   const [downloadedImages, setDownloadedImages] = useState<ImageUploadResult[] | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [selectedImageIndex, setSelectedImageIndex] = useState<number | null>(null)
+  const [isDownloadingImage, setIsDownloadingImage] = useState(false)
 
   const handleScrapeUrl = async () => {
     if (!url.trim()) {
@@ -47,6 +49,7 @@ export function YarnUrlImporter({ onImport, disabled }: YarnUrlImporterProps) {
     setError(null)
     setScrapedData(null)
     setDownloadedImages(null)
+    setSelectedImageIndex(null)
 
     try {
       const response = await fetch('/api/scrape-yarn-url', {
@@ -54,7 +57,7 @@ export function YarnUrlImporter({ onImport, disabled }: YarnUrlImporterProps) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
           url: url.trim(),
-          downloadImages: true
+          downloadImages: false // Start uten å laste ned bilder
         })
       })
 
@@ -65,12 +68,30 @@ export function YarnUrlImporter({ onImport, disabled }: YarnUrlImporterProps) {
       }
 
       setScrapedData(result.data)
-      setDownloadedImages(result.data.downloadedImages || null)
+      setDownloadedImages(null) // Reset downloaded images
+      setSelectedImageIndex(null) // Reset selected image
       
-      const imageCount = result.data.downloadedImages?.length || 0
-      if (imageCount > 0) {
-        toast.success(`Produktinformasjon og ${imageCount} bilder hentet!`)
+      // Debug bildene som blir funnet
+      const availableImages = result.data.images?.length || 0
+      if (availableImages > 0) {
+        console.log('Bilder funnet:', result.data.images)
+        result.data.images.forEach((img: any, idx: number) => {
+          console.log(`Bilde ${idx + 1}${img.isPrimary ? ' (AI valgte som hovedbilde)' : ''}:`, img.url)
+        })
+        
+        // Finn AI-valgt hovedbilde og last det ned automatisk
+        const primaryImageIndex = result.data.images.findIndex((img: any) => img.isPrimary)
+        if (primaryImageIndex !== -1) {
+          toast.success(`Produktinformasjon hentet! AI valgte bilde ${primaryImageIndex + 1} som hovedbilde av ${availableImages} tilgjengelige.`)
+          // Last ned AI-valgt bilde automatisk
+          setTimeout(() => {
+            handleDownloadImage(primaryImageIndex)
+          }, 500) // Kort delay for å la UI oppdatere seg
+        } else {
+          toast.success(`Produktinformasjon hentet! ${availableImages} bilder tilgjengelig for nedlasting.`)
+        }
       } else {
+        console.log('Ingen bilder funnet')
         toast.success('Produktinformasjon hentet!')
       }
     } catch (err) {
@@ -79,6 +100,42 @@ export function YarnUrlImporter({ onImport, disabled }: YarnUrlImporterProps) {
       toast.error(`Feil ved henting: ${errorMessage}`)
     } finally {
       setIsLoading(false)
+    }
+  }
+
+  const handleDownloadImage = async (imageIndex: number) => {
+    if (!scrapedData?.images?.[imageIndex]) {
+      toast.error('Bildet finnes ikke')
+      return
+    }
+
+    setIsDownloadingImage(true)
+    setSelectedImageIndex(imageIndex)
+
+    try {
+      const response = await fetch('/api/scrape-yarn-url', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          url: url.trim(),
+          downloadImages: true,
+          selectedImageIndex: imageIndex
+        })
+      })
+
+      const result = await response.json()
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Kunne ikke laste ned bilde')
+      }
+
+      setDownloadedImages(result.data.downloadedImages || null)
+      toast.success('Bilde lastet ned!')
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Ukjent feil'
+      toast.error(`Feil ved nedlasting: ${errorMessage}`)
+    } finally {
+      setIsDownloadingImage(false)
     }
   }
 
@@ -92,6 +149,7 @@ export function YarnUrlImporter({ onImport, disabled }: YarnUrlImporterProps) {
       setUrl('')
       setScrapedData(null)
       setDownloadedImages(null)
+      setSelectedImageIndex(null)
       setError(null)
     }
   }
@@ -418,68 +476,81 @@ export function YarnUrlImporter({ onImport, disabled }: YarnUrlImporterProps) {
               </div>
             )}
 
-            {/* Produktbilder */}
-            {downloadedImages && downloadedImages.length > 0 && (
+            {/* Bildevalg */}
+            {scrapedData.images && scrapedData.images.length > 0 && (
               <div>
-                <Label className="text-sm font-medium flex items-center gap-1 mb-2">
+                                <Label className="text-sm font-medium flex items-center gap-1 mb-2">
                   <Package className="h-4 w-4" />
-                  Produktbilder ({downloadedImages.length})
+                  Forhåndsvisning av bilder ({scrapedData.images.length} tilgjengelig)
                 </Label>
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-                  {downloadedImages.slice(0, 6).map((image, index) => (
-                    <div key={index} className="relative aspect-square bg-gray-100 rounded-lg overflow-hidden">
-                      <img
-                        src={image.url}
-                        alt={`Produktbilde ${index + 1}`}
-                        className="w-full h-full object-cover hover:scale-105 transition-transform cursor-pointer"
-                        loading="lazy"
-                        onError={(e) => {
-                          console.error('Feil ved lasting av bilde:', image.url)
-                          const target = e.target as HTMLImageElement
-                          target.style.display = 'none'
-                        }}
-                      />
-                      {index === 0 && (
-                        <div className="absolute top-1 left-1 bg-blue-600 text-white text-xs px-1 py-0.5 rounded">
-                          Hovedbilde
-                        </div>
-                      )}
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                  {scrapedData.images.map((image, index) => (
+                    <div key={index} className="rounded-lg border bg-white p-2">
+                      <div className="aspect-square w-full overflow-hidden rounded-md">
+                        <img
+                          src={image.url}
+                          alt={image.alt || `Produktbilde ${index + 1}`}
+                          className="h-full w-full object-cover"
+                          referrerPolicy="no-referrer"
+                          crossOrigin="anonymous"
+                          loading="lazy"
+                          onError={(e) => {
+                            console.error('Feil ved lasting av bilde:', image.url)
+                            const target = e.target as HTMLImageElement
+                            target.src = ''
+                            target.alt = 'Bilde kunne ikke lastes'
+                          }}
+                        />
+                      </div>
+                      <div className="mt-2 flex items-center justify-between">
+                        {image.isPrimary && (
+                          <span className="text-xs rounded bg-green-600 px-1.5 py-0.5 text-white">🤖 AI valgt</span>
+                        )}
+                        <Button
+                          size="sm"
+                          onClick={() => handleDownloadImage(index)}
+                          disabled={isDownloadingImage}
+                          variant="secondary"
+                        >
+                          {isDownloadingImage && selectedImageIndex === index ? (
+                            <>
+                              <Loader2 className="mr-1 h-3 w-3 animate-spin" />
+                              Laster...
+                            </>
+                          ) : (
+                            <>
+                              <Download className="mr-1 h-3 w-3" />
+                              Last ned
+                            </>
+                          )}
+                        </Button>
+                      </div>
                     </div>
                   ))}
-                  {downloadedImages.length > 6 && (
-                    <div className="aspect-square bg-gray-200 rounded-lg flex items-center justify-center text-sm text-gray-600">
-                      +{downloadedImages.length - 6} flere
-                    </div>
-                  )}
                 </div>
                 <p className="text-xs text-muted-foreground mt-1">
-                  Bildene er automatisk optimalisert og lagret i høy kvalitet
+                  Forhåndsvisning av tilgjengelige produktbilder. Klikk for å laste ned og optimalisere.
                 </p>
               </div>
             )}
-            
-            {/* Viser også hovedproduktbilde hvis tilgjengelig */}
-            {scrapedData.imageUrl && (!downloadedImages || downloadedImages.length === 0) && (
+
+            {/* Nedlastet bilde */}
+            {downloadedImages && downloadedImages.length > 0 && (
               <div>
                 <Label className="text-sm font-medium flex items-center gap-1 mb-2">
-                  <Package className="h-4 w-4" />
-                  Produktbilde
+                  <CheckCircle className="h-4 w-4 text-green-600" />
+                  Nedlastet bilde
                 </Label>
                 <div className="relative w-32 h-32 bg-gray-100 rounded-lg overflow-hidden">
                   <img
-                    src={scrapedData.imageUrl}
-                    alt="Produktbilde"
+                    src={downloadedImages[0].url}
+                    alt="Nedlastet produktbilde"
                     className="w-full h-full object-cover"
                     loading="lazy"
-                    onError={(e) => {
-                      console.error('Feil ved lasting av hovedbilde:', scrapedData.imageUrl)
-                      const target = e.target as HTMLImageElement
-                      target.style.display = 'none'
-                    }}
                   />
                 </div>
                 <p className="text-xs text-muted-foreground mt-1">
-                  Originalbilde fra nettsiden
+                  Bildet er optimalisert og lagret ({downloadedImages[0].filesize} bytes)
                 </p>
               </div>
             )}

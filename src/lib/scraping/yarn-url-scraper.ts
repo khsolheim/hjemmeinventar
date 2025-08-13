@@ -5,6 +5,7 @@
 
 import { load } from 'cheerio'
 import { imageService } from '@/lib/image/image-service'
+import OpenAI from 'openai'
 
 export interface YarnProductData {
   name: string
@@ -111,42 +112,84 @@ class AdlibrsScraper implements Scraper {
   private extractPrice($: any): number | undefined {
     // Forbedret pris-ekstraktering spesielt for Adlibris
     
-    // Først, sjekk om elementet har data-price attributt
+    // Først, sjekk om elementet har data-price attributt (høyeste prioritet)
     const priceAttribute = $('[data-price]').attr('data-price')
     if (priceAttribute) {
       const price = parseFloat(priceAttribute)
-      if (price >= 5 && price <= 1000) {
+      if (price >= 1 && price <= 1000) { // Justert tilbake til 1 siden 5,6 kr er faktisk produktpris
+        console.log(`Found price from data-price attribute: ${price}`)
         return price
       }
     }
     
     // Søk etter spesifikke Adlibris pris-selektorer
     const adlibrisSelectors = [
+      '.text-content-sale', // Den faktiske pris-klassen for Adlibris
       '.price-display',
       '.current-price',
       '.price-current',
       '.price-final',
       '.sale-price',
+      '.price-value',
       '.price',
-      '[class*="price"]:not([class*="original"]):not([class*="was"])'
+      '[class*="price"]:not([class*="original"]):not([class*="was"]):not([class*="shipping"]):not([class*="freight"])',
+      '[class*="sale"]:not([class*="original"]):not([class*="was"])'
     ]
+    
+    const validPrices: number[] = []
     
     for (const selector of adlibrisSelectors) {
       const elements = $(selector)
       elements.each((i, elem) => {
         const priceText = $(elem).text().trim()
+        const parentText = $(elem).parent().text().trim().toLowerCase()
+        
         console.log(`Checking selector ${selector}: "${priceText}"`)
         
-        // Søk etter norske kroner spesifikt
-        const norwegianPriceMatch = priceText.match(/(\d+[\.,]?\d*)\s*kr(?![a-z])/i)
-        if (norwegianPriceMatch) {
-          const price = parseFloat(norwegianPriceMatch[1].replace(',', '.'))
-          if (price >= 5 && price <= 1000) {
-            console.log(`Found price from selector ${selector}: ${price}`)
-            return price
+        // Skip hvis dette er frakt/levering
+        const shippingTerms = [
+          'frakt', 'levering', 'shipping', 'delivery', 
+          'fri frakt', 'gratis frakt', 'free shipping',
+          'over 299', 'under 299', 'fra 299', 'til 299',
+          'minimum', 'terskel', 'threshold'
+        ]
+        
+        const isShippingRelated = shippingTerms.some(term => 
+          parentText.includes(term) || priceText.toLowerCase().includes(term)
+        )
+        
+        if (isShippingRelated) {
+          console.log(`Skipping shipping-related price: ${priceText}`)
+          console.log(`Parent context: "${parentText}"`)
+          return
+        }
+        
+        // Søk etter norske kroner og spesielt Adlibris-format
+        const pricePatterns = [
+          /(\d+[\.,]?\d*)\s*kr(?![a-z])/i, // Standard "5,6 kr" format
+          /(\d+[\.,]?\d*)\s*,-/i, // Adlibris "5,6,-" format
+          /(\d+[\.,]?\d*)\s*$/i // Bare tall "5.6" hvis det er i price-element
+        ]
+        
+        for (const pattern of pricePatterns) {
+          const match = priceText.match(pattern)
+          if (match) {
+            const price = parseFloat(match[1].replace(',', '.'))
+            if (price >= 1 && price <= 1000) {
+              console.log(`Found valid price from selector ${selector}: ${price} (pattern: ${pattern})`)
+              validPrices.push(price)
+              break // Stop ved første match
+            }
           }
         }
       })
+    }
+    
+    // Returner høyeste pris (produktpris er vanligvis høyere enn frakt)
+    if (validPrices.length > 0) {
+      const highestPrice = Math.max(...validPrices)
+      console.log(`Selected highest price: ${highestPrice} from ${validPrices}`)
+      return highestPrice
     }
     
     // Søk i strukturert JSON-LD data
@@ -155,7 +198,7 @@ class AdlibrsScraper implements Scraper {
         const jsonData = JSON.parse($(script).html() || '{}')
         if (jsonData.offers && jsonData.offers.price) {
           const price = parseFloat(jsonData.offers.price)
-          if (price >= 5 && price <= 1000) {
+          if (price >= 1 && price <= 1000) { // Justert tilbake til 1
             console.log(`Found price from JSON-LD: ${price}`)
             return price
           }
@@ -180,7 +223,9 @@ class AdlibrsScraper implements Scraper {
       /(\d+[\.,]?\d*)\s*kr\s*(?:eks\.?\s*mva)?/gi,
       /(\d+[\.,]?\d*)\s*kr\s*(?:fratrekk)?/gi,
       /(\d+[\.,]?\d*)\s*kr\s*(?:rabatt)?/gi,
-      /(\d+[\.,]?\d*)\s*kr\s*(?:pris)?/gi
+      /(\d+[\.,]?\d*)\s*kr\s*(?:pris)?/gi,
+      // Spesifikt Adlibris ",-" format
+      /(\d+[\.,]?\d*)\s*,-/gi
     ]
     
     const foundPrices: number[] = []
@@ -192,7 +237,30 @@ class AdlibrsScraper implements Scraper {
           const priceMatch = match.match(/(\d+[\.,]?\d*)/)
           if (priceMatch) {
             const price = parseFloat(priceMatch[1].replace(',', '.'))
-            if (price >= 5 && price <= 1000) {
+            
+            // Skip hvis dette ser ut som frakt (kontekst-sjekk)
+            const context = allText.substring(
+              Math.max(0, allText.indexOf(match) - 50), 
+              Math.min(allText.length, allText.indexOf(match) + match.length + 50)
+            ).toLowerCase()
+            
+            // Utvidet liste over frakt/leveringsrelaterte termer
+            const shippingTerms = [
+              'frakt', 'levering', 'shipping', 'delivery', 
+              'fri frakt', 'gratis frakt', 'free shipping',
+              'over 299', 'under 299', 'fra 299', 'til 299',
+              'minimum', 'terskel', 'threshold'
+            ]
+            
+            const isShippingRelated = shippingTerms.some(term => context.includes(term))
+            
+            if (isShippingRelated) {
+              console.log(`Skipping shipping-related price pattern "${match}": ${price}`)
+              console.log(`Context: "${context}"`)
+              return
+            }
+            
+            if (price >= 1 && price <= 1000) { // Justert tilbake til 1
               foundPrices.push(price)
               console.log(`Found price pattern "${match}": ${price}`)
             }
@@ -202,17 +270,25 @@ class AdlibrsScraper implements Scraper {
     }
     
     if (foundPrices.length > 0) {
-      // Returner den mest forekommende prisen eller laveste hvis det er flere
+      // Gruppe priser etter hvor ofte de forekommer
       const priceFrequency = foundPrices.reduce((acc, price) => {
         acc[price] = (acc[price] || 0) + 1
         return acc
       }, {} as Record<number, number>)
       
-      const mostFrequent = Object.entries(priceFrequency)
-        .sort(([, a], [, b]) => b - a)[0]
+      // Prioriter priser som forekommer flere ganger (mer sannsynlig produktpris)
+      // eller velg høyeste pris hvis alle forekommer like ofte
+      const sortedPrices = Object.entries(priceFrequency)
+        .sort(([priceA, freqA], [priceB, freqB]) => {
+          // Først sorter etter frekvens (høyest først)
+          if (freqB !== freqA) return freqB - freqA
+          // Så etter pris (høyest først) hvis frekvens er lik
+          return parseFloat(priceB) - parseFloat(priceA)
+        })
       
-      console.log(`Returning most frequent price: ${mostFrequent[0]}`)
-      return parseFloat(mostFrequent[0])
+      const selectedPrice = parseFloat(sortedPrices[0][0])
+      console.log(`Selected price: ${selectedPrice} (frequency: ${sortedPrices[0][1]}) from prices:`, foundPrices)
+      return selectedPrice
     }
     
     console.log('No price found in text patterns')
@@ -593,14 +669,14 @@ class AdlibrsScraper implements Scraper {
     
     // Sammensetning - søk i alle tekstkilder
     const compositionPatterns = [
-      /sammensetning[:\s]*([^\\n]*%[^\\n]*)/i,
-      /(\d+%[^\\n]*\d+%[^\\n]*)/i,
-      /material[:\s]*([^\\n]*%[^\\n]*)/i,
-      /fiber[:\s]*([^\\n]*%[^\\n]*)/i,
+      /sammensetning[:\s]*([^\n]*%[^\n]*)/i,
+      /(\d+%[^\n]*\d+%[^\n]*)/i,
+      /material[:\s]*([^\n]*%[^\n]*)/i,
+      /fiber[:\s]*([^\n]*%[^\n]*)/i,
       /(\d+%\s*[A-Za-zøæåØÆÅ]+(?:[,\s]+\d+%\s*[A-Za-zøæåØÆÅ]+)*)/i,
       // Spesifikt mønster for "71% Alpakka, 25% Ull, 4% Polyamid"
       /(\d+%\s*[A-Za-zøæåØÆÅ]+(?:[,\s]+\d+%\s*[A-Za-zøæåØÆÅ]+)*)/i,
-      /sammensetning[:\s]*([^\\n]*)/i
+      /sammensetning[:\s]*([^\n]*)/i
     ]
     
     for (const textSource of textSources) {
@@ -609,25 +685,25 @@ class AdlibrsScraper implements Scraper {
         const match = textSource.match(pattern)
         if (match) {
           info.composition = match[1].trim()
-            .replace(/\\s+/g, ' ')
+            .replace(/\s+/g, ' ')
             .replace(/,\s*/g, ', ')
+            .replace(/\n.*/, '') // Fjern alt etter første linjeskift
           console.log(`Found composition: ${info.composition} using pattern: ${pattern}`)
           break
         }
       }
     }
     
-    // Strikkefasthet (gauge) - søk i alle tekstkilder
+    // Strikkefasthet (gauge) - meget spesifikk søk
     const gaugePatterns = [
-      /strikkefasthet[:\s]*([^\\n]*10cm[^\\n]*)/i,
-      /gauge[:\s]*([^\\n]*10cm[^\\n]*)/i,
-      /(\d+\s*m(?:asker)?\s*x\s*\d+\s*r(?:ader|v)?\s*=\s*10cm)/i,
-      /(\d+\s*(?:st|m)\s*x\s*\d+\s*(?:r|v)\s*=\s*10\s*x\s*10\s*cm)/i,
-      /(\d+\s*x\s*\d+\s*=\s*10cm)/i,
-      // Spesifikt mønster for "14 m x 19 v = 10cm²"
-      /(\d+\s*m\s*x\s*\d+\s*v\s*=\s*10cm²)/i,
-      /(\d+\s*m\s*x\s*\d+\s*v\s*=\s*10cm)/i,
-      /strikkefasthet[:\s]*([^\\n]*)/i
+      // Kun meget spesifikke mønstre for strikkefasthet
+      /(\d+\s*m\s*x\s*\d+\s*v\s*=\s*10cm²?)/i,
+      /(\d+\s*m\s*x\s*\d+\s*r\s*=\s*10cm²?)/i,
+      /(\d+\s*masker?\s*x\s*\d+\s*rader?\s*=\s*10cm²?)/i,
+      /(\d+\s*(?:st|m)\s*x\s*\d+\s*(?:r|v)\s*=\s*10\s*x?\s*10\s*cm)/i,
+      /(\d+\s*x\s*\d+\s*=\s*10cm²?)/i,
+      // Kun strikkefasthet med spesifikk kontekst
+      /strikkefasthet[:\s]*(\d+\s*m\s*x\s*\d+\s*v[^\\n]*10cm[^\\n]*)/i
     ]
     
     for (const textSource of textSources) {
@@ -635,32 +711,36 @@ class AdlibrsScraper implements Scraper {
       for (const pattern of gaugePatterns) {
         const match = textSource.match(pattern)
         if (match) {
-          info.gauge = match[1].trim()
-          console.log(`Found gauge: ${info.gauge} using pattern: ${pattern}`)
-          break
+          let gauge = (match[1] || match[0]).trim()
+          
+          // Rens bort alt som ikke er relevant for strikkefasthet
+          gauge = gauge
+            .replace(/strikkefasthet[:\s]*/i, '') // Fjern "strikkefasthet:"
+            .replace(/\s+/g, ' ') // Normalisér mellomrom
+            .replace(/[^\d\s=mxvr²cm]/g, '') // Behold kun relevante tegn
+            .trim()
+          
+          // Valider at det ser ut som en riktig strikkefasthet
+          if (/\d+\s*[mx]\s*\d+.*10cm/i.test(gauge)) {
+            info.gauge = gauge
+            console.log(`Found gauge: ${info.gauge} using pattern: ${pattern}`)
+            break
+          }
         }
       }
     }
     
-    // Vaskeråd - forbedret søk for Adlibris
+    // Vaskeråd - meget spesifikke mønstre for korte vaskeråd
     const carePatterns = [
-      /vaskeråd[:\s]*([^\\n]*)/i,
-      /care\s*instructions?[:\s]*([^\\n]*)/i,
-      /wash[:\s]*([^\\n]*)/i,
-      /(håndvask[^\\n]*)/i,
-      /(plantørking[^\\n]*)/i,
-      /(maskinvask[^\\n]*)/i,
-      // Nye mønstre spesifikt for Adlibris
-      /vask[:\s]*([^\\n]*)/i,
-      /(hå[^\\n]*)/i, // Forkortelse for håndvask
-      /(maskin[^\\n]*)/i,
-      /(30°[^\\n]*)/i,
-      /(40°[^\\n]*)/i,
-      /(vask\s*[^\\n]*)/i,
       // Spesifikt mønster for "Håndvask maks 30°C. Plantørking."
-      /(håndvask\s*maks\s*\d+°C[^\\n]*)/i,
-      /(håndvask[^\\n]*plantørking[^\\n]*)/i,
-      /(håndvask[^\\n]*maks[^\\n]*)/i
+      /(håndvask\s*maks\s*\d+°C\.[^\.]*plantørking[^\.]*)/i,
+      /(håndvask[^\.]*\d+°C[^\.]*\.?\s*plantørking[^\.]*)/i,
+      /vaskeråd[:\s]*(håndvask[^\.]*\d+°[^\.]*\.?\s*plantørking[^\.]*)/i,
+      /(maskinvask\s*\d+°[^\.]*)/i,
+      // Kortere mønstre som stopper tidlig
+      /(håndvask\s*maks\s*\d+°C)/i,
+      /(maskinvask\s*\d+°C)/i,
+      /(plantørking)/i
     ]
     
     for (const textSource of textSources) {
@@ -668,9 +748,32 @@ class AdlibrsScraper implements Scraper {
       for (const pattern of carePatterns) {
         const match = textSource.match(pattern)
         if (match) {
-          info.careInstructions = match[1].trim()
+          let care = (match[1] || match[0]).trim()
+          
+          // Stopp ved første punktum hvis det ikke er del av temperatur
+          if (care.includes('.')) {
+            const sentences = care.split('.')
+            care = sentences[0]
+            // Legg til andre setning kun hvis det er relatert til tørking
+            if (sentences[1] && sentences[1].trim().match(/^\s*(plantørking|tørking|ikke|aldri)/i)) {
+              care += '. ' + sentences[1].trim()
+            }
+            care += '.'
+          }
+          
+          // Rens bort alt som ikke hører til vaskeråd
+          care = care
+            .replace(/produsert\s+i.*/i, '')
+            .replace(/produktinformasjon.*/i, '')
+            .replace(/beskrivelse.*/i, '')
+            .replace(/drops\s+melody.*/i, '')
             .replace(/\s+/g, ' ')
-            .substring(0, 200) // Begrens lengde
+            .trim()
+          
+          // Valider at det faktisk er vaskeråd og ikke for langt
+          if (care.match(/(vask|tørk|°c|plantørking|maskin|hånd)/i) && care.length <= 100) {
+            info.careInstructions = care
+          }
           console.log(`Found care instructions: ${info.careInstructions} using pattern: ${pattern}`)
           break
         }
@@ -679,12 +782,12 @@ class AdlibrsScraper implements Scraper {
     
     // Garntykkelse/kategori - søk i alle tekstkilder
     const weightCategoryPatterns = [
-      /gauge\s*vekt[:\s]*([^\\n]*)/i,
+      /gauge\s*vekt[:\s]*([^\n]*)/i,
       /(bulky|aran|dk|light|lace|worsted|fingering)/i,
       /garngruppe\s*([A-F])/i,
       // Spesifikt mønster for "Bulky/Aran"
       /(bulky\/aran|aran\/bulky)/i,
-      /gauge\s*vekt[:\s]*([^\\n]*)/i
+      /gauge\s*vekt[:\s]*([^\n]*)/i
     ]
     
     for (const textSource of textSources) {
@@ -985,11 +1088,218 @@ class GenericScraper implements Scraper {
 }
 
 export class YarnUrlScraper {
+  private openai: OpenAI | null = null
+
+  constructor() {
+    // Initialiser OpenAI hvis API-nøkkel finnes
+    if (process.env.OPENAI_API_KEY) {
+      this.openai = new OpenAI({
+        apiKey: process.env.OPENAI_API_KEY
+      })
+    }
+  }
+
   private scrapers: Scraper[] = [
     new AdlibrsScraper(),
     new HobbiiScraper(),
     new GenericScraper() // Må være sist (fallback)
   ]
+
+  /**
+   * Bruk AI til å velge beste produktbilde fra tilgjengelige bilder
+   */
+  private async selectBestImageWithAI(images: Array<{url: string, alt?: string}>, productName: string): Promise<number | null> {
+    if (!this.openai || images.length === 0) {
+      return null
+    }
+
+    try {
+      const imageDescriptions = images.map((img, index) => 
+        `${index}: URL: ${img.url}, Alt: "${img.alt || 'Ingen alt-tekst'}"`
+      ).join('\n')
+
+      const prompt = `
+Du er en ekspert på produktbilder og skal velge det beste hovedbildet for et garnprodukt.
+
+Produktnavn: ${productName}
+
+Tilgjengelige bilder:
+${imageDescriptions}
+
+Analyser URL-ene og alt-tekstene for å identifisere hvilket bilde som mest sannsynlig er det beste produktbildet. Se etter:
+- Bilder som har produktnavnet i URL-en
+- Hovedfarger vs andre farger (prioriter hovedproduktet)
+- "primary", "main", "hero" indikatorer
+- Unngå thumbnails eller små bilder
+- Prioriter bilder som matcher produktnavnet
+
+Returner BARE tallet (index) for det beste bildet, eller null hvis ingen er gode produktbilder.
+Eksempel: 0 (for første bilde), 2 (for tredje bilde), eller null
+
+Svar kun med tallet eller null:
+`
+
+      const response = await this.openai.chat.completions.create({
+        model: 'gpt-4o-mini',
+        messages: [{ role: 'user', content: prompt }],
+        temperature: 0.1,
+        max_tokens: 10
+      })
+
+      const content = response.choices[0]?.message?.content?.trim()
+      if (!content) {
+        return null
+      }
+
+      if (content.toLowerCase() === 'null') {
+        return null
+      }
+
+      const selectedIndex = parseInt(content)
+      if (isNaN(selectedIndex) || selectedIndex < 0 || selectedIndex >= images.length) {
+        console.log('AI returnerte ugyldig bildeindex:', content)
+        return null
+      }
+
+      console.log(`AI valgte bilde ${selectedIndex}: ${images[selectedIndex].url}`)
+      return selectedIndex
+
+    } catch (error) {
+      console.error('Feil ved AI bildevalg:', error)
+      return null
+    }
+  }
+
+  /**
+   * Ekstraktér garninformasjon ved hjelp av AI
+   * Fallback hvis tradisjonelle metoder feiler eller gir dårlige resultater
+   */
+  private async extractWithAI(html: string, url: string): Promise<Partial<YarnProductData>> {
+    if (!this.openai) {
+      console.log('OpenAI ikke tilgjengelig, hopper over AI-ekstraksjon')
+      return {}
+    }
+
+    try {
+      // Rens HTML for kun å beholde relevant innhold
+      const $ = load(html)
+      
+      // Fjern script, style, header, footer, nav, ads
+      $('script, style, header, footer, nav, .advertisement, .ad, .cookie-banner').remove()
+      
+      // Ta kun hovedinnholdet
+      const mainContent = $('main, .product, .content, body').first().text()
+      
+      // Begrens tekst til 4000 tegn for å unngå for store requests
+      const cleanText = mainContent.substring(0, 4000)
+
+      const prompt = `
+Du er en ekspert på garninformasjon. Analyser følgende produktside og trekk ut kun de spesifikke garn-detaljene som er nevnt.
+
+URL: ${url}
+
+Produktsideinnhold:
+${cleanText}
+
+Returner BARE informasjon som er eksplisitt nevnt på siden. Ikke gjet eller lag data.
+
+Trekk ut følgende informasjon hvis tilgjengelig (returner null hvis ikke funnet):
+- name: Produktnavn
+- price: Pris (kun tall, f.eks. 5.6 for "5,6 kr")
+- producer: Produsent/merke
+- composition: Sammensetning (f.eks. "71% Alpakka, 25% Ull, 4% Polyamid")
+- yardage: Løpelengde i meter (kun tall)
+- weight: Vekt i gram (kun tall)
+- needleSize: Anbefalte pinner i mm (kun tall)
+- gauge: Strikkefasthet (f.eks. "14 m x 19 v = 10cm²")
+- careInstructions: Vaskeråd (f.eks. "Håndvask maks 30°C. Plantørking.")
+- weightCategory: Garntykkelse (f.eks. "Bulky/Aran")
+
+Returner svaret som gyldig JSON uten ekstra tekst.
+`
+
+      const response = await this.openai.chat.completions.create({
+        model: 'gpt-4o-mini',
+        messages: [{ role: 'user', content: prompt }],
+        temperature: 0.1, // Lav temperatur for konsistente resultater
+        max_tokens: 800
+      })
+
+      const content = response.choices[0]?.message?.content
+      if (!content) {
+        console.log('Ingen respons fra AI')
+        return {}
+      }
+
+      // Parse JSON-respons - fjern markdown formatting først
+      try {
+        let cleanContent = content.trim()
+        
+        // Fjern markdown kodeblokker hvis de finnes
+        if (cleanContent.startsWith('```json')) {
+          cleanContent = cleanContent.replace(/^```json\s*/, '').replace(/\s*```$/, '')
+        } else if (cleanContent.startsWith('```')) {
+          cleanContent = cleanContent.replace(/^```\s*/, '').replace(/\s*```$/, '')
+        }
+        
+        const aiData = JSON.parse(cleanContent)
+        console.log('AI-ekstrakterte data:', aiData)
+        
+        // Rens AI-data og konverter til riktig format
+        const cleaned: Partial<YarnProductData> = {}
+        
+        if (aiData.name && typeof aiData.name === 'string') {
+          cleaned.name = aiData.name.trim()
+        }
+        
+        if (aiData.price !== null && !isNaN(parseFloat(aiData.price))) {
+          cleaned.price = parseFloat(aiData.price)
+        }
+        
+        if (aiData.producer && typeof aiData.producer === 'string') {
+          cleaned.producer = aiData.producer.trim()
+        }
+        
+        if (aiData.composition && typeof aiData.composition === 'string') {
+          cleaned.composition = aiData.composition.trim()
+        }
+        
+        if (aiData.yardage !== null && !isNaN(parseFloat(aiData.yardage))) {
+          cleaned.yardage = parseFloat(aiData.yardage)
+        }
+        
+        if (aiData.weight !== null && !isNaN(parseFloat(aiData.weight))) {
+          cleaned.weight = parseFloat(aiData.weight)
+        }
+        
+        if (aiData.needleSize !== null && !isNaN(parseFloat(aiData.needleSize))) {
+          cleaned.needleSize = parseFloat(aiData.needleSize)
+        }
+        
+        if (aiData.gauge && typeof aiData.gauge === 'string') {
+          cleaned.gauge = aiData.gauge.trim()
+        }
+        
+        if (aiData.careInstructions && typeof aiData.careInstructions === 'string') {
+          cleaned.careInstructions = aiData.careInstructions.trim()
+        }
+        
+        if (aiData.weightCategory && typeof aiData.weightCategory === 'string') {
+          cleaned.weightCategory = aiData.weightCategory.trim()
+        }
+
+        return cleaned
+      } catch (parseError) {
+        console.error('Feil ved parsing av AI-respons:', parseError)
+        console.log('AI-respons:', content)
+        return {}
+      }
+
+    } catch (error) {
+      console.error('Feil ved AI-ekstraksjon:', error)
+      return {}
+    }
+  }
 
   async scrapeUrl(url: string): Promise<YarnProductData> {
     try {
@@ -1029,15 +1339,60 @@ export class YarnUrlScraper {
         throw new Error('Ingen scraper funnet for denne URL-en')
       }
       
-      // Scrape data
+      // Scrape data med tradisjonelle metoder
       const data = await scraper.scrape(html, url)
       
+      // Prøv AI-forbedring/fallback
+      console.log('Prøver AI-forbedring av ekstrakterte data...')
+      const aiData = await this.extractWithAI(html, url)
+      
+      // La AI velge beste produktbilde hvis flere bilder finnes
+      let selectedImageIndex: number | null = null
+      if (data.images && data.images.length > 1) {
+        console.log('Lar AI velge beste produktbilde...')
+        selectedImageIndex = await this.selectBestImageWithAI(data.images, aiData.name || data.name || '')
+        if (selectedImageIndex !== null) {
+          // Marker det AI-valgte bildet som primary
+          data.images = data.images.map((img, index) => ({
+            ...img,
+            isPrimary: index === selectedImageIndex
+          }))
+          console.log(`AI valgte bilde ${selectedImageIndex} som hovedbilde`)
+        }
+      }
+      
+      // Kombiner AI og tradisjonelle data - AI får prioritet for problematiske felt
+      const combinedData: YarnProductData = {
+        name: aiData.name || data.name || '',
+        price: aiData.price !== undefined ? aiData.price : data.price,
+        producer: aiData.producer || data.producer,
+        composition: aiData.composition || data.composition,
+        yardage: aiData.yardage !== undefined ? aiData.yardage : data.yardage,
+        weight: aiData.weight !== undefined ? aiData.weight : data.weight,
+        needleSize: aiData.needleSize !== undefined ? aiData.needleSize : data.needleSize,
+        gauge: aiData.gauge || data.gauge, // AI prioriteres for gauge (strikkefasthet)
+        careInstructions: aiData.careInstructions || data.careInstructions, // AI prioriteres for vaskeråd
+        weightCategory: aiData.weightCategory || data.weightCategory,
+        description: data.description, // Behold original beskrivelse
+        images: data.images, // Behold bilder fra tradisjonell scraping
+        extendedInfo: data.extendedInfo,
+        source: data.source // Behold source-informasjon fra original data
+      }
+      
+      console.log('Kombinerte data (AI + tradisjonell):', {
+        name: combinedData.name,
+        price: combinedData.price,
+        composition: combinedData.composition,
+        gauge: combinedData.gauge,
+        careInstructions: combinedData.careInstructions
+      })
+      
       // Valider at vi fikk minst et navn
-      if (!data.name || data.name.length < 2) {
+      if (!combinedData.name || combinedData.name.length < 2) {
         throw new Error('Kunne ikke finne produktnavn på siden')
       }
       
-      return data
+      return combinedData
     } catch (error) {
       console.error('Scraping feilet:', error)
       throw new Error(`Kunne ikke hente produktinformasjon: ${error instanceof Error ? error.message : 'Ukjent feil'}`)
