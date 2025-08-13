@@ -13,7 +13,9 @@ const registerSchema = z.object({
 
 const updateProfileSchema = z.object({
   name: z.string().min(2).optional(),
-  image: z.string().url().optional()
+  image: z.string().url().optional(),
+  logoUrl: z.string().url().optional(),
+  defaultLabelProfileId: z.string().nullable().optional()
 })
 
 export const usersRouter = createTRPCRouter({
@@ -77,9 +79,10 @@ export const usersRouter = createTRPCRouter({
       }
     }),
 
-  // Get current user profile
-  getProfile: protectedProcedure
+  // Get current user profile (public-safe: returns null when not authenticated)
+  getProfile: publicProcedure
     .query(async ({ ctx }) => {
+      if (!ctx.user?.id) return null
       const user = await ctx.db.user.findUnique({
         where: { id: ctx.user.id },
         select: {
@@ -87,6 +90,8 @@ export const usersRouter = createTRPCRouter({
           name: true,
           email: true,
           image: true,
+          logoUrl: true,
+          defaultLabelProfileId: true,
           createdAt: true,
           _count: {
             select: {
@@ -97,13 +102,6 @@ export const usersRouter = createTRPCRouter({
           }
         }
       })
-
-      if (!user) {
-        throw new TRPCError({
-          code: 'NOT_FOUND',
-          message: 'Bruker ikke funnet'
-        })
-      }
 
       return user
     }),
@@ -120,6 +118,8 @@ export const usersRouter = createTRPCRouter({
           name: true,
           email: true,
           image: true,
+          logoUrl: true,
+          defaultLabelProfileId: true,
           updatedAt: true
         }
       })
@@ -174,9 +174,10 @@ export const usersRouter = createTRPCRouter({
       return stats._count
     }),
 
-  // Label profiles
-  getLabelProfiles: protectedProcedure
+  // Label profiles (public-safe: returns [] when not authenticated)
+  getLabelProfiles: publicProcedure
     .query(async ({ ctx }) => {
+      if (!ctx.user?.id) return []
       return await ctx.db.labelProfile.findMany({ where: { userId: ctx.user.id }, orderBy: { createdAt: 'desc' } })
     }),
 

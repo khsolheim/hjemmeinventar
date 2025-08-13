@@ -53,6 +53,8 @@ model User {
   name      String?
   image     String?
   logoUrl   String?
+  defaultLabelProfileId String? @unique
+  defaultLabelProfile   LabelProfile? @relation("UserDefaultLabelProfile", fields: [defaultLabelProfileId], references: [id])
   password  String?  // For credentials-based authentication
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -78,7 +80,7 @@ model User {
   sessions Session[]
 
   // Label profiles
-  labelProfiles LabelProfile[]
+  labelProfiles LabelProfile[] @relation("UserLabelProfiles")
 }
 
 // Physical organization
@@ -487,10 +489,11 @@ model LabelProfile {
   logoUrl      String?
 
   // Relations
-  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user         User     @relation("UserLabelProfiles", fields: [userId], references: [id], onDelete: Cascade)
   userId       String
   household    Household? @relation(fields: [householdId], references: [id], onDelete: Cascade)
   householdId  String?
+  defaultForUser User? @relation("UserDefaultLabelProfile")
 
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt

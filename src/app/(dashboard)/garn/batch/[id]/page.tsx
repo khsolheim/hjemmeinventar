@@ -1,6 +1,7 @@
 'use client'
 
 import React from 'react'
+import { useSession } from 'next-auth/react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { trpc } from '@/lib/trpc/client'
@@ -15,16 +16,27 @@ import { toast } from 'sonner'
 import { MapPin, ChevronLeft, Edit, Trash2, QrCode, Plus, Printer } from 'lucide-react'
 import { dymoService } from '@/lib/printing/dymo-service'
 import { printQueue } from '@/lib/printing/print-queue'
+ 
 
 export default function BatchDetailPage() {
   const params = useParams()
   const router = useRouter()
   const id = Array.isArray(params?.id) ? params.id[0] : (params?.id as string)
+  const { data: session, status } = useSession()
 
   const { data: batch, refetch } = trpc.items.getById.useQuery(id!, { enabled: !!id })
   const { data: master } = trpc.yarn.getMasterForBatch.useQuery({ batchId: id! }, { enabled: !!id })
   const { data: locations } = trpc.locations.getAllFlat.useQuery(undefined, {})
+  const profiles = trpc.users.getLabelProfiles.useQuery(undefined, { enabled: status === 'authenticated' })
+  const userProfile = trpc.users.getProfile.useQuery(undefined, { enabled: status === 'authenticated' })
   const [addingDistribution, setAddingDistribution] = React.useState(false)
+  const [selectedProfileId, setSelectedProfileId] = React.useState('')
+
+  React.useEffect(() => {
+    if (!selectedProfileId && userProfile.data?.defaultLabelProfileId) {
+      setSelectedProfileId(userProfile.data.defaultLabelProfileId)
+    }
+  }, [userProfile.data, selectedProfileId])
 
   const addDistribution = trpc.items.addDistribution.useMutation({
     onSuccess: () => { toast.success('Fordeling lagt til'); refetch() },
@@ -39,6 +51,7 @@ export default function BatchDetailPage() {
     onError: () => toast.error('Kunne ikke fjerne fordeling')
   })
 
+  if (status !== 'authenticated') return null
   if (!id) return null
   if (!batch) return null
 
@@ -123,11 +136,14 @@ export default function BatchDetailPage() {
               <div className="flex items-center gap-2">
                 <Button size="sm" variant="outline" onClick={async () => {
                   try {
+                    const profile = (profiles.data || []).find((p: any) => p.id === selectedProfileId)
                     const labels = (distributions || []).map((dist) => ({
                       itemName: batch.name,
                       locationName: dist.location?.name || 'Lokasjon',
                       qrCode: dist.qrCode,
-                      dateAdded: new Date().toLocaleDateString('nb-NO')
+                      dateAdded: new Date().toLocaleDateString('nb-NO'),
+                      extraLine1: profile?.extraLine1,
+                      extraLine2: profile?.extraLine2
                     }))
                     if (labels.length > 0) {
                       await dymoService.printBulkLabels(labels, 'qr', { copies: 1 })
@@ -223,6 +239,40 @@ export default function BatchDetailPage() {
                           <div className="flex justify-center">
                             <QRCode value={`${typeof window !== 'undefined' ? window.location.origin : ''}/scan?d=${d.qrCode}`} title={`${batch.name}`} description={`${d.location?.name} • ${d.quantity} ${batch.unit || 'nøste'}`} />
                           </div>
+                          <div className="border rounded p-2">
+                            <div className="text-xs font-medium mb-1">Forhåndsvisning</div>
+                            {(() => {
+                              const profile = (profiles.data || []).find((p: any) => p.id === selectedProfileId)
+                              const logo = profile?.logoUrl || userProfile.data?.logoUrl || ''
+                              const extra1 = profile?.extraLine1 || ''
+                              const extra2 = profile?.extraLine2 || ''
+                              const showUrl = profile?.showUrl ?? true
+                              const url = typeof window !== 'undefined' ? `${window.location.origin}/scan?d=${d.qrCode}` : ''
+                              return (
+                                <div className="flex items-start gap-3">
+                                  {logo ? (
+                                    // eslint-disable-next-line @next/next/no-img-element
+                                    <img src={logo} alt="Logo" className="h-10 w-auto object-contain" />
+                                  ) : null}
+                                  <div className="flex-1 min-w-0">
+                                    <div className="text-sm font-medium truncate">{batch.name}</div>
+                                    <div className="text-xs text-muted-foreground truncate">{d.location?.name}</div>
+                                    {extra1 ? <div className="text-xs text-muted-foreground truncate">{extra1}</div> : null}
+                                    {extra2 ? <div className="text-xs text-muted-foreground truncate">{extra2}</div> : null}
+                                    <div className="mt-2 flex items-center gap-3">
+                                      <div className="w-24">
+                                        <QRCode value={url} title={batch.name} description={d.location?.name} />
+                                      </div>
+                                      <div className="text-[11px]">
+                                        <div className="font-mono">{d.qrCode}</div>
+                                        {showUrl ? <div className="text-muted-foreground break-all">{url}</div> : null}
+                                      </div>
+                                    </div>
+                                  </div>
+                                </div>
+                              )
+                            })()}
+                          </div>
                           <div className="grid grid-cols-2 gap-2">
                             <div>
                               <Label className="text-xs text-muted-foreground">Etikettstørrelse</Label>
@@ -237,12 +287,27 @@ export default function BatchDetailPage() {
                               <input id={`dy-copies-${d.id}`} type="number" min={1} max={10} defaultValue={1} className="w-full border rounded px-2 py-1 text-sm" />
                             </div>
                           </div>
+                          <div>
+                            <Label className="text-xs text-muted-foreground">Etikettmal</Label>
+                              <select id={`dy-profile-${d.id}`} className="w-full border rounded px-2 py-1 text-sm" value={selectedProfileId} onChange={(e) => setSelectedProfileId(e.target.value)}>
+                                <option value="">(Bruk profil-logo/standard)</option>
+                                {(profiles.data || []).map((p: any) => (
+                                  <option key={p.id} value={p.id}>{p.name}</option>
+                                ))}
+                              </select>
+                          </div>
                           <div className="flex justify-end">
                             <Button className="mr-2" onClick={() => {
                               const printWindow = window.open('', '_blank')
                               if (printWindow) {
                                 const url = `${window.location.origin}/scan?d=${d.qrCode}`
-                                printWindow.document.write(`<!DOCTYPE html><html><head><title>Etikett</title><style>body{margin:0;padding:12px;font-family:Arial} .box{border:1px solid #000; padding:8px; width:280px} .title{font-weight:bold; font-size:14px; margin:6px 0} .small{font-size:12px; color:#444} .code{font-family:monospace; font-size:12px}</style></head><body><div class='box'><div class='title'>${batch.name}</div><div class='small'>${d.location?.name}</div><img src="${(document.querySelector('.qr-code-component img') as HTMLImageElement)?.src}" style="width:160px;height:160px"/><div class='code'>${d.qrCode}</div><div class='small'>${url}</div></div></body></html>`)
+                                const profile = (profiles.data || []).find((p: any) => p.id === selectedProfileId)
+                                const extra1 = profile?.extraLine1 || ''
+                                const extra2 = profile?.extraLine2 || ''
+                                const showUrl = profile?.showUrl ?? true
+                                const logo = profile?.logoUrl || userProfile.data?.logoUrl || ''
+                                const qr = `https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=${encodeURIComponent(url)}`
+                                printWindow.document.write(`<!DOCTYPE html><html><head><title>Etikett</title><style>body{margin:0;padding:12px;font-family:Arial} .box{border:1px solid #000; padding:8px; width:280px} .title{font-weight:bold; font-size:14px; margin:6px 0} .small{font-size:12px; color:#444} .code{font-family:monospace; font-size:12px}</style></head><body><div class='box'>${logo ? `<img src='${logo}' style='max-width:260px;max-height:40px'/>` : ''}<div class='title'>${batch.name}</div><div class='small'>${d.location?.name}</div>${extra1 ? `<div class='small'>${extra1}</div>` : ''}${extra2 ? `<div class='small'>${extra2}</div>` : ''}<img src='${qr}' style='width:160px;height:160px'/><div class='code'>${d.qrCode}</div>${showUrl ? `<div class='small'>${url}</div>` : ''}</div></body></html>`)
                                 printWindow.document.close()
                                 setTimeout(() => { printWindow.print(); printWindow.close() }, 250)
                               }
@@ -251,11 +316,14 @@ export default function BatchDetailPage() {
                               try {
                                 const copies = Number((document.getElementById(`dy-copies-${d.id}`) as HTMLInputElement)?.value || '1')
                                 const size = ((document.getElementById(`dy-size-${d.id}`) as HTMLSelectElement)?.value || 'standard') as 'small'|'standard'|'large'
+                                const profile = (profiles.data || []).find((p: any) => p.id === selectedProfileId)
                                 await dymoService.printQRLabel({
                                   itemName: batch.name,
                                   locationName: d.location?.name || 'Lokasjon',
                                   qrCode: d.qrCode,
-                                  dateAdded: new Date().toLocaleDateString('nb-NO')
+                                  dateAdded: new Date().toLocaleDateString('nb-NO'),
+                                  extraLine1: profile?.extraLine1,
+                                  extraLine2: profile?.extraLine2
                                 }, { copies, labelSize: size })
                               } catch (e) {
                                 console.error(e)

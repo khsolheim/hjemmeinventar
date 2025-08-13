@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -16,7 +16,8 @@ import {
 } from 'lucide-react'
 import { useSearchParams } from 'next/navigation'
 import { trpc } from '@/lib/trpc/client'
-import { Button } from '@/components/ui/button'
+import { useSession } from 'next-auth/react'
+// removed duplicate Button import
 import { dymoService } from '@/lib/printing/dymo-service'
 import { printQueue } from '@/lib/printing/print-queue'
 
@@ -59,6 +60,16 @@ export default function ScanPage() {
   const [isScanning, setIsScanning] = useState(false)
   const params = useSearchParams()
   const distributionCode = params?.get('d') || ''
+  const { data: session, status } = useSession()
+  const profiles = trpc.users.getLabelProfiles.useQuery(undefined, { enabled: status === 'authenticated' })
+  const userProfile = trpc.users.getProfile.useQuery(undefined, { enabled: status === 'authenticated' })
+  const [selectedProfileId, setSelectedProfileId] = useState('')
+
+  useEffect(() => {
+    if (!selectedProfileId && userProfile.data?.defaultLabelProfileId) {
+      setSelectedProfileId(userProfile.data.defaultLabelProfileId)
+    }
+  }, [userProfile.data, selectedProfileId])
 
   const { data: distributionData, refetch: refetchDistribution } = trpc.items.getDistributionByQRCode.useQuery(
     { qrCode: distributionCode },
@@ -110,6 +121,14 @@ export default function ScanPage() {
   const clearResult = () => {
     setScanResult(null)
     setManualCode('')
+  }
+
+  if (status !== 'authenticated') {
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <h1 className="text-3xl font-bold">QR Scanner</h1>
+      </div>
+    )
   }
 
   return (
@@ -261,19 +280,78 @@ export default function ScanPage() {
               }}
               >Ta ut</Button>
             </div>
-            <div className="flex items-center gap-2 justify-end">
-              <Button variant="outline" onClick={async () => {
+              <div className="flex items-center gap-2 justify-end">
+                <div>
+                  <Label className="text-xs text-muted-foreground">Etikettmal</Label>
+                  <select className="border rounded px-2 py-1 text-sm" value={selectedProfileId} onChange={(e) => setSelectedProfileId(e.target.value)}>
+                    <option value="">(Standard)</option>
+                    {(profiles.data || []).map((p: any) => (
+                      <option key={p.id} value={p.id}>{p.name}</option>
+                    ))}
+                  </select>
+                </div>
+                {/* Preview */}
+                <div className="hidden md:block border rounded p-2 max-w-sm">
+                  <div className="text-xs font-medium mb-1">Forhåndsvisning</div>
+                  {(() => {
+                    const profile = (profiles.data || []).find((p: any) => p.id === selectedProfileId)
+                    const logo = profile?.logoUrl || userProfile.data?.logoUrl || ''
+                    const extra1 = profile?.extraLine1 || ''
+                    const extra2 = profile?.extraLine2 || ''
+                    const showUrl = profile?.showUrl ?? true
+                    const url = typeof window !== 'undefined' ? `${window.location.origin}/scan?d=${scanResult.data.qrCode}` : ''
+                    return (
+                      <div className="flex items-start gap-3">
+                        {logo ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img src={logo} alt="Logo" className="h-10 w-auto object-contain" />
+                        ) : null}
+                        <div className="flex-1 min-w-0">
+                          <div className="text-sm font-medium truncate">{scanResult.data.item.name}</div>
+                          <div className="text-xs text-muted-foreground truncate">{scanResult.data.location.name}</div>
+                          {extra1 ? <div className="text-xs text-muted-foreground truncate">{extra1}</div> : null}
+                          {extra2 ? <div className="text-xs text-muted-foreground truncate">{extra2}</div> : null}
+                          <div className="mt-2 flex items-center gap-3">
+                            <div className="text-[11px]">
+                              <div className="font-mono">{scanResult.data.qrCode}</div>
+                              {showUrl ? <div className="text-muted-foreground break-all">{url}</div> : null}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )
+                  })()}
+                </div>
+                <Button variant="outline" onClick={async () => {
                 try {
-                  await dymoService.printQRLabel({
+                    const profile = (profiles.data || []).find((p: any) => p.id === selectedProfileId)
+                    await dymoService.printQRLabel({
                     itemName: scanResult.data.item.name,
                     locationName: scanResult.data.location.name,
                     qrCode: scanResult.data.qrCode,
-                    dateAdded: new Date().toLocaleDateString('nb-NO')
-                  }, { copies: 1 })
+                      dateAdded: new Date().toLocaleDateString('nb-NO'),
+                      extraLine1: profile?.extraLine1,
+                      extraLine2: profile?.extraLine2
+                    }, { copies: 1 })
                 } catch (e) {
                   console.error(e)
                 }
               }}>Skriv ut på DYMO</Button>
+                <Button variant="outline" onClick={() => {
+                  const printWindow = window.open('', '_blank')
+                  if (printWindow) {
+                    const url = `${window.location.origin}/scan?d=${scanResult.data.qrCode}`
+                    const profile = (profiles.data || []).find((p: any) => p.id === selectedProfileId)
+                    const extra1 = profile?.extraLine1 || ''
+                    const extra2 = profile?.extraLine2 || ''
+                    const showUrl = profile?.showUrl ?? true
+                    const logo = profile?.logoUrl || userProfile.data?.logoUrl || ''
+                    const qr = `https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=${encodeURIComponent(url)}`
+                    printWindow.document.write(`<!DOCTYPE html><html><head><title>Etikett</title><style>body{margin:0;padding:12px;font-family:Arial} .box{border:1px solid #000; padding:8px; width:280px} .title{font-weight:bold; font-size:14px; margin:6px 0} .small{font-size:12px; color:#444} .code{font-family:monospace; font-size:12px}</style></head><body><div class='box'>${logo ? `<img src='${logo}' style='max-width:260px;max-height:40px'/>` : ''}<div class='title'>${scanResult.data.item.name}</div><div class='small'>${scanResult.data.location.name}</div>${extra1 ? `<div class='small'>${extra1}</div>` : ''}${extra2 ? `<div class='small'>${extra2}</div>` : ''}<img src='${qr}' style='width:160px;height:160px'/><div class='code'>${scanResult.data.qrCode}</div>${showUrl ? `<div class='small'>${url}</div>` : ''}</div></body></html>`)
+                    printWindow.document.close()
+                    setTimeout(() => { printWindow.print(); printWindow.close() }, 250)
+                  }
+                }}>Skriv ut i nettleser</Button>
               <Button variant="outline" onClick={() => {
                 printQueue.add({
                   itemName: scanResult.data.item.name,

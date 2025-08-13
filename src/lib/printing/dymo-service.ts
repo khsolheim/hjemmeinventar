@@ -35,6 +35,8 @@ export interface LabelData {
   dateAdded?: string
   barcode?: string
   householdName?: string
+  extraLine1?: string
+  extraLine2?: string
 }
 
 export interface PrintOptions {
@@ -202,6 +204,58 @@ class DymoService {
     <Bounds X="100" Y="750" Width="1381" Height="400" />
   </ObjectInfo>
   <ObjectInfo>
+    <TextObject>
+      <Name>EXTRA1</Name>
+      <ForeColor Alpha="255" Red="0" Green="0" Blue="0" />
+      <BackColor Alpha="0" Red="255" Green="255" Blue="255" />
+      <LinkedObjectName></LinkedObjectName>
+      <Rotation>Rotation0</Rotation>
+      <IsMirrored>False</IsMirrored>
+      <IsVariable>True</IsVariable>
+      <HorizontalAlignment>Center</HorizontalAlignment>
+      <VerticalAlignment>Middle</VerticalAlignment>
+      <TextFitMode>ShrinkToFit</TextFitMode>
+      <UseFullFontHeight>True</UseFullFontHeight>
+      <Verticalized>False</Verticalized>
+      <StyledText>
+        <Element>
+          <String>EXTRA1</String>
+          <Attributes>
+            <Font Family="Arial" Size="9" Bold="False" Italic="False" Underline="False" Strikeout="False" />
+            <ForeColor Alpha="255" Red="64" Green="64" Blue="64" />
+          </Attributes>
+        </Element>
+      </StyledText>
+    </TextObject>
+    <Bounds X="100" Y="1000" Width="1381" Height="350" />
+  </ObjectInfo>
+  <ObjectInfo>
+    <TextObject>
+      <Name>EXTRA2</Name>
+      <ForeColor Alpha="255" Red="0" Green="0" Blue="0" />
+      <BackColor Alpha="0" Red="255" Green="255" Blue="255" />
+      <LinkedObjectName></LinkedObjectName>
+      <Rotation>Rotation0</Rotation>
+      <IsMirrored>False</IsMirrored>
+      <IsVariable>True</IsVariable>
+      <HorizontalAlignment>Center</HorizontalAlignment>
+      <VerticalAlignment>Middle</VerticalAlignment>
+      <TextFitMode>ShrinkToFit</TextFitMode>
+      <UseFullFontHeight>True</UseFullFontHeight>
+      <Verticalized>False</Verticalized>
+      <StyledText>
+        <Element>
+          <String>EXTRA2</String>
+          <Attributes>
+            <Font Family="Arial" Size="9" Bold="False" Italic="False" Underline="False" Strikeout="False" />
+            <ForeColor Alpha="255" Red="64" Green="64" Blue="64" />
+          </Attributes>
+        </Element>
+      </StyledText>
+    </TextObject>
+    <Bounds X="100" Y="1150" Width="1381" Height="350" />
+  </ObjectInfo>
+  <ObjectInfo>
     <BarcodeObject>
       <Name>QR_CODE</Name>
       <ForeColor Alpha="255" Red="0" Green="0" Blue="0" />
@@ -359,6 +413,8 @@ class DymoService {
       // Set label data
       label.setObjectText('ITEM_NAME', data.itemName)
       label.setObjectText('LOCATION_NAME', data.locationName)
+      label.setObjectText('EXTRA1', data.extraLine1 || '')
+      label.setObjectText('EXTRA2', data.extraLine2 || '')
       label.setObjectText('QR_CODE', data.qrCode)
       label.setObjectText('DATE_ADDED', data.dateAdded || new Date().toLocaleDateString('nb-NO'))
 
@@ -412,6 +468,8 @@ class DymoService {
       label.setObjectText('ITEM_NAME', data.itemName)
       label.setObjectText('BARCODE', data.barcode)
       label.setObjectText('LOCATION_NAME', data.locationName)
+      label.setObjectText('EXTRA1', data.extraLine1 || '')
+      label.setObjectText('EXTRA2', data.extraLine2 || '')
 
       // Get printer name
       const printerName = options.printerName || this.availablePrinters[0]

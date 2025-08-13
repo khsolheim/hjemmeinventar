@@ -29,16 +29,21 @@ import { dymoService } from '@/lib/printing/dymo-service'
 import { toast } from 'sonner'
 import { useEffect, useState } from 'react'
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { trpc } from '@/lib/trpc/client'
+import { QRCode } from '@/components/ui/qr-code'
 
 interface HeaderProps {
   onToggleSidebar: () => void
 }
 
 export function Header({ onToggleSidebar }: HeaderProps) {
-  const { data: session } = useSession()
+  const { data: session, status } = useSession()
   const [isQueueOpen, setIsQueueOpen] = useState(false)
   const [queued, setQueued] = useState<any[]>([])
   const [queueCount, setQueueCount] = useState(0)
+  const profiles = trpc.users.getLabelProfiles.useQuery(undefined, { enabled: status === 'authenticated' })
+  const userProfile = trpc.users.getProfile.useQuery(undefined, { enabled: status === 'authenticated' })
+  const [selectedProfileId, setSelectedProfileId] = useState('')
 
   const refreshQueue = () => {
     const q = printQueue.getAll()
@@ -59,6 +64,12 @@ export function Header({ onToggleSidebar }: HeaderProps) {
     }
   }, [])
 
+  useEffect(() => {
+    if (!selectedProfileId && userProfile.data?.defaultLabelProfileId) {
+      setSelectedProfileId(userProfile.data.defaultLabelProfileId)
+    }
+  }, [userProfile.data, selectedProfileId])
+
   const handleSignOut = async () => {
     try {
       await signOut({
@@ -70,6 +81,15 @@ export function Header({ onToggleSidebar }: HeaderProps) {
     }
   }
 
+  if (status !== 'authenticated') {
+    return (
+      <header className="sticky top-0 z-40 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+        <div className="flex h-16 items-center px-4 gap-4">
+          <div className="flex-1" />
+        </div>
+      </header>
+    )
+  }
   return (
     <header className="sticky top-0 z-40 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="flex h-16 items-center px-4 gap-4">
@@ -201,7 +221,7 @@ export function Header({ onToggleSidebar }: HeaderProps) {
                 <label className="text-xs text-muted-foreground">Etikettstørrelse</label>
                 <select id="pq-size" className="w-full border rounded px-2 py-1 text-sm">
                   <option value="small">Liten (30334)</option>
-                  <option value="standard" selected>Standard (30252)</option>
+                  <option value="standard">Standard (30252)</option>
                   <option value="large">Stor (30323)</option>
                 </select>
               </div>
@@ -210,17 +230,88 @@ export function Header({ onToggleSidebar }: HeaderProps) {
                 <input id="pq-copies" type="number" min="1" max="10" defaultValue={1} className="w-full border rounded px-2 py-1 text-sm" />
               </div>
             </div>
+            <div>
+              <label className="text-xs text-muted-foreground">Etikettmal</label>
+              <select id="pq-profile" className="w-full border rounded px-2 py-1 text-sm" value={selectedProfileId} onChange={(e) => setSelectedProfileId(e.target.value)}>
+                <option value="">(Bruk profil-logo/standard)</option>
+                {(profiles.data || []).map((p: any) => (
+                  <option key={p.id} value={p.id}>{p.name}</option>
+                ))}
+              </select>
+            </div>
+            {queued.length > 0 && (
+              <div className="border rounded p-2">
+                <div className="text-xs font-medium mb-1">Forhåndsvisning</div>
+                {(() => {
+                  const q = queued[0]
+                  const profile = (profiles.data || []).find((p: any) => p.id === selectedProfileId)
+                  const logo = profile?.logoUrl || userProfile.data?.logoUrl || ''
+                  const extra1 = profile?.extraLine1 || ''
+                  const extra2 = profile?.extraLine2 || ''
+                  const showUrl = profile?.showUrl ?? true
+                  const url = typeof window !== 'undefined' ? `${window.location.origin}/scan?d=${q.qrCode}` : ''
+                  return (
+                    <div className="flex items-start gap-3">
+                      {logo ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={logo} alt="Logo" className="h-10 w-auto object-contain" />
+                      ) : null}
+                      <div className="flex-1 min-w-0">
+                        <div className="text-sm font-medium truncate">{q.itemName}</div>
+                        <div className="text-xs text-muted-foreground truncate">{q.locationName}</div>
+                        {extra1 ? <div className="text-xs text-muted-foreground truncate">{extra1}</div> : null}
+                        {extra2 ? <div className="text-xs text-muted-foreground truncate">{extra2}</div> : null}
+                        <div className="mt-2 flex items-center gap-3">
+                          <div className="w-24">
+                            <QRCode value={url} title={q.itemName} description={q.locationName} />
+                          </div>
+                          <div className="text-[11px]">
+                            <div className="font-mono">{q.qrCode}</div>
+                            {showUrl ? <div className="text-muted-foreground break-all">{url}</div> : null}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )
+                })()}
+              </div>
+            )}
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => { printQueue.clear(); refreshQueue() }} disabled={queued.length === 0}>
               <Trash2 className="h-4 w-4 mr-2" /> Tøm kø
+            </Button>
+            <Button variant="outline" onClick={() => {
+              if (queued.length === 0) return
+              const profile = (profiles.data || []).find((p: any) => p.id === selectedProfileId)
+              const logo = profile?.logoUrl || userProfile.data?.logoUrl || ''
+              const extra1 = profile?.extraLine1 || ''
+              const extra2 = profile?.extraLine2 || ''
+              const showUrl = profile?.showUrl ?? true
+              const html = `<!DOCTYPE html><html><head><title>Etiketter</title><style>body{margin:0;padding:12px;font-family:Arial} .wrap{display:flex;flex-wrap:wrap;gap:8px} .box{border:1px solid #000; padding:8px; width:280px; margin:4px} .title{font-weight:bold; font-size:14px; margin:6px 0} .small{font-size:12px; color:#444} .code{font-family:monospace; font-size:12px}</style></head><body><div class='wrap'>${queued.map(q=>{ const url = `${window.location.origin}/scan?d=${q.qrCode}`; const qr = `https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=${encodeURIComponent(url)}`; return `<div class='box'>${logo?`<img src='${logo}' style='max-width:260px;max-height:40px'/>`:''}<div class='title'>${q.itemName}</div><div class='small'>${q.locationName}</div>${extra1?`<div class='small'>${extra1}</div>`:''}${extra2?`<div class='small'>${extra2}</div>`:''}<img src='${qr}' style='width:160px;height:160px'/><div class='code'>${q.qrCode}</div>${showUrl?`<div class='small'>${url}</div>`:''}</div>`}).join('')}</div></body></html>`
+              const win = window.open('', '_blank')
+              if (win) {
+                win.document.write(html)
+                win.document.close()
+                setTimeout(()=>{ win.print(); win.close() }, 250)
+              }
+            }} disabled={queued.length === 0}>
+              Skriv ut i nettleser
             </Button>
             <Button onClick={async () => {
               if (queued.length === 0) return
               try {
                 const copies = Number((document.getElementById('pq-copies') as HTMLInputElement)?.value || '1')
                 const size = ((document.getElementById('pq-size') as HTMLSelectElement)?.value || 'standard') as 'small'|'standard'|'large'
-                await dymoService.printBulkLabels(queued, 'qr', { copies, labelSize: size })
+                const profileSelect = document.getElementById('pq-profile') as HTMLSelectElement | null
+                const profileId = profileSelect ? profileSelect.value : ''
+                const profile = (profiles.data || []).find((p: any) => p.id === profileId)
+                const labels = queued.map(q => ({
+                  ...q,
+                  extraLine1: profile?.extraLine1,
+                  extraLine2: profile?.extraLine2
+                }))
+                await dymoService.printBulkLabels(labels, 'qr', { copies, labelSize: size })
                 toast.success(`Skrev ut ${queued.length} etiketter`)
                 printQueue.clear(); refreshQueue(); setIsQueueOpen(false)
               } catch (e) {

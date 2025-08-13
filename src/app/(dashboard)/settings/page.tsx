@@ -19,14 +19,32 @@ import {
 } from 'lucide-react'
 import Link from 'next/link'
 import { trpc } from '@/lib/trpc/client'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { useSession } from 'next-auth/react'
 
 export default function SettingsPage() {
-  const profilesQuery = trpc.users.getLabelProfiles.useQuery()
+  const { data: session, status } = useSession()
+  const profilesQuery = trpc.users.getLabelProfiles.useQuery(undefined, { enabled: status === 'authenticated', retry: 0 })
+  const profileQuery = trpc.users.getProfile.useQuery(undefined, { enabled: status === 'authenticated', retry: 0 })
+  const updateUser = trpc.users.updateProfile.useMutation({ onSuccess: () => { profileQuery.refetch() } })
   const createProfile = trpc.users.createLabelProfile.useMutation({ onSuccess: () => profilesQuery.refetch() })
   const updateProfile = trpc.users.updateLabelProfile.useMutation({ onSuccess: () => profilesQuery.refetch() })
   const deleteProfile = trpc.users.deleteLabelProfile.useMutation({ onSuccess: () => profilesQuery.refetch() })
   const [newProfile, setNewProfile] = useState({ name: '', extraLine1: '', extraLine2: '', showUrl: true, logoUrl: '' })
+  const [defaultProfileId, setDefaultProfileId] = useState<string>('')
+
+  useEffect(() => {
+    if (!defaultProfileId && profileQuery.data?.defaultLabelProfileId) {
+      setDefaultProfileId(profileQuery.data.defaultLabelProfileId)
+    }
+  }, [profileQuery.data, defaultProfileId])
+  if (status !== 'authenticated') {
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <h1 className="text-3xl font-bold">Innstillinger</h1>
+      </div>
+    )
+  }
   return (
     <div className="container mx-auto px-4 py-8">
       {/* Header */}
@@ -86,8 +104,20 @@ export default function SettingsPage() {
                 <Button size="sm" variant="outline" onClick={async () => {
                   const logo = (document.getElementById('user-logo-url') as HTMLInputElement).value.trim()
                   if (!logo) return
-                  await fetch('/api/trpc/users.updateProfile', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ input: { logoUrl: logo } }) })
+                  updateUser.mutate({ logoUrl: logo })
                 }}>Lagre logo</Button>
+              </div>
+            </div>
+            <div>
+              <Label>Standard etikettmal</Label>
+              <select className="w-full mt-1 px-3 py-2 border rounded-md" value={defaultProfileId || ''} onChange={(e) => setDefaultProfileId(e.target.value)}>
+                <option value="">(Ingen)</option>
+                {(profilesQuery.data || []).map(p => (
+                  <option key={p.id} value={p.id}>{p.name}</option>
+                ))}
+              </select>
+              <div className="flex justify-end mt-2">
+                <Button size="sm" variant="outline" onClick={() => updateUser.mutate({ defaultLabelProfileId: defaultProfileId || null })}>Lagre standard</Button>
               </div>
             </div>
             <Button>Lagre endringer</Button>
