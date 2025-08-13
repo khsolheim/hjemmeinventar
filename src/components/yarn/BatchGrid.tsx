@@ -13,7 +13,6 @@ import { YarnWizard } from './YarnWizard'
 import { YarnProjectIntegration } from './YarnProjectIntegration'
 import { YarnBulkOperations } from './YarnBulkOperations'
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
-import { Button } from '@/components/ui/button'
 import { ChevronDown } from 'lucide-react'
 
 interface BatchGridProps {
