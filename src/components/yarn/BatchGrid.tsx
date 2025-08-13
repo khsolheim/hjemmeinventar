@@ -472,26 +472,7 @@ export function BatchGrid({ masterId, hideMasterHeader = false, hideTotals = fal
 
       {/* Bulk Operations section removed here (moved to master detail actions) */}
 
-      {/* Project Integration Section */}
-      {batches && batches.length > 0 && (
-        <div className="mt-8">
-          <h3 className="text-lg font-semibold mb-4">Prosjekt-integrasjon</h3>
-          <div className="space-y-4">
-            {batches.map((batch) => {
-              const batchData = getBatchData(batch.categoryData)
-              return (
-                <YarnProjectIntegration
-                  key={batch.id}
-                  batchId={batch.id}
-                  batchName={`${batchData.color} - ${batchData.batchNumber}`}
-                  availableQuantity={batch.availableQuantity}
-                  unit={batch.unit || 'nøste'}
-                />
-              )
-            })}
-          </div>
-        </div>
-      )}
+      {/* Project Integration section removed */}
     </div>
   )
 }
