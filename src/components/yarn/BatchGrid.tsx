@@ -18,9 +18,10 @@ import { ChevronDown } from 'lucide-react'
 interface BatchGridProps {
   masterId: string
   hideMasterHeader?: boolean
+  hideTotals?: boolean
 }
 
-export function BatchGrid({ masterId, hideMasterHeader = false }: BatchGridProps) {
+export function BatchGrid({ masterId, hideMasterHeader = false, hideTotals = false }: BatchGridProps) {
   const [isAddBatchOpen, setIsAddBatchOpen] = useState(false)
 
   // Fetch master data
@@ -172,7 +173,7 @@ export function BatchGrid({ masterId, hideMasterHeader = false }: BatchGridProps
       )}
 
       {/* Summary Statistics */}
-      {totals && (
+      {totals && !hideTotals && (
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <Card>
             <CardContent className="pt-6">
