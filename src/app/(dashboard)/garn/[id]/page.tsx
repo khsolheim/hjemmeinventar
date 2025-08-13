@@ -8,6 +8,9 @@ import { ChevronLeft, Download, CheckCircle } from 'lucide-react'
 import Link from 'next/link'
 import { BatchGrid } from '@/components/yarn/BatchGrid'
 import { trpc } from '@/lib/trpc/client'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
+import { YarnBulkOperations } from '@/components/yarn/YarnBulkOperations'
+import { YarnProjectIntegration } from '@/components/yarn/YarnProjectIntegration'
 
 export default function YarnDetailPage() {
   const params = useParams()
@@ -15,6 +18,8 @@ export default function YarnDetailPage() {
   const { data: master } = trpc.items.getById.useQuery(id!, { enabled: !!id })
   const { data: totals } = trpc.yarn.getMasterTotals.useQuery({ masterId: id! }, { enabled: !!id })
   const { data: colors } = trpc.yarn.getColorsForMaster.useQuery({ masterId: id! }, { enabled: !!id })
+  const { data: batches } = trpc.yarn.getBatchesForMaster.useQuery({ masterId: id! }, { enabled: !!id })
+  const utils = trpc.useUtils()
   const [selectedColor, setSelectedColor] = React.useState<string>('')
 
   if (!id) return null
@@ -109,6 +114,52 @@ export default function YarnDetailPage() {
                 <Button size="sm" className="bg-green-600 hover:bg-green-700">
                   <CheckCircle className="h-3 w-3 mr-1" /> Legg til batch
                 </Button>
+                {/* Bulk-operasjoner dialog */}
+                <Dialog>
+                  <DialogTrigger asChild>
+                    <Button size="sm" variant="outline">Bulk-operasjoner</Button>
+                  </DialogTrigger>
+                  <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+                    <DialogHeader>
+                      <DialogTitle>Bulk-operasjoner for batches</DialogTitle>
+                    </DialogHeader>
+                    <div className="mt-2">
+                      <YarnBulkOperations 
+                        items={batches || []}
+                        itemType="batches"
+                        onRefresh={() => {
+                          utils.yarn.getBatchesForMaster.invalidate({ masterId: id! })
+                          utils.yarn.getMasterTotals.invalidate({ masterId: id! })
+                        }}
+                      />
+                    </div>
+                  </DialogContent>
+                </Dialog>
+                {/* Legg til prosjekt dialog */}
+                <Dialog>
+                  <DialogTrigger asChild>
+                    <Button size="sm" variant="outline">Legg til prosjekt</Button>
+                  </DialogTrigger>
+                  <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+                    <DialogHeader>
+                      <DialogTitle>Legg batches til prosjekt</DialogTitle>
+                    </DialogHeader>
+                    <div className="space-y-3 mt-2">
+                      {(batches || []).map((b) => {
+                        const data = b.categoryData ? JSON.parse(b.categoryData) : {}
+                        return (
+                          <YarnProjectIntegration
+                            key={b.id}
+                            batchId={b.id}
+                            batchName={`${data.color || ''} - ${data.batchNumber || ''}`}
+                            availableQuantity={b.availableQuantity}
+                            unit={b.unit || 'nøste'}
+                          />
+                        )
+                      })}
+                    </div>
+                  </DialogContent>
+                </Dialog>
               </div>
             </div>
           </div>
