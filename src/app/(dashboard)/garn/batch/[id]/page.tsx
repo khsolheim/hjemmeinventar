@@ -27,6 +27,7 @@ export default function BatchDetailPage() {
   const { data: batch, refetch } = trpc.items.getById.useQuery(id!, { enabled: !!id })
   const { data: master } = trpc.yarn.getMasterForBatch.useQuery({ batchId: id! }, { enabled: !!id })
   const { data: locations } = trpc.locations.getAllFlat.useQuery(undefined, { enabled: status === 'authenticated', retry: 0, refetchOnWindowFocus: false, refetchOnMount: false, staleTime: 5 * 60 * 1000 })
+  const { data: locationTree } = trpc.locations.getAll.useQuery(undefined, { enabled: status === 'authenticated', retry: 0, refetchOnWindowFocus: false, refetchOnMount: false, staleTime: 5 * 60 * 1000 })
   const commonOpts = { enabled: status === 'authenticated', retry: 0, refetchOnWindowFocus: false, refetchOnMount: false, staleTime: 5 * 60 * 1000 } as const
   const profiles = trpc.users.getLabelProfiles.useQuery(undefined, commonOpts)
   const userProfile = trpc.users.getProfile.useQuery(undefined, commonOpts)
@@ -43,6 +44,7 @@ export default function BatchDetailPage() {
     onSuccess: () => { toast.success('Fordeling lagt til'); refetch() },
     onError: () => toast.error('Kunne ikke legge til fordeling')
   })
+  const createLocation = trpc.locations.create.useMutation()
   const updateDistribution = trpc.items.updateDistribution.useMutation({
     onSuccess: () => { toast.success('Fordeling oppdatert'); refetch() },
     onError: () => toast.error('Kunne ikke oppdatere fordeling')
@@ -136,6 +138,50 @@ export default function BatchDetailPage() {
             <div className="flex items-center justify-between mb-2">
               <h3 className="text-sm font-medium">Lokasjonsfordeling</h3>
               <div className="flex items-center gap-2">
+                {/* Rask builder */}
+                <Dialog>
+                  <DialogTrigger asChild>
+                    <Button size="sm" variant="outline">Ny fordeling (Rask)</Button>
+                  </DialogTrigger>
+                  <DialogContent className="max-w-lg">
+                    <DialogHeader>
+                      <DialogTitle>Ny fordeling (Rask)</DialogTitle>
+                      <DialogDescription>Velg plassering ved å klikke deg nedover i hierarkiet. Valgfritt: Opprett emballasje.</DialogDescription>
+                    </DialogHeader>
+                    <InlineBuilderForm 
+                      tree={(locationTree as any) || []}
+                      onCreateContainer={async (parentId, type, name) => {
+                        const created = await createLocation.mutateAsync({ name, type, parentId })
+                        return created.id
+                      }}
+                      onSubmit={async (targetLocationId, qty, notes) => {
+                        await addDistribution.mutateAsync({ itemId: id!, locationId: targetLocationId, quantity: qty, notes })
+                      }}
+                    />
+                  </DialogContent>
+                </Dialog>
+                {/* Wizard */}
+                <Dialog>
+                  <DialogTrigger asChild>
+                    <Button size="sm" variant="outline">Ny fordeling (Wizard)</Button>
+                  </DialogTrigger>
+                  <DialogContent className="max-w-lg">
+                    <DialogHeader>
+                      <DialogTitle>Ny fordeling (Veiviser)</DialogTitle>
+                      <DialogDescription>Trinnvis veiledning for å velge lokasjon og emballasje.</DialogDescription>
+                    </DialogHeader>
+                    <LocationWizard 
+                      tree={(locationTree as any) || []}
+                      onCreateLocation={async (parentId, type, name) => {
+                        const created = await createLocation.mutateAsync({ name, type, parentId })
+                        return created.id
+                      }}
+                      onFinish={async (finalLocationId, qty, notes) => {
+                        await addDistribution.mutateAsync({ itemId: id!, locationId: finalLocationId, quantity: qty, notes })
+                      }}
+                    />
+                  </DialogContent>
+                </Dialog>
                 <Button size="sm" variant="outline" onClick={async () => {
                   try {
                     const profile = (profiles.data || []).find((p: any) => p.id === selectedProfileId)
@@ -209,6 +255,31 @@ export default function BatchDetailPage() {
                   </div>
                   <div className="flex items-center gap-2">
                     <div className="text-sm font-mono">{d.quantity} {batch.unit || 'nøste'}</div>
+                      {/* Kopier fordeling */}
+                      <Dialog>
+                        <DialogTrigger asChild>
+                          <Button variant="outline" size="sm">Kopier</Button>
+                        </DialogTrigger>
+                        <DialogContent className="max-w-sm">
+                          <DialogHeader>
+                            <DialogTitle>Kopier fordeling</DialogTitle>
+                            <DialogDescription>Velg mål-lokasjon og antall for kopien.</DialogDescription>
+                          </DialogHeader>
+                          <InlineBuilderForm 
+                            tree={(locationTree as any) || []}
+                            defaultQuantity={d.quantity}
+                            defaultNotes={d.notes || ''}
+                            onCreateContainer={async (parentId, type, name) => {
+                              const created = await createLocation.mutateAsync({ name, type, parentId })
+                              return created.id
+                            }}
+                            onSubmit={async (targetLocationId, qty, notes) => {
+                              await addDistribution.mutateAsync({ itemId: id!, locationId: targetLocationId, quantity: qty, notes })
+                              refetch()
+                            }}
+                          />
+                        </DialogContent>
+                      </Dialog>
                     <Dialog>
                       <DialogTrigger asChild>
                         <Button variant="ghost" size="sm" title="Vis QR for fordeling">
@@ -401,6 +472,248 @@ export default function BatchDetailPage() {
           </div>
         </CardContent>
       </Card>
+    </div>
+  )
+}
+
+function InlineBuilderForm({ tree, onCreateContainer, onSubmit, defaultQuantity = 1, defaultNotes = '' }: { 
+  tree: any[],
+  onCreateContainer: (parentId: string, type: 'BAG'|'BOX', name: string) => Promise<string>,
+  onSubmit: (locationId: string, quantity: number, notes?: string) => Promise<void>,
+  defaultQuantity?: number,
+  defaultNotes?: string
+}) {
+  const [path, setPath] = React.useState<string[]>([])
+  const [qty, setQty] = React.useState<number>(defaultQuantity)
+  const [notes, setNotes] = React.useState<string>(defaultNotes)
+  const [containerType, setContainerType] = React.useState<''|'BAG'|'BOX'>('')
+  const [containerName, setContainerName] = React.useState<string>('')
+
+  const getLevelNodes = (level: number) => {
+    if (level === 0) return tree || []
+    let nodes = tree || []
+    for (let i = 0; i < level; i++) {
+      const id = path[i]
+      const node = nodes.find((n: any) => n.id === id)
+      nodes = node?.children || []
+    }
+    return nodes
+  }
+
+  const currentLevel = path.length
+  const currentNodes = getLevelNodes(currentLevel)
+
+  const getNodeById = (id?: string) => {
+    if (!id) return undefined
+    const stack = [...(tree || [])]
+    while (stack.length) {
+      const n: any = stack.pop()
+      if (n.id === id) return n
+      if (n.children) stack.push(...n.children)
+    }
+    return undefined
+  }
+
+  const leafLocationId = path[path.length - 1]
+  // Determine allowed packaging under current leaf (mirror server-side rules)
+  const getWizardNodeById = (id?: string) => {
+    if (!id) return undefined
+    const stack = [...(tree || [])]
+    while (stack.length) {
+      const n: any = stack.pop()
+      if (n.id === id) return n
+      if (n.children) stack.push(...n.children)
+    }
+    return undefined
+  }
+  const leafWizardNode: any = getWizardNodeById(leafLocationId)
+  const allowedWizardChildren: Record<string, string[]> = {
+    ROOM: ['SHELF', 'CABINET', 'CONTAINER'],
+    SHELF: ['SHELF_COMPARTMENT', 'BOX', 'DRAWER'],
+    SHELF_COMPARTMENT: ['BOX', 'BAG', 'CONTAINER'],
+    BOX: ['BAG', 'SECTION'],
+    BAG: [],
+    CABINET: ['DRAWER', 'SHELF_COMPARTMENT'],
+    DRAWER: ['SECTION', 'BAG'],
+    CONTAINER: ['BAG', 'SECTION'],
+    SECTION: ['BAG']
+  }
+  const allowedForLeafWizard: string[] = leafWizardNode?.type ? (allowedWizardChildren[leafWizardNode.type] || []) : []
+  const packagingAllowedWizard = { BAG: allowedForLeafWizard.includes('BAG'), BOX: allowedForLeafWizard.includes('BOX') }
+  const leafNode: any = getNodeById(leafLocationId)
+  const allowedChildrenMap: Record<string, string[]> = {
+    ROOM: ['SHELF', 'CABINET', 'CONTAINER'],
+    SHELF: ['SHELF_COMPARTMENT', 'BOX', 'DRAWER'],
+    SHELF_COMPARTMENT: ['BOX', 'BAG', 'CONTAINER'],
+    BOX: ['BAG', 'SECTION'],
+    BAG: [],
+    CABINET: ['DRAWER', 'SHELF_COMPARTMENT'],
+    DRAWER: ['SECTION', 'BAG'],
+    CONTAINER: ['BAG', 'SECTION'],
+    SECTION: ['BAG']
+  }
+  const allowedForLeaf: string[] = leafNode?.type ? (allowedChildrenMap[leafNode.type] || []) : []
+  const packagingAllowed = { BAG: allowedForLeaf.includes('BAG'), BOX: allowedForLeaf.includes('BOX') }
+
+  return (
+    <div className="space-y-3">
+      <div className="space-y-2">
+        {/* Nivå-knapper */}
+        {Array.from({ length: currentLevel + 1 }).map((_, level) => (
+          <div key={level} className="flex flex-wrap gap-1">
+            {(getLevelNodes(level) as any[]).map((n: any) => (
+              <Button key={n.id} size="sm" variant={path[level] === n.id ? 'default' : 'outline'} onClick={() => {
+                const next = path.slice(0, level)
+                next[level] = n.id
+                setPath(next)
+              }}>{n.name}</Button>
+            ))}
+          </div>
+        ))}
+        {currentNodes.length === 0 && (
+          <div className="text-xs text-muted-foreground">Ingen undernivåer her.</div>
+        )}
+      </div>
+
+      {/* Emballasjevalg */}
+      <div className="grid grid-cols-2 gap-2">
+        <div>
+          <Label className="text-xs text-muted-foreground">Emballasje (valgfritt)</Label>
+          <div className="flex items-center gap-2 mt-1">
+            <Button size="sm" variant={containerType === 'BAG' ? 'default' : 'outline'} disabled={!packagingAllowed.BAG} onClick={() => setContainerType(containerType === 'BAG' ? '' : 'BAG')}>Pose</Button>
+            <Button size="sm" variant={containerType === 'BOX' ? 'default' : 'outline'} disabled={!packagingAllowed.BOX} onClick={() => setContainerType(containerType === 'BOX' ? '' : 'BOX')}>Boks</Button>
+          </div>
+          {!packagingAllowed.BAG && !packagingAllowed.BOX && leafNode?.type && (
+            <div className="text-xs text-muted-foreground mt-1">Emballasje ikke støttet direkte under {leafNode.type.toLowerCase()}. Velg et undernivå først.</div>
+          )}
+        </div>
+        <div>
+          <Label className="text-xs text-muted-foreground">Navn (valgfritt)</Label>
+          <Input placeholder={containerType ? (containerType === 'BAG' ? 'Pose-navn' : 'Boks-navn') : 'Navn'} value={containerName} onChange={(e) => setContainerName(e.target.value)} />
+        </div>
+      </div>
+
+      {/* Antall/Notat */}
+      <div className="grid grid-cols-2 gap-2">
+        <div>
+          <Label>Antall</Label>
+          <Input type="number" min={0} value={qty} onChange={(e) => setQty(Number(e.target.value))} />
+        </div>
+        <div>
+          <Label>Notat</Label>
+          <Input value={notes} onChange={(e) => setNotes(e.target.value)} />
+        </div>
+      </div>
+
+      <div className="flex justify-end">
+        <Button disabled={!leafLocationId || qty <= 0 || (containerType !== '' && !packagingAllowed[containerType])} onClick={async () => {
+          let targetId = leafLocationId
+          if (containerType) {
+            const name = containerName.trim() || (containerType === 'BAG' ? 'Pose' : 'Boks')
+            targetId = await onCreateContainer(leafLocationId, containerType, name)
+          }
+          await onSubmit(targetId, qty, notes || undefined)
+        }}>Lagre</Button>
+      </div>
+    </div>
+  )
+}
+
+function LocationWizard({ tree, onCreateLocation, onFinish }: {
+  tree: any[],
+  onCreateLocation: (parentId: string, type: 'ROOM'|'SHELF'|'BOX'|'CONTAINER'|'DRAWER'|'CABINET'|'SHELF_COMPARTMENT'|'BAG'|'SECTION', name: string) => Promise<string>,
+  onFinish: (locationId: string, quantity: number, notes?: string) => Promise<void>
+}) {
+  const [step, setStep] = React.useState<'pick-root'|'pick-children'|'packaging'|'summary'>('pick-root')
+  const [path, setPath] = React.useState<string[]>([])
+  const [qty, setQty] = React.useState<number>(1)
+  const [notes, setNotes] = React.useState<string>('')
+  const [packType, setPackType] = React.useState<''|'BAG'|'BOX'>('')
+  const [packName, setPackName] = React.useState<string>('')
+
+  const getLevelNodes = (level: number) => {
+    if (level === 0) return tree || []
+    let nodes = tree || []
+    for (let i = 0; i < level; i++) {
+      const id = path[i]
+      const node = nodes.find((n: any) => n.id === id)
+      nodes = node?.children || []
+    }
+    return nodes
+  }
+
+  const leafLocationId = path[path.length - 1]
+
+  return (
+    <div className="space-y-3">
+      {step === 'pick-root' && (
+        <div className="space-y-2">
+          <div className="text-sm font-medium">Velg toppnivå</div>
+          <div className="flex flex-wrap gap-1">
+            {(getLevelNodes(0) as any[]).map((n: any) => (
+              <Button key={n.id} size="sm" variant={path[0] === n.id ? 'default' : 'outline'} onClick={() => { setPath([n.id]); setStep('pick-children') }}>{n.name}</Button>
+            ))}
+          </div>
+        </div>
+      )}
+      {step === 'pick-children' && (
+        <div className="space-y-2">
+          {Array.from({ length: path.length + 1 }).map((_, level) => (
+            <div key={level} className="flex flex-wrap gap-1">
+              {(getLevelNodes(level) as any[]).map((n: any) => (
+                <Button key={n.id} size="sm" variant={path[level] === n.id ? 'default' : 'outline'} onClick={() => {
+                  const next = path.slice(0, level)
+                  next[level] = n.id
+                  setPath(next)
+                }}>{n.name}</Button>
+              ))}
+            </div>
+          ))}
+          <div className="flex justify-end">
+            <Button disabled={!leafLocationId} onClick={() => setStep('packaging')}>Neste</Button>
+          </div>
+        </div>
+      )}
+      {step === 'packaging' && (
+        <div className="space-y-3">
+          <div className="text-sm font-medium">Emballasje (valgfritt)</div>
+          <div className="flex items-center gap-2">
+            <Button size="sm" variant={packType === 'BAG' ? 'default' : 'outline'} disabled={!packagingAllowedWizard.BAG} onClick={() => setPackType(packType === 'BAG' ? '' : 'BAG')}>Pose</Button>
+            <Button size="sm" variant={packType === 'BOX' ? 'default' : 'outline'} disabled={!packagingAllowedWizard.BOX} onClick={() => setPackType(packType === 'BOX' ? '' : 'BOX')}>Boks</Button>
+            <Input className="ml-2" placeholder={packType ? (packType === 'BAG' ? 'Pose-navn' : 'Boks-navn') : 'Navn'} value={packName} onChange={(e) => setPackName(e.target.value)} />
+          </div>
+          {!packagingAllowedWizard.BAG && !packagingAllowedWizard.BOX && leafWizardNode?.type && (
+            <div className="text-xs text-muted-foreground">Emballasje ikke støttet direkte under {leafWizardNode.type.toLowerCase()}. Velg et undernivå først.</div>
+          )}
+          <div className="grid grid-cols-2 gap-2">
+            <div>
+              <Label>Antall</Label>
+              <Input type="number" min={0} value={qty} onChange={(e) => setQty(Number(e.target.value))} />
+            </div>
+            <div>
+              <Label>Notat</Label>
+              <Input value={notes} onChange={(e) => setNotes(e.target.value)} />
+            </div>
+          </div>
+          <div className="flex justify-between">
+            <Button variant="outline" onClick={() => setStep('pick-children')}>Tilbake</Button>
+            <Button disabled={!leafLocationId || qty <= 0 || (packType !== '' && !packagingAllowedWizard[packType])} onClick={async () => {
+              let targetId = leafLocationId
+              if (packType) {
+                const createdId = await onCreateLocation(leafLocationId, packType, packName.trim() || (packType === 'BAG' ? 'Pose' : 'Boks'))
+                targetId = createdId
+              }
+              await onFinish(targetId, qty, notes || undefined)
+              setStep('summary')
+            }}>Fullfør</Button>
+          </div>
+        </div>
+      )}
+      {step === 'summary' && (
+        <div className="space-y-2">
+          <div className="text-sm">Fordeling lagret.</div>
+        </div>
+      )}
     </div>
   )
 }

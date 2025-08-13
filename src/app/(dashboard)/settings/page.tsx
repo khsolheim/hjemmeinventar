@@ -1,3 +1,5 @@
+"use client"
+
 import { NotificationSettings } from '@/components/notifications/NotificationSettings'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'

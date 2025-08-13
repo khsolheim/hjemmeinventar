@@ -120,14 +120,15 @@ export function LocationModal({
   const [activeTab, setActiveTab] = useState('basic')
   const [errors, setErrors] = useState<Record<string, string>>({})
 
-  // TODO: Get actual household ID from user context/session
-  const householdId = 'temp-household-id'
+  // Determine user's active household (use first as default)
+  const { data: myHouseholds } = trpc.households.getMyHouseholds.useQuery(undefined, { staleTime: 5 * 60 * 1000 })
+  const householdId = myHouseholds?.[0]?.id
   
   // Fetch hierarchy rules for validation
   const { data: hierarchyData } = trpc.hierarchy.getMatrix.useQuery(
-    { householdId },
+    { householdId: householdId as string },
     { 
-      enabled: isOpen, // Only fetch when modal is open
+      enabled: isOpen && !!householdId, // Only fetch when modal is open and household is known
       retry: 1, // Don't retry too much
       staleTime: 5 * 60 * 1000 // Cache for 5 minutes
     }

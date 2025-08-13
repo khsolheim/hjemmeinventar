@@ -17,15 +17,19 @@ export default function HierarchySettingsPage() {
   const [isApplying, setIsApplying] = useState(false)
   const [successMessage, setSuccessMessage] = useState('')
   
-  // TODO: Get actual household ID from context/session
-  const householdId = 'temp-household-id'
+  // Determine user's active household (use first as default)
+  const { data: myHouseholds, isLoading: loadingHouseholds } = trpc.households.getMyHouseholds.useQuery()
+  const householdId = myHouseholds?.[0]?.id
 
   // Fetch current hierarchy rules
   const { 
     data: currentMatrix, 
     isLoading: loadingMatrix,
     refetch: refetchMatrix 
-  } = trpc.hierarchy.getMatrix.useQuery({ householdId })
+  } = trpc.hierarchy.getMatrix.useQuery(
+    { householdId: householdId as string },
+    { enabled: !!householdId }
+  )
 
   // Fetch available rule sets
   const { 
@@ -60,7 +64,7 @@ export default function HierarchySettingsPage() {
   })
 
   const handleApplyRuleSet = async () => {
-    if (!selectedRuleSet) return
+    if (!selectedRuleSet || !householdId) return
     
     setIsApplying(true)
     applyRuleSetMutation.mutate({
@@ -74,6 +78,7 @@ export default function HierarchySettingsPage() {
     childType: any
     isAllowed: boolean
   }>) => {
+    if (!householdId) return
     updateRulesMutation.mutate({
       householdId,
       rules
@@ -92,13 +97,26 @@ export default function HierarchySettingsPage() {
     SECTION: 'Avsnitt'
   }
 
-  if (loadingMatrix || loadingRuleSets) {
+  if (loadingHouseholds || loadingMatrix || loadingRuleSets) {
     return (
       <div className="container mx-auto p-6">
         <div className="flex items-center justify-center h-64">
           <RefreshCw className="h-6 w-6 animate-spin" />
           <span className="ml-2">Laster hierarki-innstillinger...</span>
         </div>
+      </div>
+    )
+  }
+
+  if (!householdId) {
+    return (
+      <div className="container mx-auto p-6">
+        <Alert>
+          <Info className="h-4 w-4" />
+          <AlertDescription>
+            Ingen husholdning funnet. Opprett eller bli med i en husholdning for å konfigurere hierarki-regler.
+          </AlertDescription>
+        </Alert>
       </div>
     )
   }
