@@ -234,13 +234,22 @@ export function YarnWizard({ onComplete, existingMasterId }: YarnWizardProps) {
     setImportedData(productData)
     
     // Pre-fill master form med importerte data
+    const toStringWithUnit = (value: unknown, unit?: string) => {
+      if (value === undefined || value === null) return ''
+      if (typeof value === 'number') return `${value}${unit || ''}`
+      const str = String(value)
+      // Hvis AI allerede har lagt til enhet, behold den
+      if (unit && /\d\s*(g|m|mm)$/i.test(str)) return str
+      return unit ? `${str}${str.match(/\d\s*(g|m|mm)$/i) ? '' : unit}` : str
+    }
+
     masterForm.reset({
       name: productData.name,
       producer: productData.producer || '',
       composition: productData.composition || '',
-      yardage: productData.yardage || '',
-      weight: productData.weight || '',
-      needleSize: productData.needleSize || '',
+      yardage: toStringWithUnit(productData.yardage, 'm'),
+      weight: toStringWithUnit(productData.weight, 'g'),
+      needleSize: toStringWithUnit(productData.needleSize, 'mm'),
       careInstructions: productData.careInstructions || '',
       store: productData.source.siteName || '',
       notes: productData.description || '',
