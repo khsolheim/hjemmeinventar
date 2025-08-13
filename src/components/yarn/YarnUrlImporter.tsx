@@ -39,6 +39,9 @@ export function YarnUrlImporter({ onImport, disabled }: YarnUrlImporterProps) {
   const [selectedImageIndex, setSelectedImageIndex] = useState<number | null>(null)
   const [isDownloadingImage, setIsDownloadingImage] = useState(false)
 
+  // Build proxied URL for preview to avoid hotlink/CORS issues
+  const getPreviewSrc = (rawUrl: string) => `/api/proxy-image?url=${encodeURIComponent(rawUrl)}`
+
   const handleScrapeUrl = async () => {
     if (!url.trim()) {
       toast.error('Vennligst skriv inn en URL')
@@ -476,63 +479,67 @@ export function YarnUrlImporter({ onImport, disabled }: YarnUrlImporterProps) {
               </div>
             )}
 
-            {/* Bildevalg */}
-            {scrapedData.images && scrapedData.images.length > 0 && (
-              <div>
-                                <Label className="text-sm font-medium flex items-center gap-1 mb-2">
-                  <Package className="h-4 w-4" />
-                  Forhåndsvisning av bilder ({scrapedData.images.length} tilgjengelig)
-                </Label>
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                  {scrapedData.images.map((image, index) => (
-                    <div key={index} className="rounded-lg border bg-white p-2">
-                      <div className="aspect-square w-full overflow-hidden rounded-md">
-                        <img
-                          src={image.url}
-                          alt={image.alt || `Produktbilde ${index + 1}`}
-                          className="h-full w-full object-cover"
-                          referrerPolicy="no-referrer"
-                          crossOrigin="anonymous"
-                          loading="lazy"
-                          onError={(e) => {
-                            console.error('Feil ved lasting av bilde:', image.url)
-                            const target = e.target as HTMLImageElement
+            {/* Bildevalg - vis kun ett bilde (AI-valgt eller første) og bruk proxy for forhåndsvisning */}
+            {scrapedData.images && scrapedData.images.length > 0 && (() => {
+              const primaryIndex = scrapedData.images.findIndex((img: any) => img.isPrimary)
+              const indexToShow = primaryIndex !== -1 ? primaryIndex : 0
+              const image = scrapedData.images[indexToShow]
+              return (
+                <div>
+                  <Label className="text-sm font-medium flex items-center gap-1 mb-2">
+                    <Package className="h-4 w-4" />
+                    Forhåndsvisning av bilde
+                  </Label>
+                  <div className="rounded-lg border bg-white p-2 max-w-sm">
+                    <div className="aspect-square w-full overflow-hidden rounded-md">
+                      <img
+                        src={getPreviewSrc(image.url)}
+                        alt={image.alt || `Produktbilde`}
+                        className="h-full w-full object-cover"
+                        referrerPolicy="no-referrer"
+                        crossOrigin="anonymous"
+                        loading="lazy"
+                        onError={(e) => {
+                          console.error('Feil ved lasting av bilde (proxy), prøver direkte URL:', image.url)
+                          const target = e.target as HTMLImageElement
+                          // Fallback til direkte URL én gang
+                          if (!(target as any)._triedFallback) {
+                            ;(target as any)._triedFallback = true
+                            target.src = image.url
+                          } else {
                             target.src = ''
                             target.alt = 'Bilde kunne ikke lastes'
-                          }}
-                        />
-                      </div>
-                      <div className="mt-2 flex items-center justify-between">
-                        {image.isPrimary && (
-                          <span className="text-xs rounded bg-green-600 px-1.5 py-0.5 text-white">🤖 AI valgt</span>
-                        )}
-                        <Button
-                          size="sm"
-                          onClick={() => handleDownloadImage(index)}
-                          disabled={isDownloadingImage}
-                          variant="secondary"
-                        >
-                          {isDownloadingImage && selectedImageIndex === index ? (
-                            <>
-                              <Loader2 className="mr-1 h-3 w-3 animate-spin" />
-                              Laster...
-                            </>
-                          ) : (
-                            <>
-                              <Download className="mr-1 h-3 w-3" />
-                              Last ned
-                            </>
-                          )}
-                        </Button>
-                      </div>
+                          }
+                        }}
+                      />
                     </div>
-                  ))}
+                    <div className="mt-2 flex items-center justify-between">
+                      {image.isPrimary && (
+                        <span className="text-xs rounded bg-green-600 px-1.5 py-0.5 text-white">🤖 AI valgt</span>
+                      )}
+                      <Button
+                        size="sm"
+                        onClick={() => handleDownloadImage(indexToShow)}
+                        disabled={isDownloadingImage}
+                        variant="secondary"
+                      >
+                        {isDownloadingImage && selectedImageIndex === indexToShow ? (
+                          <>
+                            <Loader2 className="mr-1 h-3 w-3 animate-spin" />
+                            Laster...
+                          </>
+                        ) : (
+                          <>
+                            <Download className="mr-1 h-3 w-3" />
+                            Last ned
+                          </>
+                        )}
+                      </Button>
+                    </div>
+                  </div>
                 </div>
-                <p className="text-xs text-muted-foreground mt-1">
-                  Forhåndsvisning av tilgjengelige produktbilder. Klikk for å laste ned og optimalisere.
-                </p>
-              </div>
-            )}
+              )
+            })()}
 
             {/* Nedlastet bilde */}
             {downloadedImages && downloadedImages.length > 0 && (
