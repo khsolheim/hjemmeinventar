@@ -7,10 +7,8 @@ import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { trpc } from '@/lib/trpc/client'
 import { YarnWizard } from './YarnWizard'
-import { BatchGrid } from './BatchGrid'
 import { AdvancedYarnSearch } from './AdvancedYarnSearch'
 import { YarnAnalytics } from './YarnAnalytics'
 import { YarnBulkOperations } from './YarnBulkOperations'
@@ -36,7 +34,6 @@ interface YarnMasterWithTotals {
 
 export function YarnMasterDashboard() {
   const [searchTerm, setSearchTerm] = useState('')
-  const [selectedMaster, setSelectedMaster] = useState<YarnMasterWithTotals | null>(null)
   const [searchFilters, setSearchFilters] = useState<any>(null)
 
   // Fetch yarn masters
@@ -217,12 +214,9 @@ export function YarnMasterDashboard() {
               {masters.map((master) => {
                 const data = getMasterData(master.categoryData)
                 return (
-                  <Card 
-                    key={master.id} 
-                    className="cursor-pointer hover:shadow-lg transition-shadow"
-                    onClick={() => setSelectedMaster(master)}
-                  >
-                    <CardHeader>
+                  <Link key={master.id} href={`/garn/${master.id}`} className="block">
+                    <Card className="cursor-pointer hover:shadow-lg transition-shadow">
+                      <CardHeader>
                       <div className="flex justify-between items-start">
                         <div className="flex-1">
                           <CardTitle className="text-lg">{master.name}</CardTitle>
@@ -234,8 +228,8 @@ export function YarnMasterDashboard() {
                           {master.totals?.batchCount || 0} batches
                         </Badge>
                       </div>
-                    </CardHeader>
-                    <CardContent>
+                      </CardHeader>
+                      <CardContent>
                       <div className="space-y-2">
                         <div className="flex justify-between text-sm">
                           <span className="text-muted-foreground">Nøster:</span>
@@ -281,8 +275,9 @@ export function YarnMasterDashboard() {
                           />
                         </div>
                       </div>
-                    </CardContent>
-                  </Card>
+                      </CardContent>
+                    </Card>
+                  </Link>
                 )
               })}
             </div>
@@ -296,10 +291,10 @@ export function YarnMasterDashboard() {
                 {masters.map((master) => {
                   const data = getMasterData(master.categoryData)
                   return (
-                    <div 
+                    <Link 
                       key={master.id}
-                      className="p-4 hover:bg-muted/50 cursor-pointer"
-                      onClick={() => setSelectedMaster(master)}
+                      href={`/garn/${master.id}`}
+                      className="block p-4 hover:bg-muted/50 cursor-pointer"
                     >
                       <div className="flex items-center justify-between">
                         <div className="flex-1">
@@ -325,7 +320,7 @@ export function YarnMasterDashboard() {
                           </div>
                         </div>
                       </div>
-                    </div>
+                    </Link>
                   )
                 })}
               </div>
@@ -346,20 +341,7 @@ export function YarnMasterDashboard() {
         </TabsContent>
       </Tabs>
 
-      {/* Master Detail Dialog */}
-      {selectedMaster && (
-        <Dialog open={!!selectedMaster} onOpenChange={() => setSelectedMaster(null)}>
-          <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle>{selectedMaster.name}</DialogTitle>
-              <DialogDescription>
-                Detaljer og batches for denne garn-typen
-              </DialogDescription>
-            </DialogHeader>
-            <BatchGrid masterId={selectedMaster.id} />
-          </DialogContent>
-        </Dialog>
-      )}
+      {/* Master Detail moved to dedicated route /garn/[id] */}
     </div>
   )
 }
