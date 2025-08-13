@@ -115,6 +115,7 @@ export default function YarnDetailPage() {
                   <CheckCircle className="h-3 w-3 mr-1" /> Legg til batch
                 </Button>
                 {/* Bulk-operasjoner dialog */}
+                {(batches && batches.length > 0) && (
                 <Dialog>
                   <DialogTrigger asChild>
                     <Button size="sm" variant="outline">Bulk-operasjoner</Button>
@@ -135,7 +136,9 @@ export default function YarnDetailPage() {
                     </div>
                   </DialogContent>
                 </Dialog>
+                )}
                 {/* Legg til prosjekt dialog */}
+                {(batches && batches.length > 0) && (
                 <Dialog>
                   <DialogTrigger asChild>
                     <Button size="sm" variant="outline">Legg til prosjekt</Button>
@@ -160,6 +163,7 @@ export default function YarnDetailPage() {
                     </div>
                   </DialogContent>
                 </Dialog>
+                )}
               </div>
             </div>
           </div>

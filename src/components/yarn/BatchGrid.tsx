@@ -470,31 +470,7 @@ export function BatchGrid({ masterId, hideMasterHeader = false, hideTotals = fal
         )}
       </div>
 
-      {/* Bulk Operations - collapsed to save space */}
-      {batches && batches.length > 0 && (
-        <Collapsible>
-          <div className="mt-6 flex items-center justify-between">
-            <div className="text-sm font-medium">Bulk-operasjoner</div>
-            <CollapsibleTrigger asChild>
-              <Button variant="outline" size="sm">
-                <ChevronDown className="h-4 w-4 mr-1" /> Vis/skjul
-              </Button>
-            </CollapsibleTrigger>
-          </div>
-          <CollapsibleContent>
-            <div className="mt-3">
-              <YarnBulkOperations 
-                items={batches}
-                onRefresh={() => {
-                  refetchBatches()
-                  refetchTotals()
-                }}
-                itemType="batches"
-              />
-            </div>
-          </CollapsibleContent>
-        </Collapsible>
-      )}
+      {/* Bulk Operations section removed here (moved to master detail actions) */}
 
       {/* Project Integration Section */}
       {batches && batches.length > 0 && (
