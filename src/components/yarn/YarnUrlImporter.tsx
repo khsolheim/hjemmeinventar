@@ -117,9 +117,14 @@ export function YarnUrlImporter({ onImport, disabled }: YarnUrlImporterProps) {
   }
 
   const handleDownloadImage = async (imageIndex: number) => {
+    // Tolerant sjekk: hvis valgt index ikke finnes enda (race), fall tilbake til første bilde
     if (!scrapedData?.images?.[imageIndex]) {
-      toast.error('Bildet finnes ikke')
-      return
+      if (scrapedData?.images && scrapedData.images.length > 0) {
+        imageIndex = 0
+      } else {
+        toast.error('Ingen bilder tilgjengelig for nedlasting')
+        return
+      }
     }
 
     setIsDownloadingImage(true)
