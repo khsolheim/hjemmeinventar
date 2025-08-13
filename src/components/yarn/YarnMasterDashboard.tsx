@@ -14,7 +14,7 @@ import { YarnBulkOperations } from './YarnBulkOperations'
 import Link from 'next/link'
 import { trpc } from '@/lib/trpc/client'
 
-interface YarnMasterWithTotals {
+export interface YarnMasterWithTotals {
   id: string
   name: string
   description: string | null
@@ -32,7 +32,7 @@ interface YarnMasterWithTotals {
   createdAt: Date
 }
 
-export function YarnMasterDashboard() {
+export function YarnMasterDashboard({ initialMasters, initialTotal }: { initialMasters?: YarnMasterWithTotals[]; initialTotal?: number }) {
   const [searchTerm, setSearchTerm] = useState('')
   const [searchFilters, setSearchFilters] = useState<any>(null)
 
@@ -46,7 +46,8 @@ export function YarnMasterDashboard() {
     refetchOnWindowFocus: false,
     refetchOnMount: false,
     staleTime: 30000,
-    keepPreviousData: true
+    keepPreviousData: true,
+    initialData: initialMasters ? { masters: initialMasters, total: initialTotal ?? initialMasters.length } : undefined
   })
 
   const handleAdvancedSearch = (filters: any) => {
@@ -61,8 +62,8 @@ export function YarnMasterDashboard() {
     refetch()
   }
 
-  const masters = mastersData?.masters || []
-  const total = mastersData?.total || 0
+  const masters = (mastersData?.masters || initialMasters) || []
+  const total = mastersData?.total ?? initialTotal ?? 0
 
   // Calculate overall statistics
   const overallStats = masters.reduce((acc, master) => {

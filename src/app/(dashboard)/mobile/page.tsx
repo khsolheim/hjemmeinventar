@@ -46,9 +46,19 @@ export default function MobileDemoPage() {
   const { isOnline, connectionQuality } = useOfflineStatus()
 
   // Sample data for demo
-  const { data: sampleItemsData } = trpc.items.getAll.useQuery({ limit: 5 })
+  const { data: sampleItemsData } = trpc.items.getAll.useQuery({ limit: 5 }, {
+    staleTime: 30000,
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
+    keepPreviousData: true
+  })
   const sampleItems = sampleItemsData?.items || []
-  const { data: sampleLocations = [] } = trpc.locations.getAll.useQuery()
+  const { data: sampleLocations = [] } = trpc.locations.getAll.useQuery(undefined, {
+    staleTime: 30000,
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
+    keepPreviousData: true
+  })
 
   useEffect(() => {
     setIsClient(true)
@@ -171,11 +181,30 @@ export default function MobileDemoPage() {
   // Don't render until client is ready
   if (!isClient) {
     return (
-      <div className="container mx-auto px-4 py-8 max-w-4xl">
-        <div className="flex items-center justify-center min-h-64">
-          <div className="text-center">
-            <RefreshCw className="w-8 h-8 animate-spin mx-auto mb-4 text-muted-foreground" />
-            <p className="text-muted-foreground">Laster mobile funksjoner...</p>
+      <div className="page container mx-auto px-4 py-8 max-w-4xl cq">
+        <div className="mb-8">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="w-8 h-8 rounded-full bg-muted animate-pulse" />
+            <div>
+              <div className="h-8 w-56 bg-muted rounded animate-pulse mb-2" />
+              <div className="h-4 w-72 bg-muted rounded animate-pulse" />
+            </div>
+          </div>
+          <div className="flex gap-2 mb-4">
+            <div className="h-6 w-20 bg-muted rounded animate-pulse" />
+            <div className="h-6 w-24 bg-muted rounded animate-pulse" />
+            <div className="h-6 w-24 bg-muted rounded animate-pulse" />
+          </div>
+        </div>
+
+        <div className="mb-6 h-12 bg-muted rounded animate-pulse" />
+
+        <div className="space-y-6">
+          <div className="h-10 w-full bg-muted rounded animate-pulse" />
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="h-56 bg-muted rounded animate-pulse" />
+            <div className="h-56 bg-muted rounded animate-pulse" />
+            <div className="h-56 bg-muted rounded animate-pulse" />
           </div>
         </div>
       </div>
@@ -215,7 +244,7 @@ export default function MobileDemoPage() {
       </div>
 
       {/* Offline Status Banner */}
-      <OfflineStatusBanner showDetailedStats={true} className="mb-6" />
+      <OfflineStatusBanner compact showDetailedStats={false} className="mb-6" />
 
       <Tabs value={selectedTab} onValueChange={setSelectedTab} className="space-y-6">
         <TabsList className="grid w-full grid-cols-4">
@@ -226,7 +255,7 @@ export default function MobileDemoPage() {
         </TabsList>
 
         {/* Overview Tab */}
-        <TabsContent value="overview" className="space-y-6">
+        <TabsContent value="overview" className="space-y-6 min-h-96">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {/* Device Info */}
             <Card>
@@ -236,7 +265,7 @@ export default function MobileDemoPage() {
                   Enhetsinfo
                 </CardTitle>
               </CardHeader>
-              <CardContent className="space-y-2">
+              <CardContent className="space-y-2 min-h-56">
                 <div className="grid grid-cols-2 gap-2 text-sm">
                   <span className="text-muted-foreground">Plattform:</span>
                   <span className="font-medium">{deviceInfo.platform}</span>
@@ -267,7 +296,7 @@ export default function MobileDemoPage() {
                   Feature Support
                 </CardTitle>
               </CardHeader>
-              <CardContent className="space-y-2">
+              <CardContent className="space-y-2 min-h-56">
                 <div className="space-y-2">
                   {[
                     { name: 'Vibrasjon', supported: deviceInfo.vibrationSupported, icon: Vibrate },
@@ -299,7 +328,7 @@ export default function MobileDemoPage() {
                   Tilkobling
                 </CardTitle>
               </CardHeader>
-              <CardContent className="space-y-2">
+              <CardContent className="space-y-2 min-h-48">
                 <div className="grid grid-cols-2 gap-2 text-sm">
                   <span className="text-muted-foreground">Status:</span>
                   <Badge variant={isOnline ? "default" : "destructive"}>

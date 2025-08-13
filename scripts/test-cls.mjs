@@ -8,7 +8,8 @@ const paths = [
   '/items',
   '/locations',
   '/locations/mobile',
-  '/garn'
+  '/garn',
+  '/mobile'
 ]
 
 async function prepareCLSTracking(page) {
@@ -42,11 +43,27 @@ async function measureCLS(page, url) {
 }
 
 async function login(page) {
-  await page.goto(`${BASE}/auth/signin`, { waitUntil: 'networkidle2' })
-  await page.type('#email', 'test@example.com')
-  await page.type('#password', 'test123')
+  // Try to access a protected page; if redirected to sign-in, perform login
+  await page.goto(`${BASE}/dashboard`, { waitUntil: 'networkidle2' })
+  const currentUrl = page.url()
+  if (!/\/auth\/signin/.test(currentUrl)) {
+    return
+  }
+  // Fill form robustly
+  const emailHandle = await page.$('input[type="email"], input[name="email"], #email')
+  const passwordHandle = await page.$('input[type="password"], input[name="password"], #password')
+  if (!emailHandle || !passwordHandle) {
+    throw new Error('Sign-in form inputs not found')
+  }
+  await emailHandle.click({ clickCount: 3 })
+  await emailHandle.type('test@example.com')
+  await passwordHandle.type('test123')
+  const submitHandle = await page.$('button[type="submit"], form button')
+  if (!submitHandle) {
+    throw new Error('Sign-in submit button not found')
+  }
   await Promise.all([
-    page.click('button[type="submit"]'),
+    submitHandle.click(),
     page.waitForNavigation({ waitUntil: 'networkidle2' })
   ])
 }
@@ -81,8 +98,11 @@ async function login(page) {
     await new Promise(r => setTimeout(r, 1500))
     const detailHref = await page.evaluate(() => {
       const links = Array.from(document.querySelectorAll('a[href^="/items/"]'))
-      const first = links.find(a => /^\/items\/.+/.test(a.getAttribute('href') || ''))
-      return first ? first.getAttribute('href') : null
+      // Pick first that looks like /items/<id> (exclude known non-detail paths like enhanced/new/create)
+      const first = links
+        .map(a => a.getAttribute('href') || '')
+        .find(href => /^\/items\/[a-zA-Z0-9][^/?#]*/.test(href) && !/\/items\/(enhanced|new|create)/.test(href))
+      return first || null
     })
     if (detailHref) {
       const clsBefore = await page.evaluate(() => window.__cls ?? 0)
@@ -104,24 +124,48 @@ async function login(page) {
     await new Promise(r => setTimeout(r, 1500))
     // Navigate into first master detail
     const masterHref = await page.evaluate(() => {
-      const link = document.querySelector('a[href^="/garn/"]')
-      return link ? link.getAttribute('href') : null
+      const links = Array.from(document.querySelectorAll('a[href^="/garn/"]'))
+      // Prefer /garn/<id> and exclude register, batch, and query links
+      const match = links
+        .map(a => a.getAttribute('href') || '')
+        .find(href => /^\/garn\/[a-zA-Z0-9][^/?#]*/.test(href) && !/\/garn\/(register|batch|mobile)/.test(href))
+      return match || null
     })
     if (masterHref) {
-      await page.goto(`${BASE}${masterHref}`, { waitUntil: 'networkidle2' })
-      await new Promise(r => setTimeout(r, 1500))
-      const batchHref = await page.evaluate(() => {
-        const link = document.querySelector('a[href^="/garn/batch/"]')
-        return link ? link.getAttribute('href') : null
+      // Measure master detail directly in isolation
+      const masterCls = await measureCLS(page, `${BASE}${masterHref}`)
+      results.push({ path: masterHref, cls: masterCls })
+      console.log(masterHref, masterCls.toFixed(3))
+      let batchHref = await page.evaluate(() => {
+        // 1) Any explicit anchor to a batch detail
+        const links = Array.from(document.querySelectorAll('a[href*="/batch/"]'))
+        const match = links
+          .map(a => a.getAttribute('href') || '')
+          .find(href => /\/garn\/batch\/[a-zA-Z0-9]/.test(href))
+        if (match) return match
+        // 2) Look for data-batch-id attributes and compose URL
+        const el = document.querySelector('[data-batch-id]')
+        if (el) {
+          const id = el.getAttribute('data-batch-id')
+          if (id) return `/garn/batch/${id}`
+        }
+        return null
       })
+      if (!batchHref) {
+        // 3) Fallback: try to derive from any /items/<id> link on the page
+        batchHref = await page.evaluate(() => {
+          const links = Array.from(document.querySelectorAll('a[href^="/items/"]'))
+          const id = links
+            .map(a => a.getAttribute('href') || '')
+            .map(h => (h.match(/^\/items\/([^/?#]+)/)?.[1]))
+            .find(Boolean)
+          return id ? `/garn/batch/${id}` : null
+        })
+      }
       if (batchHref) {
-        const clsBefore = await page.evaluate(() => window.__cls ?? 0)
-        await page.goto(`${BASE}${batchHref}`, { waitUntil: 'networkidle2' })
-        await new Promise(r => setTimeout(r, 1500))
-        const clsAfter = await page.evaluate(() => window.__cls ?? 0)
-        const delta = Math.max(0, clsAfter - clsBefore)
-        results.push({ path: batchHref, cls: delta })
-        console.log(batchHref, delta.toFixed(3))
+        const batchCls = await measureCLS(page, `${BASE}${batchHref}`)
+        results.push({ path: batchHref, cls: batchCls })
+        console.log(batchHref, batchCls.toFixed(3))
       }
     }
   } catch (e) {

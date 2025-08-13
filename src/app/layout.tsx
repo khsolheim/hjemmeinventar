@@ -10,6 +10,7 @@ import { SkipToContent } from "@/components/accessibility/SkipToContent"
 const inter = Inter({
   subsets: ["latin"],
   variable: "--font-inter",
+  display: 'optional',
 })
 
 export const metadata: Metadata = {

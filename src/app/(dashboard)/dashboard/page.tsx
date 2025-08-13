@@ -267,6 +267,7 @@ export default function DashboardPage() {
                 Alt er klart! Du har rom, oppbevaringssteder og gjenstander.
               </div>
             ) : (
+              <>
               <div className="flex items-center space-x-4">
                 <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
                   hasRooms ? 'bg-green-500 text-white' : 'bg-primary text-primary-foreground'
@@ -329,6 +330,7 @@ export default function DashboardPage() {
                   </Link>
                 )}
               </div>
+              </>
             )}
           </CardContent>
         </Card>

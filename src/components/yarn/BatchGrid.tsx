@@ -31,13 +31,28 @@ export function BatchGrid({ masterId, hideMasterHeader = false, hideTotals = fal
   const router = useRouter()
 
   // Fetch master data
-  const { data: master, refetch: refetchMaster } = trpc.items.getById.useQuery(masterId)
+  const { data: master, refetch: refetchMaster } = trpc.items.getById.useQuery(masterId, {
+    staleTime: 30000,
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
+    keepPreviousData: true,
+  })
   
   // Fetch batches for this master
-  const { data: batches, isLoading, refetch: refetchBatches } = trpc.yarn.getBatchesForMaster.useQuery({ masterId })
+  const { data: batches, isLoading, refetch: refetchBatches } = trpc.yarn.getBatchesForMaster.useQuery({ masterId }, {
+    staleTime: 30000,
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
+    keepPreviousData: true,
+  })
   
   // Fetch master totals
-  const { data: totals, refetch: refetchTotals } = trpc.yarn.getMasterTotals.useQuery({ masterId })
+  const { data: totals, refetch: refetchTotals } = trpc.yarn.getMasterTotals.useQuery({ masterId }, {
+    staleTime: 30000,
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
+    keepPreviousData: true,
+  })
 
   // Delete batch mutation
   const deleteBatchMutation = trpc.items.delete.useMutation({
@@ -109,14 +124,17 @@ export function BatchGrid({ masterId, hideMasterHeader = false, hideTotals = fal
 
   if (isLoading) {
     return (
-      <div className="space-y-4">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {[...Array(3)].map((_, i) => (
+      <div className="space-y-4 min-h-80">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
+          {[...Array(8)].map((_, i) => (
             <Card key={i} className="animate-pulse">
-              <CardHeader className="space-y-2">
+              <CardHeader className="px-3 py-2 space-y-2">
                 <div className="h-4 bg-gray-200 rounded w-3/4"></div>
                 <div className="h-8 bg-gray-200 rounded w-1/2"></div>
               </CardHeader>
+              <CardContent className="px-3 py-2">
+                <div className="h-16 bg-gray-200 rounded w-full"></div>
+              </CardContent>
             </Card>
           ))}
         </div>
@@ -125,7 +143,7 @@ export function BatchGrid({ masterId, hideMasterHeader = false, hideTotals = fal
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 min-h-80">
       {/* Master Information */}
       {master && !hideMasterHeader && (
         <Card>
