@@ -5,6 +5,8 @@ import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { ChevronLeft, Pencil, Trash2, Plus } from 'lucide-react'
 import { trpc } from '@/lib/trpc/client'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
+import { YarnWizard } from '@/components/yarn/YarnWizard'
 
 export default function YarnColorPage() {
   const params = useParams()
@@ -59,11 +61,19 @@ export default function YarnColorPage() {
       {/* Batches for this color */}
       <div className="flex items-center justify-between">
         <div className="text-sm text-muted-foreground">{batches?.length || 0} batches</div>
-        <Button size="sm" className="bg-green-600 hover:bg-green-700" onClick={() => {
-          alert('TODO: Åpne batch-veiviser forhåndsutfylt med denne fargen')
-        }}>
-          <Plus className="h-3 w-3 mr-1"/> Ny batch
-        </Button>
+        <Dialog>
+          <DialogTrigger asChild>
+            <Button size="sm" className="bg-green-600 hover:bg-green-700">
+              <Plus className="h-3 w-3 mr-1"/> Ny batch
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Ny batch for {color?.name}</DialogTitle>
+            </DialogHeader>
+            <YarnWizard onComplete={() => utils.yarn.getBatchesForColor.invalidate({ colorId })} preset={{ masterId, batch: { color: color?.name, colorCode: color?.colorCode } }} />
+          </DialogContent>
+        </Dialog>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">

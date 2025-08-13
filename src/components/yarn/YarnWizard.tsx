@@ -55,7 +55,13 @@ interface YarnWizardProps {
 
 type WizardStep = 'choose-type' | 'url-import' | 'master-details' | 'batch-details' | 'summary'
 
-export function YarnWizard({ onComplete, existingMasterId }: YarnWizardProps) {
+// Optional preset for quick batch creation
+type YarnWizardPreset = {
+  masterId?: string
+  batch?: Partial<BatchFormData>
+}
+
+export function YarnWizard({ onComplete, existingMasterId, preset }: YarnWizardProps & { preset?: YarnWizardPreset }) {
   const { data: session } = useSession()
   const [currentStep, setCurrentStep] = useState<WizardStep>(existingMasterId ? 'batch-details' : 'choose-type')
   const [creationType, setCreationType] = useState<'new-master' | 'existing-master' | 'url-import' | null>(null)
@@ -175,6 +181,26 @@ export function YarnWizard({ onComplete, existingMasterId }: YarnWizardProps) {
       notes: '',
     }
   })
+
+  // Apply preset if provided (prefill for color and jump to batch creation for a specific master)
+  React.useEffect(() => {
+    if (preset?.masterId) {
+      setSelectedMasterId(preset.masterId)
+      setCreationType('existing-master')
+      setCurrentStep('batch-details')
+    }
+    if (preset?.batch) {
+      batchForm.reset({
+        batchNumber: preset.batch.batchNumber ?? '',
+        color: preset.batch.color ?? '',
+        colorCode: preset.batch.colorCode ?? '',
+        quantity: preset.batch.quantity ?? 1,
+        pricePerSkein: preset.batch.pricePerSkein,
+        condition: preset.batch.condition ?? 'Ny',
+        notes: preset.batch.notes ?? ''
+      })
+    }
+  }, [preset])
 
   const handleMasterSubmit = async (data: MasterFormData) => {
     try {
