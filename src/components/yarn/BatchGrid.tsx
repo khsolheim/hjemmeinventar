@@ -19,9 +19,10 @@ interface BatchGridProps {
   masterId: string
   hideMasterHeader?: boolean
   hideTotals?: boolean
+  filterColorName?: string
 }
 
-export function BatchGrid({ masterId, hideMasterHeader = false, hideTotals = false }: BatchGridProps) {
+export function BatchGrid({ masterId, hideMasterHeader = false, hideTotals = false, filterColorName }: BatchGridProps) {
   const [isAddBatchOpen, setIsAddBatchOpen] = useState(false)
 
   // Fetch master data
@@ -247,6 +248,9 @@ export function BatchGrid({ masterId, hideMasterHeader = false, hideTotals = fal
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {batches.map((batch) => {
               const batchData = getBatchData(batch.categoryData)
+              if (filterColorName && (batchData.color || '').toLowerCase() !== filterColorName.toLowerCase()) {
+                return null
+              }
               const colorStyle = batchData.colorCode 
                 ? { backgroundColor: batchData.colorCode }
                 : undefined

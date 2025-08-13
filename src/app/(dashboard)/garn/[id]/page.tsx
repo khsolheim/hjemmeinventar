@@ -14,6 +14,7 @@ export default function YarnDetailPage() {
   const { data: master } = trpc.items.getById.useQuery(id!, { enabled: !!id })
   const { data: totals } = trpc.yarn.getMasterTotals.useQuery({ masterId: id! }, { enabled: !!id })
   const { data: colors } = trpc.yarn.getColorsForMaster.useQuery({ masterId: id! }, { enabled: !!id })
+  const [selectedColor, setSelectedColor] = React.useState<string>('')
 
   if (!id) return null
 
@@ -114,10 +115,13 @@ export default function YarnDetailPage() {
           {/* Colors grid (compact) */}
           {colors && colors.length > 0 && (
             <div className="mt-6">
-              <h3 className="text-sm font-medium mb-2">Farger</h3>
+              <div className="flex items-center justify-between mb-2">
+                <h3 className="text-sm font-medium">Farger</h3>
+                <div className="text-xs text-muted-foreground">Filter: {selectedColor || 'Ingen'}</div>
+              </div>
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
                 {colors.map((c) => (
-                  <Link key={c.id} href={`/garn/${id}/farge/${c.id}`} className="rounded-lg border p-3 hover:bg-muted/40 transition-colors">
+                  <button key={c.id} onClick={() => setSelectedColor(prev => prev === c.name ? '' : c.name)} className={`rounded-lg border p-3 text-left transition-colors ${selectedColor === c.name ? 'bg-muted' : 'hover:bg-muted/40'}`}>
                     <div className="flex items-center gap-2">
                       <span className="inline-block w-4 h-4 rounded" style={{ backgroundColor: c.colorCode || '#e5e7eb' }} />
                       <span className="text-sm font-medium truncate">{c.name}</span>
@@ -126,7 +130,7 @@ export default function YarnDetailPage() {
                       <span>{c.batchCount} batches</span>
                       <span>{c.skeinCount} nøster</span>
                     </div>
-                  </Link>
+                  </button>
                 ))}
               </div>
             </div>
@@ -134,7 +138,7 @@ export default function YarnDetailPage() {
 
           {/* Batches */}
           <div className="mt-6">
-            <BatchGrid masterId={id} hideMasterHeader hideTotals />
+            <BatchGrid masterId={id} hideMasterHeader hideTotals filterColorName={selectedColor || undefined} />
           </div>
         </CardContent>
       </Card>
