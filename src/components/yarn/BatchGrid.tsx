@@ -15,9 +15,10 @@ import { YarnBulkOperations } from './YarnBulkOperations'
 
 interface BatchGridProps {
   masterId: string
+  hideMasterHeader?: boolean
 }
 
-export function BatchGrid({ masterId }: BatchGridProps) {
+export function BatchGrid({ masterId, hideMasterHeader = false }: BatchGridProps) {
   const [isAddBatchOpen, setIsAddBatchOpen] = useState(false)
 
   // Fetch master data
@@ -106,7 +107,7 @@ export function BatchGrid({ masterId }: BatchGridProps) {
   return (
     <div className="space-y-6">
       {/* Master Information */}
-      {master && (
+      {master && !hideMasterHeader && (
         <Card>
           <CardHeader>
             <div className="flex justify-between items-start">
