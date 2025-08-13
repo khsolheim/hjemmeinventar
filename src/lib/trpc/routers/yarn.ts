@@ -951,7 +951,7 @@ export const yarnRouter = createTRPCRouter({
       }
       await ctx.db.item.delete({ where: { id: input.colorId } })
       return { success: true }
-    })
+    }),
 
   // Hent alle yarn masters for brukeren
   getAllMasters: protectedProcedure
