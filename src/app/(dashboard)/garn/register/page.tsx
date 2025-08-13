@@ -5,8 +5,10 @@ import { Button } from '@/components/ui/button'
 import { ChevronLeft } from 'lucide-react'
 import Link from 'next/link'
 import { YarnWizard } from '@/components/yarn/YarnWizard'
+import { useRouter } from 'next/navigation'
 
 export default function RegisterYarnPage() {
+  const router = useRouter()
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
@@ -28,7 +30,7 @@ export default function RegisterYarnPage() {
           <CardDescription>Følg stegene for å registrere garn</CardDescription>
         </CardHeader>
         <CardContent>
-          <YarnWizard onComplete={() => { /* Navigasjon håndteres av brukeren */ }} />
+          <YarnWizard onComplete={() => router.push('/garn')} />
         </CardContent>
       </Card>
     </div>
