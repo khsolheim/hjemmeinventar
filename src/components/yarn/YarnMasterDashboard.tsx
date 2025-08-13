@@ -7,13 +7,14 @@ import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { trpc } from '@/lib/trpc/client'
 import { YarnWizard } from './YarnWizard'
 import { BatchGrid } from './BatchGrid'
 import { AdvancedYarnSearch } from './AdvancedYarnSearch'
 import { YarnAnalytics } from './YarnAnalytics'
 import { YarnBulkOperations } from './YarnBulkOperations'
+import Link from 'next/link'
 
 interface YarnMasterWithTotals {
   id: string
@@ -36,7 +37,6 @@ interface YarnMasterWithTotals {
 export function YarnMasterDashboard() {
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedMaster, setSelectedMaster] = useState<YarnMasterWithTotals | null>(null)
-  const [isWizardOpen, setIsWizardOpen] = useState(false)
   const [searchFilters, setSearchFilters] = useState<any>(null)
 
   // Fetch yarn masters
@@ -77,10 +77,7 @@ export function YarnMasterDashboard() {
     }
   }, { totalMasters: 0, totalSkeins: 0, totalValue: 0, totalBatches: 0 })
 
-  const handleMasterCreated = () => {
-    setIsWizardOpen(false)
-    refetch()
-  }
+  // Wizard is now a dedicated page. Refetch happens when returning to this page.
 
   const getMasterData = (categoryData: string | null) => {
     if (!categoryData) return {}
@@ -121,23 +118,12 @@ export function YarnMasterDashboard() {
             Administrer dine garn-typer og batches
           </p>
         </div>
-        <Dialog open={isWizardOpen} onOpenChange={setIsWizardOpen}>
-          <DialogTrigger asChild>
-            <Button>
-              <Plus className="h-4 w-4 mr-2" />
-              Registrer Nytt Garn
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-5xl max-h-[95vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle>Registrer Nytt Garn</DialogTitle>
-              <DialogDescription>
-                Opprett en ny garn-type eller legg til batch til eksisterende type
-              </DialogDescription>
-            </DialogHeader>
-            <YarnWizard onComplete={handleMasterCreated} />
-          </DialogContent>
-        </Dialog>
+        <Button asChild>
+          <Link href="/garn/register">
+            <Plus className="h-4 w-4 mr-2" />
+            Registrer Nytt Garn
+          </Link>
+        </Button>
       </div>
 
       {/* Statistics Cards */}
