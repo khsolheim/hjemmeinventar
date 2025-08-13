@@ -13,6 +13,7 @@ import { AdvancedYarnSearch } from './AdvancedYarnSearch'
 import { YarnAnalytics } from './YarnAnalytics'
 import { YarnBulkOperations } from './YarnBulkOperations'
 import Link from 'next/link'
+import { trpc } from '@/lib/trpc/client'
 
 interface YarnMasterWithTotals {
   id: string
@@ -213,6 +214,7 @@ export function YarnMasterDashboard() {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {masters.map((master) => {
                 const data = getMasterData(master.categoryData)
+                const { data: colors } = trpc.yarn.getColorsForMaster.useQuery({ masterId: master.id })
                 return (
                   <Link key={master.id} href={`/garn/${master.id}`} className="block">
                     <Card className="cursor-pointer hover:shadow-lg transition-shadow">
@@ -257,6 +259,19 @@ export function YarnMasterDashboard() {
                           <span className="font-medium">{master.location.name}</span>
                         </div>
                       </div>
+
+                        {/* Compact colors row */}
+                        {colors && colors.length > 0 && (
+                          <div className="mt-3 grid grid-cols-3 gap-2">
+                            {colors.slice(0,3).map((c) => (
+                              <div key={c.id} className="flex items-center gap-2 text-xs text-muted-foreground">
+                                <span className="inline-block w-3 h-3 rounded" style={{ backgroundColor: c.colorCode || '#e5e7eb' }} />
+                                <span className="truncate">{c.name}</span>
+                                <span className="ml-auto">{c.batchCount}/{c.skeinCount}</span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
 
                       {/* Progress bar showing available vs total */}
                       <div className="mt-4">

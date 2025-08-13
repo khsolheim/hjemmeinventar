@@ -664,6 +664,7 @@ export const yarnRouter = createTRPCRouter({
       notes: z.string().optional(),
       imageUrl: z.string().optional(),
       unit: z.string().default('nøste'),
+      colorId: z.string().optional(),
     }))
     .mutation(async ({ ctx, input }) => {
       // Verifiser at master tilhører brukeren
@@ -698,6 +699,18 @@ export const yarnRouter = createTRPCRouter({
         unit: input.unit,
       })
 
+      // Relater til farge hvis oppgitt
+      if (input.colorId) {
+        await ctx.db.item.update({
+          where: { id: batch.id },
+          data: {
+            relatedItems: {
+              connect: { id: input.colorId }
+            }
+          }
+        })
+      }
+
       return batch
     }),
 
@@ -729,6 +742,136 @@ export const yarnRouter = createTRPCRouter({
     .query(async ({ ctx, input }) => {
       const totals = await calculateMasterTotals(ctx.db, input.masterId, ctx.user.id)
       return totals
+    }),
+
+  // YARN COLOR LEVEL ENDPOINTS
+
+  // Opprett ny farge knyttet til en master
+  createColor: protectedProcedure
+    .input(z.object({
+      masterId: z.string(),
+      name: z.string().min(1),
+      colorCode: z.string().optional(),
+      imageUrl: z.string().optional()
+    }))
+    .mutation(async ({ ctx, input }) => {
+      // Finn/lag kategori "Garn Farge"
+      let colorCategory = await ctx.db.category.findFirst({ where: { name: 'Garn Farge' } })
+      if (!colorCategory) {
+        colorCategory = await ctx.db.category.create({
+          data: {
+            name: 'Garn Farge',
+            description: 'Fargenivå mellom master og batch',
+            fieldSchema: JSON.stringify({
+              type: 'object',
+              properties: {
+                colorCode: { type: 'string', label: 'Fargekode' },
+                masterItemId: { type: 'string', label: 'Master', hidden: true }
+              }
+            })
+          }
+        })
+      }
+
+      const color = await ctx.db.item.create({
+        data: {
+          name: input.name,
+          description: undefined,
+          userId: ctx.user.id,
+          categoryId: colorCategory.id,
+          locationId: (await ctx.db.item.findUnique({ where: { id: input.masterId } }))!.locationId,
+          totalQuantity: 0,
+          availableQuantity: 0,
+          unit: 'nøste',
+          imageUrl: input.imageUrl,
+          categoryData: JSON.stringify({
+            colorCode: input.colorCode,
+            masterItemId: input.masterId
+          }),
+          relatedItems: {
+            connect: { id: input.masterId }
+          }
+        }
+      })
+
+      return color
+    }),
+
+  // Hent alle farger for en master med summer
+  getColorsForMaster: protectedProcedure
+    .input(z.object({ masterId: z.string() }))
+    .query(async ({ ctx, input }) => {
+      const [colorCategory, batchCategory] = await Promise.all([
+        ctx.db.category.findFirst({ where: { name: 'Garn Farge' } }),
+        ctx.db.category.findFirst({ where: { name: 'Garn Batch' } })
+      ])
+
+      if (!colorCategory) return []
+
+      const colors = await ctx.db.item.findMany({
+        where: {
+          userId: ctx.user.id,
+          categoryId: colorCategory.id,
+          OR: [
+            { relatedItems: { some: { id: input.masterId } } },
+            { relatedTo: { some: { id: input.masterId } } }
+          ]
+        }
+      })
+
+      if (!batchCategory) {
+        return colors.map(c => ({
+          id: c.id,
+          name: c.name,
+          colorCode: safeParseColorCode(c.categoryData),
+          batchCount: 0,
+          skeinCount: 0
+        }))
+      }
+
+      const results = [] as Array<{ id: string, name: string, colorCode?: string, batchCount: number, skeinCount: number }>
+      for (const color of colors) {
+        const batches = await ctx.db.item.findMany({
+          where: {
+            userId: ctx.user.id,
+            categoryId: batchCategory.id,
+            OR: [
+              { relatedItems: { some: { id: color.id } } },
+              { relatedTo: { some: { id: color.id } } }
+            ]
+          }
+        })
+        const skeins = batches.reduce((sum, b) => sum + (b.availableQuantity || 0), 0)
+        results.push({
+          id: color.id,
+          name: color.name,
+          colorCode: safeParseColorCode(color.categoryData),
+          batchCount: batches.length,
+          skeinCount: Math.round(skeins)
+        })
+      }
+
+      return results
+    }),
+
+  // Hent alle batches for en farge
+  getBatchesForColor: protectedProcedure
+    .input(z.object({ colorId: z.string() }))
+    .query(async ({ ctx, input }) => {
+      const batchCategory = await ctx.db.category.findFirst({ where: { name: 'Garn Batch' } })
+      if (!batchCategory) return []
+      const batches = await ctx.db.item.findMany({
+        where: {
+          userId: ctx.user.id,
+          categoryId: batchCategory.id,
+          OR: [
+            { relatedItems: { some: { id: input.colorId } } },
+            { relatedTo: { some: { id: input.colorId } } }
+          ]
+        },
+        include: { location: true }
+      })
+      return batches
     }),
 
   // Hent alle yarn masters for brukeren

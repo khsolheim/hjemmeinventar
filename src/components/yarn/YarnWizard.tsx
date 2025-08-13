@@ -143,6 +143,7 @@ export function YarnWizard({ onComplete, existingMasterId }: YarnWizardProps) {
   // Mutations
   const createMasterMutation = trpc.yarn.createMaster.useMutation()
   const createBatchMutation = trpc.yarn.createBatch.useMutation()
+  const createColorMutation = trpc.yarn.createColor.useMutation()
 
   // Forms
   const masterForm = useForm<MasterFormData>({
@@ -205,11 +206,25 @@ export function YarnWizard({ onComplete, existingMasterId }: YarnWizardProps) {
 
       const batchName = `${data.color} - ${data.batchNumber}`
       
+      // Ensure color entity exists or create one on the fly
+      let colorId: string | undefined
+      if (data.color) {
+        try {
+          const color = await createColorMutation.mutateAsync({
+            masterId,
+            name: data.color,
+            colorCode: data.colorCode
+          })
+          colorId = color.id
+        } catch {}
+      }
+
       await createBatchMutation.mutateAsync({
         masterId,
         name: batchName,
         locationId,
         ...data,
+        colorId,
       })
 
       setCurrentStep('summary')
