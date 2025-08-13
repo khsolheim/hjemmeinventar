@@ -11,6 +11,7 @@ import { trpc } from '@/lib/trpc/client'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { YarnBulkOperations } from '@/components/yarn/YarnBulkOperations'
 import { YarnProjectIntegration } from '@/components/yarn/YarnProjectIntegration'
+import { YarnWizard } from '@/components/yarn/YarnWizard'
 
 export default function YarnDetailPage() {
   const params = useParams()
@@ -20,6 +21,7 @@ export default function YarnDetailPage() {
   const { data: colors } = trpc.yarn.getColorsForMaster.useQuery({ masterId: id! }, { enabled: !!id })
   const { data: batches } = trpc.yarn.getBatchesForMaster.useQuery({ masterId: id! }, { enabled: !!id })
   const utils = trpc.useUtils()
+  const [isAddBatchOpen, setIsAddBatchOpen] = React.useState(false)
   const [selectedColor, setSelectedColor] = React.useState<string>('')
 
   if (!id) return null
@@ -111,9 +113,26 @@ export default function YarnDetailPage() {
                 <Button size="sm" variant="secondary">
                   <Download className="h-3 w-3 mr-1" /> Last ned bilde
                 </Button>
-                <Button size="sm" className="bg-green-600 hover:bg-green-700">
-                  <CheckCircle className="h-3 w-3 mr-1" /> Legg til batch
-                </Button>
+                <Dialog open={isAddBatchOpen} onOpenChange={setIsAddBatchOpen}>
+                  <DialogTrigger asChild>
+                    <Button size="sm" className="bg-green-600 hover:bg-green-700">
+                      <CheckCircle className="h-3 w-3 mr-1" /> Legg til batch
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+                    <DialogHeader>
+                      <DialogTitle>Ny batch for {master?.name}</DialogTitle>
+                    </DialogHeader>
+                    <YarnWizard 
+                      onComplete={() => {
+                        setIsAddBatchOpen(false)
+                        utils.yarn.getBatchesForMaster.invalidate({ masterId: id! })
+                        utils.yarn.getMasterTotals.invalidate({ masterId: id! })
+                      }} 
+                      preset={{ masterId: id }}
+                    />
+                  </DialogContent>
+                </Dialog>
                 {/* Bulk-operasjoner dialog */}
                 {(batches && batches.length > 0) && (
                 <Dialog>
