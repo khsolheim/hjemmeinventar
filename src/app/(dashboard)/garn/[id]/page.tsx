@@ -12,6 +12,7 @@ export default function YarnDetailPage() {
   const params = useParams()
   const id = Array.isArray(params?.id) ? params.id[0] : (params?.id as string)
   const { data: master } = trpc.items.getById.useQuery(id!, { enabled: !!id })
+  const { data: totals } = trpc.yarn.getMasterTotals.useQuery({ masterId: id! }, { enabled: !!id })
 
   if (!id) return null
 
@@ -64,14 +65,14 @@ export default function YarnDetailPage() {
               )}
 
               {/* Minimal stats row placed last */}
-              {master && (
+              {totals && (
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-3">
                   <div className="rounded-xl border py-4 shadow-sm">
                     <div className="px-4">
                       <div className="flex items-center space-x-2">
                         <Hash className="h-4 w-4 text-muted-foreground" />
                         <div>
-                          <div className="text-xl font-semibold">{(master as any)?.totals?.totalSkeins ?? '—'}</div>
+                          <div className="text-xl font-semibold">{totals.totalSkeins}</div>
                           <div className="text-xs text-muted-foreground">Totalt nøster</div>
                         </div>
                       </div>
@@ -82,7 +83,7 @@ export default function YarnDetailPage() {
                       <div className="flex items-center space-x-2">
                         <Package className="h-4 w-4 text-green-600" />
                         <div>
-                          <div className="text-xl font-semibold text-green-600">{(master as any)?.totals?.availableSkeins ?? '—'}</div>
+                          <div className="text-xl font-semibold text-green-600">{totals.availableSkeins}</div>
                           <div className="text-xs text-muted-foreground">Tilgjengelig</div>
                         </div>
                       </div>
@@ -93,7 +94,7 @@ export default function YarnDetailPage() {
                       <div className="flex items-center space-x-2">
                         <DollarSign className="h-4 w-4 text-muted-foreground" />
                         <div>
-                          <div className="text-xl font-semibold">{((master as any)?.totals?.totalValue ?? 0).toFixed ? ((master as any).totals.totalValue).toFixed(0) + ' kr' : '—'}</div>
+                          <div className="text-xl font-semibold">{`${Math.round(totals.totalValue)} kr`}</div>
                           <div className="text-xs text-muted-foreground">Total verdi</div>
                         </div>
                       </div>
@@ -104,7 +105,7 @@ export default function YarnDetailPage() {
                       <div className="flex items-center space-x-2">
                         <div className="w-4 h-4 rounded bg-gradient-to-r from-blue-500 to-purple-500" />
                         <div>
-                          <div className="text-xl font-semibold">{(master as any)?.totals?.batchCount ?? '—'}</div>
+                          <div className="text-xl font-semibold">{totals.batchCount}</div>
                           <div className="text-xs text-muted-foreground">Batches</div>
                         </div>
                       </div>
