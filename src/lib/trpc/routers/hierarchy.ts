@@ -7,6 +7,55 @@ import { LocationType } from '@prisma/client'
 const LocationTypeEnum = z.nativeEnum(LocationType)
 
 export const hierarchyRouter = createTRPCRouter({
+  // Determine which default rule set (if any) is currently active
+  getActiveRuleSet: protectedProcedure
+    .input(z.object({
+      householdId: z.string()
+    }))
+    .query(async ({ ctx, input }) => {
+      // Verify membership
+      const membership = await ctx.db.householdMember.findFirst({
+        where: { userId: ctx.session.user.id, householdId: input.householdId }
+      })
+      if (!membership) {
+        throw new TRPCError({ code: 'FORBIDDEN', message: 'Not a member of this household' })
+      }
+
+      // Load current allowed rules (only where isAllowed = true)
+      const currentAllowed = await ctx.db.hierarchyRule.findMany({
+        where: { householdId: input.householdId, isAllowed: true },
+        select: { parentType: true, childType: true }
+      })
+      const currentSet = new Set(currentAllowed.map(r => `${r.parentType}->${r.childType}`))
+
+      // Load default rule sets
+      const defaults = await ctx.db.defaultHierarchyRule.findMany({
+        where: { isAllowed: true },
+        select: { ruleSetName: true, parentType: true, childType: true }
+      })
+
+      // Group defaults by set name
+      const grouped: Record<string, Array<{ parentType: string; childType: string }>> = {}
+      for (const d of defaults) {
+        grouped[d.ruleSetName] ||= []
+        grouped[d.ruleSetName].push({ parentType: d.parentType, childType: d.childType })
+      }
+
+      // Compare sets (exact match)
+      function isEqualToDefault(setName: string): boolean {
+        const defs = grouped[setName] || []
+        if (defs.length !== currentSet.size) return false
+        for (const r of defs) {
+          if (!currentSet.has(`${r.parentType}->${r.childType}`)) return false
+        }
+        return true
+      }
+
+      const candidates = ['minimal', 'standard', 'extended'] as const
+      const match = candidates.find(name => isEqualToDefault(name))
+
+      return { active: match ?? (currentSet.size > 0 ? 'custom' : null) }
+    }),
   // Get current hierarchy rules for user's household
   getRules: protectedProcedure
     .input(z.object({

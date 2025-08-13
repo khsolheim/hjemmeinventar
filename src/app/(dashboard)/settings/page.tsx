@@ -87,7 +87,7 @@ export default function SettingsPage() {
             </div>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-3 items-end">
               <div className="md:col-span-2">
-                <Label>Logo</Label>
+                <Label htmlFor="user-logo-url">Logo</Label>
                 <div className="flex items-center gap-3">
                   <Input id="user-logo-url" placeholder="https://..." />
                   <input id="user-logo-file" type="file" accept="image/*" className="hidden" onChange={async (e) => {
@@ -112,8 +112,8 @@ export default function SettingsPage() {
               </div>
             </div>
             <div>
-              <Label>Standard etikettmal</Label>
-              <select className="w-full mt-1 px-3 py-2 border rounded-md" value={defaultProfileId || ''} onChange={(e) => setDefaultProfileId(e.target.value)}>
+              <Label htmlFor="defaultLabelProfile">Standard etikettmal</Label>
+              <select id="defaultLabelProfile" name="defaultLabelProfile" className="w-full mt-1 px-3 py-2 border rounded-md" value={defaultProfileId || ''} onChange={(e) => setDefaultProfileId(e.target.value)}>
                 <option value="">(Ingen)</option>
                 {(profilesQuery.data || []).map(p => (
                   <option key={p.id} value={p.id}>{p.name}</option>
@@ -142,24 +142,24 @@ export default function SettingsPage() {
             {/* Create */}
             <div className="grid grid-cols-1 md:grid-cols-5 gap-2 items-end">
               <div className="md:col-span-2">
-                <Label>Navn</Label>
-                <Input value={newProfile.name} onChange={(e) => setNewProfile({ ...newProfile, name: e.target.value })} placeholder="F.eks. Standard med logo" />
+                <Label htmlFor="newProfileName">Navn</Label>
+                <Input id="newProfileName" name="newProfileName" value={newProfile.name} onChange={(e) => setNewProfile({ ...newProfile, name: e.target.value })} placeholder="F.eks. Standard med logo" />
               </div>
               <div>
-                <Label>Linje 2</Label>
-                <Input value={newProfile.extraLine1} onChange={(e) => setNewProfile({ ...newProfile, extraLine1: e.target.value })} placeholder="Valgfritt" />
+                <Label htmlFor="newProfileLine2">Linje 2</Label>
+                <Input id="newProfileLine2" name="newProfileLine2" value={newProfile.extraLine1} onChange={(e) => setNewProfile({ ...newProfile, extraLine1: e.target.value })} placeholder="Valgfritt" />
               </div>
               <div>
-                <Label>Linje 3</Label>
-                <Input value={newProfile.extraLine2} onChange={(e) => setNewProfile({ ...newProfile, extraLine2: e.target.value })} placeholder="Valgfritt" />
+                <Label htmlFor="newProfileLine3">Linje 3</Label>
+                <Input id="newProfileLine3" name="newProfileLine3" value={newProfile.extraLine2} onChange={(e) => setNewProfile({ ...newProfile, extraLine2: e.target.value })} placeholder="Valgfritt" />
               </div>
               <div>
-                <Label>Logo URL</Label>
-                <Input value={newProfile.logoUrl} onChange={(e) => setNewProfile({ ...newProfile, logoUrl: e.target.value })} placeholder="https://..." />
+                <Label htmlFor="newProfileLogoUrl">Logo URL</Label>
+                <Input id="newProfileLogoUrl" name="newProfileLogoUrl" value={newProfile.logoUrl} onChange={(e) => setNewProfile({ ...newProfile, logoUrl: e.target.value })} placeholder="https://..." />
               </div>
               <div className="flex items-center gap-2">
-                <Switch checked={newProfile.showUrl} onCheckedChange={(v) => setNewProfile({ ...newProfile, showUrl: !!v })} />
-                <Label>Vis URL på etikett</Label>
+                <Switch id="newProfileShowUrl" name="newProfileShowUrl" checked={newProfile.showUrl} onCheckedChange={(v) => setNewProfile({ ...newProfile, showUrl: !!v })} />
+                <Label htmlFor="newProfileShowUrl">Vis URL på etikett</Label>
               </div>
               <div className="md:col-span-5 flex justify-end">
                 <Button onClick={() => {
@@ -241,9 +241,9 @@ export default function SettingsPage() {
             <div className="space-y-2">
               <Label className="text-base">Endre passord</Label>
               <div className="grid grid-cols-1 gap-2">
-                <Input type="password" placeholder="Nåværende passord" />
-                <Input type="password" placeholder="Nytt passord" />
-                <Input type="password" placeholder="Bekreft nytt passord" />
+                <Input id="currentPassword" name="currentPassword" type="password" placeholder="Nåværende passord" />
+                <Input id="newPassword" name="newPassword" type="password" placeholder="Nytt passord" />
+                <Input id="confirmNewPassword" name="confirmNewPassword" type="password" placeholder="Bekreft nytt passord" />
               </div>
               <Button variant="outline">Oppdater passord</Button>
             </div>
@@ -264,32 +264,32 @@ export default function SettingsPage() {
           <CardContent className="space-y-4">
             <div className="flex items-center justify-between">
               <div className="space-y-0.5">
-                <Label className="text-base">Mørk modus</Label>
+                <Label htmlFor="pref-dark-mode" className="text-base">Mørk modus</Label>
                 <div className="text-sm text-gray-600">
                   Bruk mørk fargepalett for appen
                 </div>
               </div>
-              <Switch />
+              <Switch id="pref-dark-mode" name="pref-dark-mode" />
             </div>
 
             <div className="flex items-center justify-between">
               <div className="space-y-0.5">
-                <Label className="text-base">Kompakt visning</Label>
+                <Label htmlFor="pref-compact-mode" className="text-base">Kompakt visning</Label>
                 <div className="text-sm text-gray-600">
                   Vis mer informasjon på mindre plass
                 </div>
               </div>
-              <Switch />
+              <Switch id="pref-compact-mode" name="pref-compact-mode" />
             </div>
 
             <div className="flex items-center justify-between">
               <div className="space-y-0.5">
-                <Label className="text-base">Automatisk lagring</Label>
+                <Label htmlFor="pref-auto-save" className="text-base">Automatisk lagring</Label>
                 <div className="text-sm text-gray-600">
                   Lagre endringer automatisk mens du skriver
                 </div>
               </div>
-              <Switch defaultChecked />
+              <Switch id="pref-auto-save" name="pref-auto-save" defaultChecked />
             </div>
 
             <div>
@@ -339,32 +339,32 @@ export default function SettingsPage() {
 
               <div className="flex items-center justify-between">
                 <div className="space-y-0.5">
-                  <Label className="text-base">Streng hierarki-validering</Label>
+                  <Label htmlFor="org-strict-validation" className="text-base">Streng hierarki-validering</Label>
                   <div className="text-sm text-gray-600">
                     Forhindre plassering av gjenstander som bryter hierarki-reglene
                   </div>
                 </div>
-                <Switch defaultChecked />
+                <Switch id="org-strict-validation" name="org-strict-validation" defaultChecked />
               </div>
 
               <div className="flex items-center justify-between">
                 <div className="space-y-0.5">
-                  <Label className="text-base">Vis hierarki-advarsler</Label>
+                  <Label htmlFor="org-show-warnings" className="text-base">Vis hierarki-advarsler</Label>
                   <div className="text-sm text-gray-600">
                     Vis advarsler når du oppretter lokasjoner som kan forvirre organisasjonen
                   </div>
                 </div>
-                <Switch defaultChecked />
+                <Switch id="org-show-warnings" name="org-show-warnings" defaultChecked />
               </div>
 
               <div className="flex items-center justify-between">
                 <div className="space-y-0.5">
-                  <Label className="text-base">Auto-foreslå lokasjoner</Label>
+                  <Label htmlFor="org-auto-suggest" className="text-base">Auto-foreslå lokasjoner</Label>
                   <div className="text-sm text-gray-600">
                     Foreslå passende overordnede lokasjoner basert på type
                   </div>
                 </div>
-                <Switch defaultChecked />
+                <Switch id="org-auto-suggest" name="org-auto-suggest" defaultChecked />
               </div>
             </div>
           </CardContent>

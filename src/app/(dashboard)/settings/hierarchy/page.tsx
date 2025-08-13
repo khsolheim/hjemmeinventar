@@ -37,6 +37,12 @@ export default function HierarchySettingsPage() {
     isLoading: loadingRuleSets 
   } = trpc.hierarchy.getDefaultRuleSets.useQuery()
 
+  // Detect active rule set
+  const { data: activeRuleSet } = trpc.hierarchy.getActiveRuleSet.useQuery(
+    { householdId: householdId as string },
+    { enabled: !!householdId }
+  )
+
   // Mutation for applying default rule set
   const applyRuleSetMutation = trpc.hierarchy.applyDefaultRuleSet.useMutation({
     onSuccess: () => {
@@ -131,6 +137,17 @@ export default function HierarchySettingsPage() {
           <p className="text-muted-foreground">
             Konfigurer hvordan lokasjoner kan organiseres i din husholdning
           </p>
+          {activeRuleSet && (
+            <p className="text-sm mt-1">
+              Aktivt regel-sett: <span className="font-medium">
+                {activeRuleSet.active === 'minimal' && 'Minimal'}
+                {activeRuleSet.active === 'standard' && 'Standard'}
+                {activeRuleSet.active === 'extended' && 'Utvidet'}
+                {activeRuleSet.active === 'custom' && 'Egendefinert'}
+                {!activeRuleSet.active && 'Ingen'}
+              </span>
+            </p>
+          )}
         </div>
       </div>
 
@@ -159,7 +176,7 @@ export default function HierarchySettingsPage() {
                 Start med et ferdig regel-sett som passer for din type husholdning
               </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-6">
+              <CardContent className="space-y-6">
               {/* Rule Set Descriptions */}
               <div className="grid gap-4 md:grid-cols-3">
                 <Card className="border-2 hover:border-primary/50 transition-colors">

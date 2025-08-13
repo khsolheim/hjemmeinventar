@@ -4,22 +4,37 @@ import { createTRPCRouter, protectedProcedure } from '../server'
 import { TRPCError } from '@trpc/server'
 import { generateUniqueQRCode, logActivity } from '../../db'
 
-// Hierarki-regler for lokasjonstyper
-const HIERARCHY_RULES: Record<string, string[]> = {
-  ROOM: ['SHELF', 'CABINET', 'CONTAINER'],
-  SHELF: ['SHELF_COMPARTMENT', 'BOX', 'DRAWER'],
-  SHELF_COMPARTMENT: ['BOX', 'BAG', 'CONTAINER'],
-  BOX: ['BAG', 'SECTION'],
-  BAG: [], // Kun gjenstander
-  CABINET: ['DRAWER', 'SHELF_COMPARTMENT'],
-  DRAWER: ['SECTION', 'BAG'],
-  CONTAINER: ['BAG', 'SECTION'],
-  SECTION: ['BAG']
-}
+// Helper: Validate placement using household-specific hierarchy rules
+async function isPlacementAllowed(ctx: any, parentType: string, childType: string): Promise<boolean> {
+  // Find user's default household (first membership)
+  const membership = await ctx.db.householdMember.findFirst({
+    where: { userId: ctx.user.id },
+    orderBy: { joinedAt: 'asc' }
+  })
 
-// Helper function for validating parent-child relationship
-function validateHierarchy(parentType: string, childType: string): boolean {
-  return HIERARCHY_RULES[parentType]?.includes(childType) || false
+  if (!membership) {
+    // No household membership; allow by default
+    return true
+  }
+
+  const householdId = membership.householdId
+
+  // If the household has no rules configured yet, allow all (acts like extended)
+  const anyRules = await ctx.db.hierarchyRule.count({ where: { householdId } })
+  if (anyRules === 0) {
+    return true
+  }
+
+  // Look up specific rule
+  const rule = await ctx.db.hierarchyRule.findFirst({
+    where: {
+      householdId,
+      parentType: parentType as any,
+      childType: childType as any
+    }
+  })
+
+  return rule?.isAllowed === true
 }
 
 export const locationsRouter = createTRPCRouter({
@@ -251,8 +266,8 @@ export const locationsRouter = createTRPCRouter({
           })
         }
         
-        // Validate hierarchy rules
-        if (!validateHierarchy(parent.type, cleanedInput.type)) {
+        // Validate hierarchy rules (household-aware)
+        if (!(await isPlacementAllowed(ctx, parent.type, cleanedInput.type))) {
           throw new TRPCError({
             code: 'BAD_REQUEST',
             message: `En ${cleanedInput.type.toLowerCase()} kan ikke plasseres i en ${parent.type.toLowerCase()}. Sjekk hierarki-reglene.`
@@ -348,7 +363,7 @@ export const locationsRouter = createTRPCRouter({
         
         // Validate hierarchy rules for new parent-child relationship
         const newType = updateData.type || existingLocation.type
-        if (!validateHierarchy(parent.type, newType)) {
+        if (!(await isPlacementAllowed(ctx, parent.type, newType))) {
           throw new TRPCError({
             code: 'BAD_REQUEST',
             message: `En ${newType.toLowerCase()} kan ikke plasseres i en ${parent.type.toLowerCase()}. Sjekk hierarki-reglene.`

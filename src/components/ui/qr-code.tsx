@@ -1,69 +1,9 @@
 'use client'
 
-import { useEffect, useRef } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Download, Printer } from 'lucide-react'
-
-// Simple QR Code generator using Canvas
-function generateQRCode(text: string, size: number = 200): string {
-  // Create a simple matrix pattern for demo - in production you'd use a proper QR library
-  const canvas = document.createElement('canvas')
-  const ctx = canvas.getContext('2d')
-  
-  if (!ctx) return ''
-  
-  canvas.width = size
-  canvas.height = size
-  
-  // White background
-  ctx.fillStyle = '#ffffff'
-  ctx.fillRect(0, 0, size, size)
-  
-  // Black border
-  ctx.fillStyle = '#000000'
-  ctx.fillRect(0, 0, size, 10)
-  ctx.fillRect(0, 0, 10, size)
-  ctx.fillRect(size - 10, 0, 10, size)
-  ctx.fillRect(0, size - 10, size, 10)
-  
-  // Create a simple pattern based on text
-  const moduleSize = Math.floor(size / 25)
-  const hash = text.split('').reduce((a, b) => {
-    a = ((a << 5) - a) + b.charCodeAt(0)
-    return a & a
-  }, 0)
-  
-  for (let x = 2; x < 23; x++) {
-    for (let y = 2; y < 23; y++) {
-      const shouldFill = (hash + x * y) % 3 === 0
-      if (shouldFill) {
-        ctx.fillRect(x * moduleSize, y * moduleSize, moduleSize, moduleSize)
-      }
-    }
-  }
-  
-  // Add corner squares (typical QR pattern)
-  const cornerSize = moduleSize * 3
-  // Top-left
-  ctx.fillRect(moduleSize, moduleSize, cornerSize, cornerSize)
-  ctx.fillStyle = '#ffffff'
-  ctx.fillRect(moduleSize * 2, moduleSize * 2, moduleSize, moduleSize)
-  
-  // Top-right
-  ctx.fillStyle = '#000000'
-  ctx.fillRect(size - cornerSize - moduleSize, moduleSize, cornerSize, cornerSize)
-  ctx.fillStyle = '#ffffff'
-  ctx.fillRect(size - cornerSize, moduleSize * 2, moduleSize, moduleSize)
-  
-  // Bottom-left
-  ctx.fillStyle = '#000000'
-  ctx.fillRect(moduleSize, size - cornerSize - moduleSize, cornerSize, cornerSize)
-  ctx.fillStyle = '#ffffff'
-  ctx.fillRect(moduleSize * 2, size - cornerSize, moduleSize, moduleSize)
-  
-  return canvas.toDataURL()
-}
+import { QRCodeCanvas } from 'qrcode.react'
 
 interface QRCodeProps {
   value: string
@@ -82,13 +22,12 @@ export function QRCode({
   showActions = true,
   className = "" 
 }: QRCodeProps) {
-  const canvasRef = useRef<HTMLCanvasElement>(null)
-  const qrDataUrl = generateQRCode(value, size)
-
   const handleDownload = () => {
+    const canvas = document.querySelector(`#qr-canvas-${CSS.escape(value)}`) as HTMLCanvasElement | null
+    if (!canvas) return
     const link = document.createElement('a')
     link.download = `qr-code-${value}.png`
-    link.href = qrDataUrl
+    link.href = canvas.toDataURL('image/png')
     link.click()
   }
 
@@ -148,7 +87,7 @@ export function QRCode({
             <div class="qr-container">
               ${title ? `<div class="qr-title">${title}</div>` : ''}
               ${description ? `<div class="qr-description">${description}</div>` : ''}
-              <img src="${qrDataUrl}" alt="QR Code" class="qr-code" />
+              <img src="${(document.querySelector(`#qr-canvas-${CSS.escape(value)}`) as HTMLCanvasElement)?.toDataURL('image/png') || ''}" alt="QR Code" class="qr-code" />
               <div class="qr-value">${value}</div>
             </div>
           </body>
@@ -166,12 +105,7 @@ export function QRCode({
     <div className={`qr-code-component ${className}`}>
       <div className="flex flex-col items-center space-y-4">
         <div className="qr-image-container border-2 border-gray-200 rounded-lg p-4 bg-white">
-          <img 
-            src={qrDataUrl} 
-            alt={`QR Code for ${value}`}
-            className="block"
-            style={{ width: size, height: size }}
-          />
+          <QRCodeCanvas id={`qr-canvas-${value}`} value={value} size={size} includeMargin={true} level="M" />
         </div>
         
         <div className="text-center">
@@ -205,16 +139,9 @@ export function QRCode({
 
 // Compact QR Code for inline display
 export function QRCodeCompact({ value, size = 80 }: { value: string; size?: number }) {
-  const qrDataUrl = generateQRCode(value, size)
-  
   return (
     <div className="inline-block">
-      <img 
-        src={qrDataUrl} 
-        alt={`QR Code: ${value}`}
-        className="border border-gray-200 rounded"
-        style={{ width: size, height: size }}
-      />
+      <QRCodeCanvas value={value} size={size} includeMargin={true} level="M" className="border border-gray-200 rounded" />
     </div>
   )
 }
@@ -235,8 +162,6 @@ export function QRCodeCard({
   onDownload?: () => void
   size?: number
 }) {
-  const qrDataUrl = generateQRCode(value, size)
-  
   return (
     <Card className="w-full max-w-sm">
       <CardHeader className="text-center">
@@ -248,11 +173,7 @@ export function QRCodeCard({
       <CardContent className="space-y-4">
         <div className="flex justify-center">
           <div className="border-2 border-gray-200 rounded-lg p-3 bg-white">
-            <img 
-              src={qrDataUrl} 
-              alt={`QR Code for ${title}`}
-              style={{ width: size, height: size }}
-            />
+            <QRCodeCanvas id={`qr-card-${title}-${value}`} value={value} size={size} includeMargin={true} level="M" />
           </div>
         </div>
         
@@ -266,9 +187,11 @@ export function QRCodeCard({
             size="sm" 
             className="flex-1" 
             onClick={onDownload || (() => {
+              const canvas = document.querySelector(`#qr-card-${CSS.escape(title)}-${CSS.escape(value)}`) as HTMLCanvasElement | null
+              if (!canvas) return
               const link = document.createElement('a')
               link.download = `${title}-qr.png`
-              link.href = qrDataUrl
+              link.href = canvas.toDataURL('image/png')
               link.click()
             })}
           >
@@ -312,7 +235,7 @@ export function QRCodeCard({
                     <body>
                       <div class="label">
                         <div class="title">${title}</div>
-                        <img src="${qrDataUrl}" alt="QR Code" class="qr-code" />
+                        <img src="${(document.querySelector(`#qr-card-${CSS.escape(title)}-${CSS.escape(value)}`) as HTMLCanvasElement)?.toDataURL('image/png') || ''}" alt="QR Code" class="qr-code" />
                         <div class="code">${value}</div>
                       </div>
                     </body>

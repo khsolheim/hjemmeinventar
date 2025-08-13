@@ -31,6 +31,13 @@ export default function BatchDetailPage() {
   const commonOpts = { enabled: status === 'authenticated', retry: 0, refetchOnWindowFocus: false, refetchOnMount: false, staleTime: 5 * 60 * 1000 } as const
   const profiles = trpc.users.getLabelProfiles.useQuery(undefined, commonOpts)
   const userProfile = trpc.users.getProfile.useQuery(undefined, commonOpts)
+  // Determine user's household and hierarchy rules (for packaging support)
+  const myHouseholds = trpc.households.getMyHouseholds.useQuery(undefined, commonOpts)
+  const householdId = myHouseholds.data?.[0]?.id
+  const hierarchyMatrixQuery = trpc.hierarchy.getMatrix.useQuery(
+    { householdId: householdId as string },
+    { enabled: !!householdId }
+  )
   const [addingDistribution, setAddingDistribution] = React.useState(false)
   const [selectedProfileId, setSelectedProfileId] = React.useState('')
 
@@ -150,6 +157,7 @@ export default function BatchDetailPage() {
                     </DialogHeader>
                     <InlineBuilderForm 
                       tree={(locationTree as any) || []}
+                       hierarchyMatrix={hierarchyMatrixQuery.data?.matrix}
                       onCreateContainer={async (parentId, type, name) => {
                         const created = await createLocation.mutateAsync({ name, type, parentId })
                         return created.id
@@ -172,6 +180,7 @@ export default function BatchDetailPage() {
                     </DialogHeader>
                     <LocationWizard 
                       tree={(locationTree as any) || []}
+                      hierarchyMatrix={hierarchyMatrixQuery.data?.matrix}
                       onCreateLocation={async (parentId, type, name) => {
                         const created = await createLocation.mutateAsync({ name, type, parentId })
                         return created.id
@@ -451,6 +460,12 @@ export default function BatchDetailPage() {
                         <EditDistributionForm 
                           distribution={d}
                           locations={locations || []}
+                          tree={(locationTree as any) || []}
+                          hierarchyMatrix={hierarchyMatrixQuery.data?.matrix}
+                          onCreateLocation={async (parentId, type, name) => {
+                            const created = await createLocation.mutateAsync({ name, type, parentId })
+                            return created.id
+                          }}
                           onSubmit={async (values) => {
                             await updateDistribution.mutateAsync({
                               distributionId: d.id,
@@ -458,6 +473,7 @@ export default function BatchDetailPage() {
                               quantity: values.quantity,
                               notes: values.notes
                             })
+                            refetch()
                           }}
                         />
                       </DialogContent>
@@ -476,8 +492,9 @@ export default function BatchDetailPage() {
   )
 }
 
-function InlineBuilderForm({ tree, onCreateContainer, onSubmit, defaultQuantity = 1, defaultNotes = '' }: { 
+function InlineBuilderForm({ tree, hierarchyMatrix, onCreateContainer, onSubmit, defaultQuantity = 1, defaultNotes = '' }: { 
   tree: any[],
+  hierarchyMatrix?: Record<string, Record<string, boolean>>,
   onCreateContainer: (parentId: string, type: 'BAG'|'BOX', name: string) => Promise<string>,
   onSubmit: (locationId: string, quantity: number, notes?: string) => Promise<void>,
   defaultQuantity?: number,
@@ -527,32 +544,18 @@ function InlineBuilderForm({ tree, onCreateContainer, onSubmit, defaultQuantity 
     return undefined
   }
   const leafWizardNode: any = getWizardNodeById(leafLocationId)
-  const allowedWizardChildren: Record<string, string[]> = {
-    ROOM: ['SHELF', 'CABINET', 'CONTAINER'],
-    SHELF: ['SHELF_COMPARTMENT', 'BOX', 'DRAWER'],
-    SHELF_COMPARTMENT: ['BOX', 'BAG', 'CONTAINER'],
-    BOX: ['BAG', 'SECTION'],
-    BAG: [],
-    CABINET: ['DRAWER', 'SHELF_COMPARTMENT'],
-    DRAWER: ['SECTION', 'BAG'],
-    CONTAINER: ['BAG', 'SECTION'],
-    SECTION: ['BAG']
-  }
-  const allowedForLeafWizard: string[] = leafWizardNode?.type ? (allowedWizardChildren[leafWizardNode.type] || []) : []
+  const allowedForLeafWizard: string[] = leafWizardNode?.type && hierarchyMatrix
+    ? Object.entries(hierarchyMatrix[leafWizardNode.type] || {})
+        .filter(([_, allowed]) => allowed)
+        .map(([child]) => child)
+    : []
   const packagingAllowedWizard = { BAG: allowedForLeafWizard.includes('BAG'), BOX: allowedForLeafWizard.includes('BOX') }
   const leafNode: any = getNodeById(leafLocationId)
-  const allowedChildrenMap: Record<string, string[]> = {
-    ROOM: ['SHELF', 'CABINET', 'CONTAINER'],
-    SHELF: ['SHELF_COMPARTMENT', 'BOX', 'DRAWER'],
-    SHELF_COMPARTMENT: ['BOX', 'BAG', 'CONTAINER'],
-    BOX: ['BAG', 'SECTION'],
-    BAG: [],
-    CABINET: ['DRAWER', 'SHELF_COMPARTMENT'],
-    DRAWER: ['SECTION', 'BAG'],
-    CONTAINER: ['BAG', 'SECTION'],
-    SECTION: ['BAG']
-  }
-  const allowedForLeaf: string[] = leafNode?.type ? (allowedChildrenMap[leafNode.type] || []) : []
+  const allowedForLeaf: string[] = leafNode?.type && hierarchyMatrix
+    ? Object.entries(hierarchyMatrix[leafNode.type] || {})
+        .filter(([_, allowed]) => allowed)
+        .map(([child]) => child)
+    : []
   const packagingAllowed = { BAG: allowedForLeaf.includes('BAG'), BOX: allowedForLeaf.includes('BOX') }
 
   return (
@@ -619,8 +622,9 @@ function InlineBuilderForm({ tree, onCreateContainer, onSubmit, defaultQuantity 
   )
 }
 
-function LocationWizard({ tree, onCreateLocation, onFinish }: {
+function LocationWizard({ tree, hierarchyMatrix, onCreateLocation, onFinish }: {
   tree: any[],
+  hierarchyMatrix?: Record<string, Record<string, boolean>>,
   onCreateLocation: (parentId: string, type: 'ROOM'|'SHELF'|'BOX'|'CONTAINER'|'DRAWER'|'CABINET'|'SHELF_COMPARTMENT'|'BAG'|'SECTION', name: string) => Promise<string>,
   onFinish: (locationId: string, quantity: number, notes?: string) => Promise<void>
 }) {
@@ -643,6 +647,23 @@ function LocationWizard({ tree, onCreateLocation, onFinish }: {
   }
 
   const leafLocationId = path[path.length - 1]
+  const getNodeById = (id?: string) => {
+    if (!id) return undefined
+    const stack = [...(tree || [])]
+    while (stack.length) {
+      const n: any = stack.pop()
+      if (n.id === id) return n
+      if (n.children) stack.push(...n.children)
+    }
+    return undefined
+  }
+  const leafWizardNode: any = getNodeById(leafLocationId)
+  const allowedForLeafWizard: string[] = leafWizardNode?.type && hierarchyMatrix
+    ? Object.entries(hierarchyMatrix[leafWizardNode.type] || {})
+        .filter(([_, allowed]) => allowed)
+        .map(([child]) => child)
+    : []
+  const packagingAllowedWizard = { BAG: allowedForLeafWizard.includes('BAG'), BOX: allowedForLeafWizard.includes('BOX') }
 
   return (
     <div className="space-y-3">
@@ -831,15 +852,28 @@ function MoveDistributionForm({ fromDistributionId, fromLocationId, locations, m
   )
 }
 
-function EditDistributionForm({ distribution, locations, onSubmit }: { distribution: any, locations: Array<{ id: string, name: string }>, onSubmit: (v: { locationId: string, quantity: number, notes?: string }) => Promise<void> }) {
+function EditDistributionForm({ distribution, locations, tree, hierarchyMatrix, onCreateLocation, onSubmit }: { 
+  distribution: any,
+  locations: Array<{ id: string, name: string }>,
+  tree: any[],
+  hierarchyMatrix?: Record<string, Record<string, boolean>>,
+  onCreateLocation: (parentId: string, type: 'ROOM'|'SHELF'|'BOX'|'CONTAINER'|'DRAWER'|'CABINET'|'SHELF_COMPARTMENT'|'BAG'|'SECTION', name: string) => Promise<string>,
+  onSubmit: (v: { locationId: string, quantity: number, notes?: string }) => Promise<void>
+}) {
   const [locationId, setLocationId] = React.useState(distribution.locationId as string)
   const [quantity, setQuantity] = React.useState<number>(distribution.quantity as number)
   const [notes, setNotes] = React.useState(distribution.notes || '')
+  const [showWizard, setShowWizard] = React.useState(false)
 
   return (
     <div className="space-y-3">
-      <div>
+      <div className="flex items-center justify-between">
         <Label>Lokasjon</Label>
+        <Button variant="outline" size="sm" onClick={() => setShowWizard(!showWizard)}>
+          {showWizard ? 'Skjul veiviser' : 'Velg med veiviser'}
+        </Button>
+      </div>
+      {!showWizard ? (
         <Select value={locationId} onValueChange={setLocationId}>
           <SelectTrigger>
             <SelectValue placeholder="Velg lokasjon" />
@@ -850,7 +884,19 @@ function EditDistributionForm({ distribution, locations, onSubmit }: { distribut
             ))}
           </SelectContent>
         </Select>
-      </div>
+      ) : (
+        <div className="border rounded p-2">
+          <LocationWizard 
+            tree={tree}
+            hierarchyMatrix={hierarchyMatrix}
+            onCreateLocation={onCreateLocation}
+            onFinish={async (finalLocationId) => {
+              setLocationId(finalLocationId)
+              setShowWizard(false)
+            }}
+          />
+        </div>
+      )}
       <div>
         <Label>Antall</Label>
         <Input type="number" value={quantity} onChange={(e) => setQuantity(Number(e.target.value))} />
