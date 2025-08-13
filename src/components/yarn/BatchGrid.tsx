@@ -272,8 +272,31 @@ export function BatchGrid({ masterId, hideMasterHeader = false, hideTotals = fal
                           Batch: {batchData.batchNumber}
                         </CardDescription>
                       </div>
-                      <div className="flex items-center gap-1">
-                        <Button variant="ghost" size="sm">
+                       <div className="flex items-center gap-1">
+                        <Button variant="ghost" size="sm" onClick={() => {
+                          const newBatchNumber = prompt('Batchnummer', batchData.batchNumber || '')
+                          const newColor = prompt('Farge', batchData.color || '')
+                          const newColorCode = prompt('Fargekode (valgfritt)', batchData.colorCode || '')
+                          const newQuantityStr = prompt('Antall nøster', String(batchData.quantity || batch.totalQuantity))
+                          const newPriceStr = prompt('Pris per nøste (kr)', String(batchData.pricePerSkein || ''))
+                          const updates: any = {}
+                          if (newBatchNumber !== null) updates.batchNumber = newBatchNumber
+                          if (newColor !== null) updates.color = newColor
+                          if (newColorCode !== null) updates.colorCode = newColorCode
+                          if (newQuantityStr !== null && newQuantityStr !== '') updates.quantity = Number(newQuantityStr)
+                          if (newPriceStr !== null && newPriceStr !== '') updates.pricePerSkein = Number(newPriceStr)
+                          // optimistic local message; real update via tRPC handled below
+                          ;(async () => {
+                            try {
+                              await (await import('@/lib/trpc/client')).trpc.yarn.updateBatch.mutateAsync({ batchId: batch.id, ...updates } as any)
+                              refetchBatches(); refetchTotals()
+                              toast.success('Batch oppdatert')
+                            } catch (e) {
+                              toast.error('Kunne ikke oppdatere batch')
+                              console.error(e)
+                            }
+                          })()
+                        }}>
                           <Edit className="h-3 w-3" />
                         </Button>
                         <AlertDialog>

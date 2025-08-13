@@ -714,6 +714,69 @@ export const yarnRouter = createTRPCRouter({
       return batch
     }),
 
+  // Oppdater eksisterende batch
+  updateBatch: protectedProcedure
+    .input(z.object({
+      batchId: z.string(),
+      name: z.string().optional(),
+      locationId: z.string().optional(),
+      batchNumber: z.string().optional(),
+      color: z.string().optional(),
+      colorCode: z.string().optional(),
+      quantity: z.number().min(0).optional(),
+      pricePerSkein: z.number().min(0).optional(),
+      purchaseDate: z.date().optional(),
+      condition: z.string().optional(),
+      notes: z.string().optional(),
+      imageUrl: z.string().optional(),
+      unit: z.string().optional(),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const batch = await ctx.db.item.findFirst({
+        where: { id: input.batchId, userId: ctx.user.id },
+        include: { category: true }
+      })
+      if (!batch || !isYarnBatch(batch.category?.name)) {
+        throw new TRPCError({ code: 'NOT_FOUND', message: 'Batch ikke funnet' })
+      }
+
+      const currentData = batch.categoryData ? JSON.parse(batch.categoryData) : {}
+      const updatedData = {
+        ...currentData,
+        ...(input.batchNumber !== undefined ? { batchNumber: input.batchNumber } : {}),
+        ...(input.color !== undefined ? { color: input.color } : {}),
+        ...(input.colorCode !== undefined ? { colorCode: input.colorCode } : {}),
+        ...(input.pricePerSkein !== undefined ? { pricePerSkein: input.pricePerSkein } : {}),
+        ...(input.condition !== undefined ? { condition: input.condition } : {}),
+        ...(input.notes !== undefined ? { notes: input.notes } : {}),
+      }
+
+      // Håndter mengde justering
+      let newTotal = batch.totalQuantity
+      let newAvailable = batch.availableQuantity
+      if (input.quantity !== undefined) {
+        const diff = Math.round(input.quantity) - batch.totalQuantity
+        newTotal = Math.round(input.quantity)
+        newAvailable = Math.max(0, newAvailable + diff)
+      }
+
+      const updated = await ctx.db.item.update({
+        where: { id: input.batchId },
+        data: {
+          ...(input.name !== undefined ? { name: input.name } : {}),
+          ...(input.locationId !== undefined ? { locationId: input.locationId } : {}),
+          ...(input.purchaseDate !== undefined ? { purchaseDate: input.purchaseDate } : {}),
+          ...(input.imageUrl !== undefined ? { imageUrl: input.imageUrl } : {}),
+          ...(input.unit !== undefined ? { unit: input.unit } : {}),
+          ...(input.quantity !== undefined ? { totalQuantity: newTotal, availableQuantity: newAvailable } : {}),
+          ...(input.pricePerSkein !== undefined ? { price: input.pricePerSkein } : {}),
+          categoryData: JSON.stringify(updatedData)
+        }
+      })
+
+      return updated
+    }),
+
   // Hent alle batches for en master
   getBatchesForMaster: protectedProcedure
     .input(z.object({
