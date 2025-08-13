@@ -49,9 +49,10 @@ interface AdvancedYarnSearchProps {
   onSearch: (filters: AdvancedSearchFilters) => void
   onClear: () => void
   isLoading?: boolean
+  compact?: boolean
 }
 
-export function AdvancedYarnSearch({ onSearch, onClear, isLoading }: AdvancedYarnSearchProps) {
+export function AdvancedYarnSearch({ onSearch, onClear, isLoading, compact = false }: AdvancedYarnSearchProps) {
   const [isExpanded, setIsExpanded] = useState(false)
   const [filters, setFilters] = useState<AdvancedSearchFilters>({
     searchQuery: '',
@@ -130,29 +131,29 @@ export function AdvancedYarnSearch({ onSearch, onClear, isLoading }: AdvancedYar
 
   return (
     <Card>
-      <CardHeader>
+      <CardHeader className={compact ? 'py-2' : undefined}>
         <div className="flex items-center justify-between">
           <div>
-            <CardTitle className="flex items-center gap-2">
-              <Search className="h-5 w-5" />
+            <CardTitle className={`flex items-center gap-2 ${compact ? 'text-base' : ''}`}>
+              <Search className={compact ? 'h-4 w-4' : 'h-5 w-5'} />
               Avansert søk
             </CardTitle>
-            <CardDescription>
+            <CardDescription className={compact ? 'text-xs' : undefined}>
               Søk og filtrer garn etter ulike kriterier
             </CardDescription>
           </div>
           <div className="flex items-center gap-2">
             {activeFilters > 0 && (
-              <Badge variant="secondary">
+              <Badge variant="secondary" className={compact ? 'text-[10px] h-5' : undefined}>
                 {activeFilters} filter{activeFilters !== 1 ? 'e' : ''}
               </Badge>
             )}
             <Collapsible open={isExpanded} onOpenChange={setIsExpanded}>
               <CollapsibleTrigger asChild>
-                <Button variant="outline" size="sm">
-                  <Filter className="h-4 w-4 mr-2" />
+                <Button variant="outline" size="sm" className={compact ? 'h-7' : undefined}>
+                  <Filter className={compact ? 'h-3 w-3 mr-1.5' : 'h-4 w-4 mr-2'} />
                   {isExpanded ? 'Enkel søk' : 'Avansert'}
-                  <ChevronDown className={`h-4 w-4 ml-2 transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
+                  <ChevronDown className={`ml-2 transition-transform ${isExpanded ? 'rotate-180' : ''} ${compact ? 'h-3 w-3' : 'h-4 w-4'}`} />
                 </Button>
               </CollapsibleTrigger>
             </Collapsible>
@@ -160,23 +161,23 @@ export function AdvancedYarnSearch({ onSearch, onClear, isLoading }: AdvancedYar
         </div>
       </CardHeader>
 
-      <CardContent className="space-y-6">
+      <CardContent className={compact ? 'space-y-3 py-2' : 'space-y-6'}>
         {/* Basic Search */}
-        <div className="flex gap-2">
+        <div className={compact ? 'flex gap-2 items-center' : 'flex gap-2'}>
           <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+            <Search className={`absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground ${compact ? 'h-3 w-3' : 'h-4 w-4'}`} />
             <Input
               placeholder="Søk i garn, produsent, farge, notater..."
               value={filters.searchQuery}
               onChange={(e) => updateFilter('searchQuery', e.target.value)}
-              className="pl-10"
+              className={`pl-10 ${compact ? 'h-8' : ''}`}
             />
           </div>
-          <Button onClick={handleSearch} disabled={isLoading}>
+          <Button onClick={handleSearch} disabled={isLoading} className={compact ? 'h-8' : undefined}>
             {isLoading ? 'Søker...' : 'Søk'}
           </Button>
           {activeFilters > 0 && (
-            <Button variant="outline" onClick={handleClear}>
+            <Button variant="outline" onClick={handleClear} className={compact ? 'h-8' : undefined}>
               <X className="h-4 w-4 mr-2" />
               Nullstill
             </Button>
@@ -185,16 +186,16 @@ export function AdvancedYarnSearch({ onSearch, onClear, isLoading }: AdvancedYar
 
         {/* Advanced Filters */}
         <Collapsible open={isExpanded} onOpenChange={setIsExpanded}>
-          <CollapsibleContent className="space-y-6">
+          <CollapsibleContent className={compact ? 'space-y-4' : 'space-y-6'}>
             
             {/* Master Properties */}
             <div className="space-y-4">
-              <h3 className="text-sm font-semibold flex items-center gap-2">
-                <Package className="h-4 w-4" />
+              <h3 className={`font-semibold flex items-center gap-2 ${compact ? 'text-xs' : 'text-sm'}`}>
+                <Package className={compact ? 'h-3 w-3' : 'h-4 w-4'} />
                 Garn-type egenskaper
               </h3>
               
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className={`grid grid-cols-1 md:grid-cols-3 ${compact ? 'gap-3' : 'gap-4'}`}>
                 <div>
                   <Label htmlFor="producer">Produsent</Label>
                   <Select value={filters.producer} onValueChange={(value) => updateFilter('producer', value)}>
@@ -256,12 +257,12 @@ export function AdvancedYarnSearch({ onSearch, onClear, isLoading }: AdvancedYar
 
             {/* Batch Properties */}
             <div className="space-y-4">
-              <h3 className="text-sm font-semibold flex items-center gap-2">
-                <Palette className="h-4 w-4" />
+              <h3 className={`font-semibold flex items-center gap-2 ${compact ? 'text-xs' : 'text-sm'}`}>
+                <Palette className={compact ? 'h-3 w-3' : 'h-4 w-4'} />
                 Batch egenskaper
               </h3>
               
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className={`grid grid-cols-1 md:grid-cols-3 ${compact ? 'gap-3' : 'gap-4'}`}>
                 <div>
                   <Label htmlFor="color">Farge</Label>
                   <Input
@@ -300,12 +301,12 @@ export function AdvancedYarnSearch({ onSearch, onClear, isLoading }: AdvancedYar
 
             {/* Quantity and Price */}
             <div className="space-y-4">
-              <h3 className="text-sm font-semibold flex items-center gap-2">
-                <DollarSign className="h-4 w-4" />
+              <h3 className={`font-semibold flex items-center gap-2 ${compact ? 'text-xs' : 'text-sm'}`}>
+                <DollarSign className={compact ? 'h-3 w-3' : 'h-4 w-4'} />
                 Mengde og pris
               </h3>
               
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className={`grid grid-cols-1 md:grid-cols-2 ${compact ? 'gap-4' : 'gap-6'}`}>
                 <div className="space-y-2">
                   <Label>Antall nøster: {filters.quantityRange[0]} - {filters.quantityRange[1]}</Label>
                   <Slider
@@ -350,8 +351,8 @@ export function AdvancedYarnSearch({ onSearch, onClear, isLoading }: AdvancedYar
 
             {/* Date Filters */}
             <div className="space-y-4">
-              <h3 className="text-sm font-semibold flex items-center gap-2">
-                <Calendar className="h-4 w-4" />
+              <h3 className={`font-semibold flex items-center gap-2 ${compact ? 'text-xs' : 'text-sm'}`}>
+                <Calendar className={compact ? 'h-3 w-3' : 'h-4 w-4'} />
                 Datofilter
               </h3>
               
@@ -376,7 +377,7 @@ export function AdvancedYarnSearch({ onSearch, onClear, isLoading }: AdvancedYar
 
             {/* Special Filters */}
             <div className="space-y-4">
-              <h3 className="text-sm font-semibold">Spesielle filtre</h3>
+              <h3 className={compact ? 'text-xs font-semibold' : 'text-sm font-semibold'}>Spesielle filtre</h3>
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-3">
@@ -430,11 +431,11 @@ export function AdvancedYarnSearch({ onSearch, onClear, isLoading }: AdvancedYar
             </div>
 
             {/* Action Buttons */}
-            <div className="flex gap-2 pt-4 border-t">
-              <Button onClick={handleSearch} disabled={isLoading} className="flex-1">
+            <div className={compact ? 'flex gap-2 pt-3 border-t' : 'flex gap-2 pt-4 border-t'}>
+              <Button onClick={handleSearch} disabled={isLoading} className={`flex-1 ${compact ? 'h-9' : ''}`}>
                 {isLoading ? 'Søker...' : 'Søk med filtre'}
               </Button>
-              <Button variant="outline" onClick={handleClear}>
+              <Button variant="outline" onClick={handleClear} className={compact ? 'h-9' : undefined}>
                 Nullstill alle filtre
               </Button>
             </div>

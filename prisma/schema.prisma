@@ -52,6 +52,7 @@ model User {
   email     String   @unique
   name      String?
   image     String?
+  logoUrl   String?
   password  String?  // For credentials-based authentication
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -75,6 +76,9 @@ model User {
   // Authentication
   accounts Account[]
   sessions Session[]
+
+  // Label profiles
+  labelProfiles LabelProfile[]
 }
 
 // Physical organization
@@ -201,6 +205,7 @@ model Item {
 // NEW: Distribution tracking system
 model ItemDistribution {
   id         String   @id @default(cuid())
+  qrCode     String   @unique
   quantity   Float  // Antall på denne lokasjonen (kan være desimaltall)
   notes      String?  // F.eks. "Hovedlager", "Til reise"
   purpose    DistributionPurpose @default(STORAGE)
@@ -280,6 +285,9 @@ model Household {
   
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+
+  // Label profiles
+  labelProfiles LabelProfile[]
 }
 
 model HouseholdMember {
@@ -467,6 +475,28 @@ model Attachment {
   
   @@index([itemId])
   @@index([type])
+}
+
+// NEW: Label profiles for printing (per user/household)
+model LabelProfile {
+  id           String   @id @default(cuid())
+  name         String
+  extraLine1   String?
+  extraLine2   String?
+  showUrl      Boolean  @default(true)
+  logoUrl      String?
+
+  // Relations
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId       String
+  household    Household? @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  householdId  String?
+
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([userId])
+  @@index([householdId])
 }
 
 // NEW: Hierarchy rules system for configurable location organization

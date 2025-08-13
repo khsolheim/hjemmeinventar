@@ -1025,12 +1025,36 @@ export const yarnRouter = createTRPCRouter({
       return { success: true }
     }),
 
-  // Hent alle yarn masters for brukeren
+  // Hent alle yarn masters for brukeren (med enkel avansert filtrering)
   getAllMasters: protectedProcedure
     .input(z.object({
       limit: z.number().min(1).max(100).default(50),
       offset: z.number().min(0).default(0),
       search: z.string().optional(),
+      filters: z.object({
+        // Master-level
+        producer: z.string().optional(),
+        composition: z.string().optional(),
+        needleSize: z.string().optional(),
+        yarnWeight: z.string().optional(),
+        store: z.string().optional(),
+        // Batch-level
+        color: z.string().optional(),
+        condition: z.string().optional(),
+        batchNumber: z.string().optional(),
+        // Ranges & status
+        quantityRange: z.tuple([z.number(), z.number()]).optional(),
+        priceRange: z.tuple([z.number(), z.number()]).optional(),
+        availabilityStatus: z.string().optional(), // all|available|low|empty|full
+        // Dates
+        purchaseDateFrom: z.date().optional(),
+        purchaseDateTo: z.date().optional(),
+        // Special
+        hasProjects: z.boolean().optional(),
+        hasNotes: z.boolean().optional(),
+        lowStock: z.boolean().optional(),
+        recentlyAdded: z.boolean().optional()
+      }).optional()
     }))
     .query(async ({ ctx, input }) => {
       const masterCategory = await ctx.db.category.findFirst({
@@ -1041,7 +1065,7 @@ export const yarnRouter = createTRPCRouter({
         return { masters: [], total: 0 }
       }
 
-      const where = {
+      const where: any = {
         userId: ctx.user.id,
         categoryId: masterCategory.id,
         ...(input.search && {
@@ -1082,7 +1106,82 @@ export const yarnRouter = createTRPCRouter({
         })
       )
 
-      return { masters: mastersWithTotals, total }
+      // Avansert filtrering (post-prosessering for enkelhet)
+      const f = input.filters
+      let filtered = mastersWithTotals
+      if (f) {
+        const within = (value: number, range?: [number, number]) => {
+          if (!range) return true
+          return value >= range[0] && value <= range[1]
+        }
+        const textMatch = (val: string | undefined, query?: string, mode: 'equals' | 'contains' = 'contains') => {
+          if (!query) return true
+          const v = (val || '').toLowerCase()
+          const q = query.toLowerCase()
+          return mode === 'equals' ? v === q : v.includes(q)
+        }
+        filtered = filtered.filter(master => {
+          const mData = master.categoryData ? JSON.parse(master.categoryData) : {}
+          // Master-level checks
+          if (!textMatch(mData.producer, f.producer && f.producer !== 'all' ? f.producer : undefined, f.producer && f.producer !== 'all' ? 'contains' : 'contains')) return false
+          if (!textMatch(mData.composition, f.composition && f.composition !== 'all' ? f.composition : undefined, f.composition && f.composition !== 'all' ? 'contains' : 'contains')) return false
+          if (!textMatch(mData.needleSize, f.needleSize && f.needleSize !== 'all' ? f.needleSize : undefined, 'equals')) return false
+          if (!textMatch(mData.yarnWeight, f.yarnWeight, 'equals')) return false
+          if (!textMatch(mData.store, f.store, 'contains')) return false
+
+          // Special flags on master
+          if (f.recentlyAdded) {
+            const days30 = 1000 * 60 * 60 * 24 * 30
+            if (Date.now() - new Date(master.createdAt).getTime() > days30) return false
+          }
+          if (f.hasNotes) {
+            const mNotes = (mData.notes || '').toString().trim().length > 0
+            const batchNotes = master.relatedTo.some(b => {
+              const bd = b.categoryData ? JSON.parse(b.categoryData) : {}
+              return (bd.notes || '').toString().trim().length > 0
+            })
+            if (!mNotes && !batchNotes) return false
+          }
+          if (f.lowStock) {
+            const anyLow = master.relatedTo.some(b => (b.availableQuantity || 0) <= 2 && (b.availableQuantity || 0) > 0)
+            if (!anyLow) return false
+          }
+          // hasProjects not implemented here (would require join). Optional to skip.
+
+          // Batch-level checks: at least one batch must match if any batch filter specified
+          const hasBatchFilters = !!(f.color || (f.condition && f.condition !== 'all') || f.batchNumber || f.quantityRange || f.priceRange || (f.availabilityStatus && f.availabilityStatus !== 'all') || f.purchaseDateFrom || f.purchaseDateTo)
+          if (hasBatchFilters) {
+            const matchesAnyBatch = master.relatedTo.some(b => {
+              const bd = b.categoryData ? JSON.parse(b.categoryData) : {}
+              const colorOk = textMatch(bd.color, f.color, 'contains')
+              const condOk = textMatch(bd.condition, f.condition && f.condition !== 'all' ? f.condition : undefined, 'equals')
+              const lotOk = textMatch(bd.batchNumber, f.batchNumber, 'contains')
+              const qtyOk = within(b.totalQuantity || 0, f.quantityRange)
+              const price = typeof bd.pricePerSkein === 'number' ? bd.pricePerSkein : (typeof b.price === 'number' ? b.price : 0)
+              const priceOk = within(price, f.priceRange)
+              let availOk = true
+              if (f.availabilityStatus && f.availabilityStatus !== 'all') {
+                const avail = b.availableQuantity || 0
+                const total = b.totalQuantity || 0
+                if (f.availabilityStatus === 'available') availOk = avail > 0
+                if (f.availabilityStatus === 'low') availOk = avail <= 2 && avail > 0
+                if (f.availabilityStatus === 'empty') availOk = avail === 0
+                if (f.availabilityStatus === 'full') availOk = total > 0 && avail === total
+              }
+              let dateOk = true
+              if (f.purchaseDateFrom) dateOk = dateOk && (!!b.purchaseDate && new Date(b.purchaseDate) >= f.purchaseDateFrom)
+              if (f.purchaseDateTo) dateOk = dateOk && (!!b.purchaseDate && new Date(b.purchaseDate) <= f.purchaseDateTo)
+
+              return colorOk && condOk && lotOk && qtyOk && priceOk && availOk && dateOk
+            })
+            if (!matchesAnyBatch) return false
+          }
+
+          return true
+        })
+      }
+
+      return { masters: filtered, total: filtered.length }
     }),
 
   // PROJECT INTEGRATION ENDPOINTS
@@ -1467,7 +1566,8 @@ export const yarnRouter = createTRPCRouter({
 
   // Hent value analysis
   getValueAnalysis: protectedProcedure
-    .query(async ({ ctx }) => {
+    .input(z.object({ timeRange: z.number().default(30) }).optional())
+    .query(async ({ ctx, input }) => {
       const batchCategory = await ctx.db.category.findFirst({
         where: { name: 'Garn Batch' }
       })
@@ -1494,8 +1594,39 @@ export const yarnRouter = createTRPCRouter({
         totalValue += quantity * pricePerSkein
       })
 
-      // For now, we'll simulate value change (in a real app, you'd compare with previous period)
-      const valueChange = Math.random() * 20 - 10 // -10% to +10%
+      // Beregn prosentvis endring i innkjøpsverdi for valgt periode vs. forrige periode
+      const days = input?.timeRange ?? 30
+      const now = new Date()
+      const currentStart = new Date(now)
+      currentStart.setDate(now.getDate() - days)
+      const previousStart = new Date(currentStart)
+      previousStart.setDate(currentStart.getDate() - days)
+
+      let currentPeriod = 0
+      let previousPeriod = 0
+
+      batches.forEach(batch => {
+        const batchData = batch.categoryData ? JSON.parse(batch.categoryData) : {}
+        const quantity = batchData.quantity || 0
+        const pricePerSkein = batchData.pricePerSkein || 0
+        const value = quantity * pricePerSkein
+        const purchase = batch.purchaseDate ? new Date(batch.purchaseDate) : undefined
+        if (!purchase) return
+        if (purchase >= currentStart && purchase <= now) {
+          currentPeriod += value
+        } else if (purchase >= previousStart && purchase < currentStart) {
+          previousPeriod += value
+        }
+      })
+
+      let valueChange = 0
+      if (previousPeriod > 0) {
+        valueChange = ((currentPeriod - previousPeriod) / previousPeriod) * 100
+      } else if (currentPeriod > 0) {
+        valueChange = 100
+      } else {
+        valueChange = 0
+      }
 
       return {
         totalValue,

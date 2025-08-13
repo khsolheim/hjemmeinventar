@@ -134,12 +134,18 @@ class DymoService {
   }
 
   // Standard QR label template
-  private getQRLabelTemplate(): string {
+  private getQRLabelTemplate(size: 'small' | 'standard' | 'large' = 'standard'): string {
+    const paperMap: Record<'small'|'standard'|'large', { id: string; name: string }> = {
+      small: { id: 'Address', name: '30334 Multi-purpose' },
+      standard: { id: 'Address', name: '30252 Address' },
+      large: { id: 'Address', name: '30323 Shipping' }
+    }
+    const paper = paperMap[size]
     return `<?xml version="1.0" encoding="utf-8"?>
 <DieCutLabel Version="8.0" Units="twips" MediaType="Default">
   <PaperOrientation>Landscape</PaperOrientation>
-  <Id>Address</Id>
-  <PaperName>30252 Address</PaperName>
+  <Id>${paper.id}</Id>
+  <PaperName>${paper.name}</PaperName>
   <DrawCommands>
     <RoundRectangle X="0" Y="0" Width="1581" Height="5040" Rx="270" Ry="270" />
   </DrawCommands>
@@ -347,7 +353,7 @@ class DymoService {
     }
 
     try {
-      const template = this.getQRLabelTemplate()
+      const template = this.getQRLabelTemplate(options.labelSize || 'standard')
       const label = dymo.label.framework.openLabelXml(template)
 
       // Set label data
@@ -475,8 +481,9 @@ class DymoService {
 
   // Preview label (returns base64 image)
   async previewLabel(data: LabelData, labelType: 'qr' | 'barcode' = 'qr'): Promise<string> {
+    // default preview uses standard unless options are supplied via overload (kept below)
     try {
-      const template = labelType === 'qr' ? this.getQRLabelTemplate() : this.getBarcodeLabelTemplate()
+      const template = labelType === 'qr' ? this.getQRLabelTemplate('standard') : this.getBarcodeLabelTemplate()
       const label = dymo.label.framework.openLabelXml(template)
 
       // Set label data
@@ -504,6 +511,35 @@ class DymoService {
       return base64Image
     } catch (error) {
       console.error('Failed to preview label:', error)
+      throw error
+    }
+  }
+
+  // Overload-like helper to pass options for preview (e.g., labelSize)
+  async previewLabelWithOptions(data: LabelData, labelType: 'qr' | 'barcode' = 'qr', options: PrintOptions = {}): Promise<string> {
+    try {
+      const template = labelType === 'qr' ? this.getQRLabelTemplate(options.labelSize || 'standard') : this.getBarcodeLabelTemplate()
+      const label = dymo.label.framework.openLabelXml(template)
+
+      label.setObjectText('ITEM_NAME', data.itemName)
+      label.setObjectText('LOCATION_NAME', data.locationName)
+      if (labelType === 'qr') {
+        label.setObjectText('QR_CODE', data.qrCode)
+        label.setObjectText('DATE_ADDED', data.dateAdded || new Date().toLocaleDateString('nb-NO'))
+      } else {
+        if (!data.barcode) throw new Error('Barcode is required for barcode preview')
+        label.setObjectText('BARCODE', data.barcode)
+      }
+
+      const previewParams = dymo.label.framework.createLabelRenderParamsXml({
+        labelColor: dymo.label.framework.LabelColor.BlackOnWhite,
+        shadowDepth: 0,
+        flowDirection: dymo.label.framework.FlowDirection.LeftToRight
+      })
+      const base64Image = await dymo.label.framework.renderLabel(label.getLabelXml(), previewParams, 'image/png')
+      return base64Image
+    } catch (error) {
+      console.error('Failed to preview label with options:', error)
       throw error
     }
   }

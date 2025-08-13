@@ -18,8 +18,15 @@ import {
   ExternalLink
 } from 'lucide-react'
 import Link from 'next/link'
+import { trpc } from '@/lib/trpc/client'
+import { useState } from 'react'
 
 export default function SettingsPage() {
+  const profilesQuery = trpc.users.getLabelProfiles.useQuery()
+  const createProfile = trpc.users.createLabelProfile.useMutation({ onSuccess: () => profilesQuery.refetch() })
+  const updateProfile = trpc.users.updateLabelProfile.useMutation({ onSuccess: () => profilesQuery.refetch() })
+  const deleteProfile = trpc.users.deleteLabelProfile.useMutation({ onSuccess: () => profilesQuery.refetch() })
+  const [newProfile, setNewProfile] = useState({ name: '', extraLine1: '', extraLine2: '', showUrl: true, logoUrl: '' })
   return (
     <div className="container mx-auto px-4 py-8">
       {/* Header */}
@@ -57,7 +64,107 @@ export default function SettingsPage() {
               <Label htmlFor="email">E-post</Label>
               <Input id="email" type="email" placeholder="din@epost.no" />
             </div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 items-end">
+              <div className="md:col-span-2">
+                <Label>Logo</Label>
+                <div className="flex items-center gap-3">
+                  <Input id="user-logo-url" placeholder="https://..." />
+                  <input id="user-logo-file" type="file" accept="image/*" className="hidden" onChange={async (e) => {
+                    const file = e.target.files?.[0]
+                    if (!file) return
+                    const res = await fetch(`/api/upload?filename=${encodeURIComponent(file.name)}`, { method: 'POST', body: file })
+                    const data = await res.json()
+                    if (data.url) {
+                      (document.getElementById('user-logo-url') as HTMLInputElement).value = data.url
+                    }
+                  }} />
+                  <Button variant="outline" size="sm" onClick={() => (document.getElementById('user-logo-file') as HTMLInputElement).click()}>Last opp</Button>
+                </div>
+                <p className="text-xs text-muted-foreground">Lim inn URL eller last opp bilde</p>
+              </div>
+              <div className="flex justify-end">
+                <Button size="sm" variant="outline" onClick={async () => {
+                  const logo = (document.getElementById('user-logo-url') as HTMLInputElement).value.trim()
+                  if (!logo) return
+                  await fetch('/api/trpc/users.updateProfile', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ input: { logoUrl: logo } }) })
+                }}>Lagre logo</Button>
+              </div>
+            </div>
             <Button>Lagre endringer</Button>
+          </CardContent>
+        </Card>
+
+        {/* Label Profiles */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Palette className="h-5 w-5" />
+              Etikettmaler
+            </CardTitle>
+            <CardDescription>
+              Opprett og administrer etikettprofiler til utskrift (DYMO/Browser)
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {/* Create */}
+            <div className="grid grid-cols-1 md:grid-cols-5 gap-2 items-end">
+              <div className="md:col-span-2">
+                <Label>Navn</Label>
+                <Input value={newProfile.name} onChange={(e) => setNewProfile({ ...newProfile, name: e.target.value })} placeholder="F.eks. Standard med logo" />
+              </div>
+              <div>
+                <Label>Linje 2</Label>
+                <Input value={newProfile.extraLine1} onChange={(e) => setNewProfile({ ...newProfile, extraLine1: e.target.value })} placeholder="Valgfritt" />
+              </div>
+              <div>
+                <Label>Linje 3</Label>
+                <Input value={newProfile.extraLine2} onChange={(e) => setNewProfile({ ...newProfile, extraLine2: e.target.value })} placeholder="Valgfritt" />
+              </div>
+              <div>
+                <Label>Logo URL</Label>
+                <Input value={newProfile.logoUrl} onChange={(e) => setNewProfile({ ...newProfile, logoUrl: e.target.value })} placeholder="https://..." />
+              </div>
+              <div className="flex items-center gap-2">
+                <Switch checked={newProfile.showUrl} onCheckedChange={(v) => setNewProfile({ ...newProfile, showUrl: !!v })} />
+                <Label>Vis URL på etikett</Label>
+              </div>
+              <div className="md:col-span-5 flex justify-end">
+                <Button onClick={() => {
+                  if (!newProfile.name.trim()) return
+                  createProfile.mutate({ name: newProfile.name.trim(), extraLine1: newProfile.extraLine1 || undefined, extraLine2: newProfile.extraLine2 || undefined, showUrl: newProfile.showUrl, logoUrl: newProfile.logoUrl || undefined })
+                  setNewProfile({ name: '', extraLine1: '', extraLine2: '', showUrl: true, logoUrl: '' })
+                }}>Opprett mal</Button>
+              </div>
+            </div>
+
+            <Separator />
+
+            {/* List */}
+            <div className="space-y-2">
+              {(profilesQuery.data || []).map((p) => (
+                <div key={p.id} className="p-3 border rounded flex items-center justify-between gap-3">
+                  <div className="min-w-0">
+                    <div className="font-medium truncate">{p.name}</div>
+                    <div className="text-xs text-muted-foreground truncate">{[p.extraLine1, p.extraLine2].filter(Boolean).join(' • ') || '—'}</div>
+                    <div className="text-xs text-muted-foreground">Vis URL: {p.showUrl ? 'Ja' : 'Nei'} {p.logoUrl ? `• Logo: ${p.logoUrl}` : ''}</div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Button size="sm" variant="outline" onClick={() => {
+                      const name = prompt('Nytt navn', p.name) || p.name
+                      const line2 = prompt('Linje 2 (valgfritt)', p.extraLine1 || '') || undefined
+                      const line3 = prompt('Linje 3 (valgfritt)', p.extraLine2 || '') || undefined
+                      const logo = prompt('Logo URL (valgfritt)', p.logoUrl || '') || undefined
+                      const showUrl = confirm('Skal URL vises på etikett? OK = Ja, Avbryt = Nei')
+                      updateProfile.mutate({ id: p.id, name, extraLine1: line2, extraLine2: line3, logoUrl: logo, showUrl })
+                    }}>Rediger</Button>
+                    <Button size="sm" variant="destructive" onClick={() => deleteProfile.mutate({ id: p.id })}>Slett</Button>
+                  </div>
+                </div>
+              ))}
+              {profilesQuery.isLoading && (
+                <div className="text-sm text-muted-foreground">Laster...</div>
+              )}
+            </div>
           </CardContent>
         </Card>
 

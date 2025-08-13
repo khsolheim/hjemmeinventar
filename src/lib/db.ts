@@ -23,10 +23,11 @@ export async function generateUniqueQRCode(): Promise<string> {
       chars.charAt(Math.floor(Math.random() * chars.length))
     ).join('')
     
-    const existing = await db.location.findUnique({
-      where: { qrCode }
-    })
-    exists = !!existing
+    const [loc, dist] = await Promise.all([
+      db.location.findUnique({ where: { qrCode } }),
+      db.itemDistribution.findFirst({ where: { qrCode: `D-${qrCode}` } })
+    ])
+    exists = !!loc || !!dist
   } while (exists)
   
   return qrCode

@@ -40,7 +40,8 @@ export function YarnMasterDashboard() {
   const { data: mastersData, isLoading, refetch } = trpc.yarn.getAllMasters.useQuery({
     limit: 50,
     offset: 0,
-    search: searchTerm || undefined
+    search: searchTerm || undefined,
+    filters: searchFilters || undefined
   }, {
     refetchOnWindowFocus: true,
     refetchOnMount: true,
@@ -50,7 +51,6 @@ export function YarnMasterDashboard() {
   const handleAdvancedSearch = (filters: any) => {
     setSearchFilters(filters)
     setSearchTerm(filters.searchQuery)
-    // TODO: Extend tRPC query to handle advanced filters
     refetch()
   }
 
@@ -106,12 +106,12 @@ export function YarnMasterDashboard() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-2">
       {/* Header */}
-      <div className="flex justify-between items-center">
+      <div className="flex justify-between items-center py-1">
         <div>
-          <h1 className="text-3xl font-bold">Garn Oversikt</h1>
-          <p className="text-muted-foreground">
+          <h1 className="text-2xl font-bold leading-none">Garn Oversikt</h1>
+          <p className="text-sm text-muted-foreground mt-1">
             Administrer dine garn-typer og batches
           </p>
         </div>
@@ -123,55 +123,55 @@ export function YarnMasterDashboard() {
         </Button>
       </div>
 
-      {/* Statistics Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Garn-typer</CardTitle>
+      {/* Statistics Cards - compact */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-1">
+        <Card className="py-3">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 py-1 px-3">
+            <CardTitle className="text-xs font-medium">Garn-typer</CardTitle>
             <Package2 className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{overallStats.totalMasters}</div>
-            <p className="text-xs text-muted-foreground">
+          <CardContent className="py-1 px-3">
+            <div className="text-lg font-bold leading-none">{overallStats.totalMasters}</div>
+            <p className="text-[10px] text-muted-foreground mt-1">
               Forskjellige garntyper
             </p>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Totalt Nøster</CardTitle>
+        <Card className="py-3">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 py-1 px-3">
+            <CardTitle className="text-xs font-medium">Totalt Nøster</CardTitle>
             <Hash className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{overallStats.totalSkeins}</div>
-            <p className="text-xs text-muted-foreground">
+          <CardContent className="py-1 px-3">
+            <div className="text-lg font-bold leading-none">{overallStats.totalSkeins}</div>
+            <p className="text-[10px] text-muted-foreground mt-1">
               På tvers av alle typer
             </p>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Verdi</CardTitle>
+        <Card className="py-3">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 py-1 px-3">
+            <CardTitle className="text-xs font-medium">Total Verdi</CardTitle>
             <DollarSign className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{overallStats.totalValue.toFixed(0)} kr</div>
-            <p className="text-xs text-muted-foreground">
+          <CardContent className="py-1 px-3">
+            <div className="text-lg font-bold leading-none">{overallStats.totalValue.toFixed(0)} kr</div>
+            <p className="text-[10px] text-muted-foreground mt-1">
               Estimert beholdningsverdi
             </p>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Batches</CardTitle>
+        <Card className="py-3">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 py-1 px-3">
+            <CardTitle className="text-xs font-medium">Batches</CardTitle>
             <Palette className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{overallStats.totalBatches}</div>
-            <p className="text-xs text-muted-foreground">
+          <CardContent className="py-1 px-3">
+            <div className="text-lg font-bold leading-none">{overallStats.totalBatches}</div>
+            <p className="text-[10px] text-muted-foreground mt-1">
               Unike farge-batches
             </p>
           </CardContent>
@@ -183,6 +183,7 @@ export function YarnMasterDashboard() {
         onSearch={handleAdvancedSearch}
         onClear={handleClearSearch}
         isLoading={isLoading}
+        compact
       />
 
       {/* Main Content */}

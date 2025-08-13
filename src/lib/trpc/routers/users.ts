@@ -172,5 +172,35 @@ export const usersRouter = createTRPCRouter({
       }
 
       return stats._count
+    }),
+
+  // Label profiles
+  getLabelProfiles: protectedProcedure
+    .query(async ({ ctx }) => {
+      return await ctx.db.labelProfile.findMany({ where: { userId: ctx.user.id }, orderBy: { createdAt: 'desc' } })
+    }),
+
+  createLabelProfile: protectedProcedure
+    .input(z.object({ name: z.string().min(1), extraLine1: z.string().optional(), extraLine2: z.string().optional(), showUrl: z.boolean().optional(), logoUrl: z.string().optional() }))
+    .mutation(async ({ ctx, input }) => {
+      return await ctx.db.labelProfile.create({ data: { userId: ctx.user.id, ...input } })
+    }),
+
+  updateLabelProfile: protectedProcedure
+    .input(z.object({ id: z.string(), name: z.string().min(1).optional(), extraLine1: z.string().optional(), extraLine2: z.string().optional(), showUrl: z.boolean().optional(), logoUrl: z.string().optional() }))
+    .mutation(async ({ ctx, input }) => {
+      const { id, ...data } = input
+      const existing = await ctx.db.labelProfile.findFirst({ where: { id, userId: ctx.user.id } })
+      if (!existing) throw new TRPCError({ code: 'NOT_FOUND' })
+      return await ctx.db.labelProfile.update({ where: { id }, data })
+    }),
+
+  deleteLabelProfile: protectedProcedure
+    .input(z.object({ id: z.string() }))
+    .mutation(async ({ ctx, input }) => {
+      const existing = await ctx.db.labelProfile.findFirst({ where: { id: input.id, userId: ctx.user.id } })
+      if (!existing) throw new TRPCError({ code: 'NOT_FOUND' })
+      await ctx.db.labelProfile.delete({ where: { id: input.id } })
+      return { success: true }
     })
 })

@@ -33,11 +33,17 @@ export function YarnProjectIntegration({
   const [selectedProjectId, setSelectedProjectId] = useState('')
   const [usageNotes, setUsageNotes] = useState('')
 
+  // New project form state
+  const [newProjectName, setNewProjectName] = useState('')
+  const [newProjectDescription, setNewProjectDescription] = useState('')
+  const [newProjectStatus, setNewProjectStatus] = useState<'PLANNED' | 'IN_PROGRESS' | 'COMPLETED' | 'ON_HOLD' | 'CANCELLED'>('PLANNED')
+
   // Fetch projects that use this yarn
   const { data: yarnUsage, refetch: refetchUsage } = trpc.yarn.getYarnUsageForItem.useQuery({ itemId: batchId })
   
   // Fetch all projects for dropdown
   const { data: allProjects } = trpc.yarn.getProjects.useQuery({ limit: 100, offset: 0 })
+  const utils = trpc.useUtils()
   
   // Mutations
   const addYarnToProjectMutation = trpc.yarn.addYarnToProject.useMutation({
@@ -61,6 +67,21 @@ export function YarnProjectIntegration({
     },
     onError: (error) => {
       toast.error(`Feil: ${error.message}`)
+    }
+  })
+
+  const createProjectMutation = trpc.yarn.createProject.useMutation({
+    onSuccess: async (project) => {
+      toast.success('Prosjekt opprettet')
+      setIsCreateProjectOpen(false)
+      setSelectedProjectId(project.id)
+      setNewProjectName('')
+      setNewProjectDescription('')
+      setNewProjectStatus('PLANNED')
+      await utils.yarn.getProjects.invalidate()
+    },
+    onError: (error) => {
+      toast.error(`Kunne ikke opprette prosjekt: ${error.message}`)
     }
   })
 
@@ -175,6 +196,50 @@ export function YarnProjectIntegration({
                       ))}
                     </SelectContent>
                   </Select>
+                  <div className="mt-2">
+                    {!isCreateProjectOpen ? (
+                      <Button variant="outline" size="sm" onClick={() => setIsCreateProjectOpen(true)}>
+                        <Plus className="h-4 w-4 mr-2" /> Opprett nytt prosjekt
+                      </Button>
+                    ) : (
+                      <div className="mt-2 space-y-3 border rounded-md p-3">
+                        <div className="text-sm font-medium">Nytt prosjekt</div>
+                        <div>
+                          <Label htmlFor="new-name">Navn</Label>
+                          <Input id="new-name" value={newProjectName} onChange={(e) => setNewProjectName(e.target.value)} placeholder="Prosjektnavn" />
+                        </div>
+                        <div>
+                          <Label htmlFor="new-desc">Beskrivelse (valgfritt)</Label>
+                          <Input id="new-desc" value={newProjectDescription} onChange={(e) => setNewProjectDescription(e.target.value)} placeholder="Kort beskrivelse" />
+                        </div>
+                        <div>
+                          <Label>Status</Label>
+                          <Select value={newProjectStatus} onValueChange={(v) => setNewProjectStatus(v as any)}>
+                            <SelectTrigger>
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="PLANNED">Planlagt</SelectItem>
+                              <SelectItem value="IN_PROGRESS">I arbeid</SelectItem>
+                              <SelectItem value="COMPLETED">Ferdig</SelectItem>
+                              <SelectItem value="ON_HOLD">Pauset</SelectItem>
+                              <SelectItem value="CANCELLED">Kansellert</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="flex gap-2 justify-end">
+                          <Button variant="outline" size="sm" onClick={() => setIsCreateProjectOpen(false)}>Avbryt</Button>
+                          <Button 
+                            size="sm"
+                            onClick={() => createProjectMutation.mutate({ name: newProjectName.trim(), description: newProjectDescription || undefined, status: newProjectStatus })}
+                            disabled={createProjectMutation.isPending || newProjectName.trim().length === 0}
+                          >
+                            {createProjectMutation.isPending ? 'Oppretter...' : 'Opprett'}
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </div>
 
                 <div>

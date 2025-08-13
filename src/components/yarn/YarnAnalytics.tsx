@@ -24,7 +24,7 @@ export function YarnAnalytics({ className }: YarnAnalyticsProps) {
   })
 
   const { data: stockAlerts } = trpc.yarn.getStockAlerts.useQuery()
-  const { data: valueAnalysis } = trpc.yarn.getValueAnalysis.useQuery()
+  const { data: valueAnalysis } = trpc.yarn.getValueAnalysis.useQuery({ timeRange: parseInt(timeRange) })
   const { data: usageStats } = trpc.yarn.getUsageStatistics.useQuery({
     timeRange: parseInt(timeRange)
   })
@@ -76,17 +76,17 @@ export function YarnAnalytics({ className }: YarnAnalyticsProps) {
       </div>
 
       {/* Key Metrics */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-2">
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Verdi</CardTitle>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 py-2">
+            <CardTitle className="text-xs font-medium">Total Verdi</CardTitle>
             <DollarSign className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
+          <CardContent className="py-2">
+            <div className="text-xl font-bold leading-none">
               {valueAnalysis?.totalValue ? `${valueAnalysis.totalValue.toFixed(0)} kr` : '0 kr'}
             </div>
-            <p className="text-xs text-muted-foreground">
+            <p className="text-[11px] text-muted-foreground mt-1">
               {valueAnalysis?.valueChange ? (
                 <span className={`flex items-center ${valueAnalysis.valueChange > 0 ? 'text-green-600' : 'text-red-600'}`}>
                   {valueAnalysis.valueChange > 0 ? (
@@ -104,45 +104,45 @@ export function YarnAnalytics({ className }: YarnAnalyticsProps) {
         </Card>
 
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Aktive Prosjekter</CardTitle>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 py-2">
+            <CardTitle className="text-xs font-medium">Aktive Prosjekter</CardTitle>
             <Package className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
+          <CardContent className="py-2">
+            <div className="text-xl font-bold leading-none">
               {usageStats?.activeProjects || 0}
             </div>
-            <p className="text-xs text-muted-foreground">
+            <p className="text-[11px] text-muted-foreground mt-1">
               {usageStats?.projectsUsingYarn || 0} bruker garn
             </p>
           </CardContent>
         </Card>
 
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Lav Beholdning</CardTitle>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 py-2">
+            <CardTitle className="text-xs font-medium">Lav Beholdning</CardTitle>
             <Package className="h-4 w-4 text-amber-500" />
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-amber-600">
+          <CardContent className="py-2">
+            <div className="text-xl font-bold text-amber-600 leading-none">
               {stockAlerts?.lowStockCount || 0}
             </div>
-            <p className="text-xs text-muted-foreground">
+            <p className="text-[11px] text-muted-foreground mt-1">
               Garn med lav beholdning
             </p>
           </CardContent>
         </Card>
 
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Unike Farger</CardTitle>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 py-2">
+            <CardTitle className="text-xs font-medium">Unike Farger</CardTitle>
             <Palette className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
+          <CardContent className="py-2">
+            <div className="text-xl font-bold leading-none">
               {analyticsData?.uniqueColors || 0}
             </div>
-            <p className="text-xs text-muted-foreground">
+            <p className="text-[11px] text-muted-foreground mt-1">
               På tvers av {analyticsData?.totalMasters || 0} garntyper
             </p>
           </CardContent>

@@ -12,7 +12,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { QRCode } from '@/components/ui/qr-code'
 import { toast } from 'sonner'
-import { MapPin, ChevronLeft, Edit, Trash2, QrCode, Plus } from 'lucide-react'
+import { MapPin, ChevronLeft, Edit, Trash2, QrCode, Plus, Printer } from 'lucide-react'
+import { dymoService } from '@/lib/printing/dymo-service'
+import { printQueue } from '@/lib/printing/print-queue'
 
 export default function BatchDetailPage() {
   const params = useParams()
@@ -22,6 +24,7 @@ export default function BatchDetailPage() {
   const { data: batch, refetch } = trpc.items.getById.useQuery(id!, { enabled: !!id })
   const { data: master } = trpc.yarn.getMasterForBatch.useQuery({ batchId: id! }, { enabled: !!id })
   const { data: locations } = trpc.locations.getAllFlat.useQuery(undefined, {})
+  const [addingDistribution, setAddingDistribution] = React.useState(false)
 
   const addDistribution = trpc.items.addDistribution.useMutation({
     onSuccess: () => { toast.success('Fordeling lagt til'); refetch() },
@@ -117,14 +120,33 @@ export default function BatchDetailPage() {
           <div className="mt-6">
             <div className="flex items-center justify-between mb-2">
               <h3 className="text-sm font-medium">Lokasjonsfordeling</h3>
-              <Dialog>
-                <DialogTrigger asChild>
-                  <Button size="sm"><Plus className="h-3 w-3 mr-1" /> Legg til fordeling</Button>
-                </DialogTrigger>
-                <DialogContent className="max-w-md">
-                  <DialogHeader>
-                    <DialogTitle>Ny fordeling</DialogTitle>
-                  </DialogHeader>
+              <div className="flex items-center gap-2">
+                <Button size="sm" variant="outline" onClick={async () => {
+                  try {
+                    const labels = (distributions || []).map((dist) => ({
+                      itemName: batch.name,
+                      locationName: dist.location?.name || 'Lokasjon',
+                      qrCode: dist.qrCode,
+                      dateAdded: new Date().toLocaleDateString('nb-NO')
+                    }))
+                    if (labels.length > 0) {
+                      await dymoService.printBulkLabels(labels, 'qr', { copies: 1 })
+                    }
+                  } catch (e) {
+                    console.error(e)
+                  }
+                }}>Skriv ut alle (DYMO)</Button>
+                <Button size="sm" onClick={() => setAddingDistribution(true)}>
+                  <Plus className="h-3 w-3 mr-1" /> Legg til fordeling
+                </Button>
+              </div>
+            </div>
+            <div className="border rounded-md divide-y">
+              {distributions.length === 0 && !addingDistribution && (
+                <div className="p-3 text-sm text-muted-foreground">Ingen fordeling registrert ennå.</div>
+              )}
+              {distributions.length === 0 && addingDistribution && (
+                <div className="p-3">
                   <AddDistributionForm 
                     locations={locations || []}
                     onSubmit={async (values) => {
@@ -134,14 +156,32 @@ export default function BatchDetailPage() {
                         quantity: values.quantity,
                         notes: values.notes
                       })
+                      setAddingDistribution(false)
                     }}
                   />
-                </DialogContent>
-              </Dialog>
-            </div>
-            <div className="border rounded-md divide-y">
-              {distributions.length === 0 && (
-                <div className="p-3 text-sm text-muted-foreground">Ingen fordeling registrert ennå.</div>
+                  <div className="mt-2 flex justify-end">
+                    <Button variant="outline" size="sm" onClick={() => setAddingDistribution(false)}>Avbryt</Button>
+                  </div>
+                </div>
+              )}
+              {distributions.length > 0 && addingDistribution && (
+                <div className="p-3 bg-muted/30">
+                  <AddDistributionForm 
+                    locations={locations || []}
+                    onSubmit={async (values) => {
+                      await addDistribution.mutateAsync({
+                        itemId: id!,
+                        locationId: values.locationId,
+                        quantity: values.quantity,
+                        notes: values.notes
+                      })
+                      setAddingDistribution(false)
+                    }}
+                  />
+                  <div className="mt-2 flex justify-end">
+                    <Button variant="outline" size="sm" onClick={() => setAddingDistribution(false)}>Avbryt</Button>
+                  </div>
+                </div>
               )}
               {distributions.map((d) => (
                 <div key={d.id} className="p-3 flex items-center justify-between gap-2">
@@ -151,6 +191,109 @@ export default function BatchDetailPage() {
                   </div>
                   <div className="flex items-center gap-2">
                     <div className="text-sm font-mono">{d.quantity} {batch.unit || 'nøste'}</div>
+                    <Dialog>
+                      <DialogTrigger asChild>
+                        <Button variant="ghost" size="sm" title="Vis QR for fordeling">
+                          <QrCode className="h-3 w-3" />
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent className="max-w-md">
+                        <DialogHeader>
+                          <DialogTitle>QR-kode for fordeling</DialogTitle>
+                        </DialogHeader>
+                        <div className="flex flex-col items-center">
+                          <QRCode value={`${typeof window !== 'undefined' ? window.location.origin : ''}/scan?d=${d.qrCode}`} title={`${batch.name} @ ${d.location?.name}`} description={`${d.quantity} ${batch.unit || 'nøste'} tilgjengelig`} />
+                        </div>
+                      </DialogContent>
+                    </Dialog>
+                    <Dialog>
+                      <DialogTrigger asChild>
+                        <Button variant="ghost" size="sm" title="Skriv ut etikett">
+                          <Printer className="h-3 w-3" />
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent className="max-w-md">
+                        <DialogHeader>
+                          <DialogTitle>Skriv ut fordeling-etikett</DialogTitle>
+                        </DialogHeader>
+                        <div className="space-y-3">
+                          <div className="text-sm text-muted-foreground">
+                            Kode: <span className="font-mono">{d.qrCode}</span>
+                          </div>
+                          <div className="flex justify-center">
+                            <QRCode value={`${typeof window !== 'undefined' ? window.location.origin : ''}/scan?d=${d.qrCode}`} title={`${batch.name}`} description={`${d.location?.name} • ${d.quantity} ${batch.unit || 'nøste'}`} />
+                          </div>
+                          <div className="grid grid-cols-2 gap-2">
+                            <div>
+                              <Label className="text-xs text-muted-foreground">Etikettstørrelse</Label>
+                              <select id={`dy-size-${d.id}`} defaultValue="standard" className="w-full border rounded px-2 py-1 text-sm">
+                                <option value="small">Liten (30334)</option>
+                                <option value="standard">Standard (30252)</option>
+                                <option value="large">Stor (30323)</option>
+                              </select>
+                            </div>
+                            <div>
+                              <Label className="text-xs text-muted-foreground">Kopier</Label>
+                              <input id={`dy-copies-${d.id}`} type="number" min={1} max={10} defaultValue={1} className="w-full border rounded px-2 py-1 text-sm" />
+                            </div>
+                          </div>
+                          <div className="flex justify-end">
+                            <Button className="mr-2" onClick={() => {
+                              const printWindow = window.open('', '_blank')
+                              if (printWindow) {
+                                const url = `${window.location.origin}/scan?d=${d.qrCode}`
+                                printWindow.document.write(`<!DOCTYPE html><html><head><title>Etikett</title><style>body{margin:0;padding:12px;font-family:Arial} .box{border:1px solid #000; padding:8px; width:280px} .title{font-weight:bold; font-size:14px; margin:6px 0} .small{font-size:12px; color:#444} .code{font-family:monospace; font-size:12px}</style></head><body><div class='box'><div class='title'>${batch.name}</div><div class='small'>${d.location?.name}</div><img src="${(document.querySelector('.qr-code-component img') as HTMLImageElement)?.src}" style="width:160px;height:160px"/><div class='code'>${d.qrCode}</div><div class='small'>${url}</div></div></body></html>`)
+                                printWindow.document.close()
+                                setTimeout(() => { printWindow.print(); printWindow.close() }, 250)
+                              }
+                            }}>Skriv ut</Button>
+                            <Button variant="outline" onClick={async () => {
+                              try {
+                                const copies = Number((document.getElementById(`dy-copies-${d.id}`) as HTMLInputElement)?.value || '1')
+                                const size = ((document.getElementById(`dy-size-${d.id}`) as HTMLSelectElement)?.value || 'standard') as 'small'|'standard'|'large'
+                                await dymoService.printQRLabel({
+                                  itemName: batch.name,
+                                  locationName: d.location?.name || 'Lokasjon',
+                                  qrCode: d.qrCode,
+                                  dateAdded: new Date().toLocaleDateString('nb-NO')
+                                }, { copies, labelSize: size })
+                              } catch (e) {
+                                console.error(e)
+                              }
+                            }}>Skriv ut på DYMO</Button>
+                          </div>
+                        </div>
+                      </DialogContent>
+                    </Dialog>
+                    <Dialog>
+                      <DialogTrigger asChild>
+                        <Button variant="outline" size="sm">Flytt</Button>
+                      </DialogTrigger>
+                      <DialogContent className="max-w-sm">
+                        <DialogHeader>
+                          <DialogTitle>Flytt fordeling</DialogTitle>
+                        </DialogHeader>
+                        <MoveDistributionForm 
+                          fromDistributionId={d.id}
+                          fromLocationId={d.locationId}
+                          locations={(locations || [])}
+                          max={d.quantity}
+                          unit={batch.unit || 'nøste'}
+                          onDone={() => refetch()}
+                        />
+                      </DialogContent>
+                    </Dialog>
+                    <Dialog>
+                      <DialogTrigger asChild>
+                        <Button variant="outline" size="sm">Ta ut</Button>
+                      </DialogTrigger>
+                      <DialogContent className="max-w-sm">
+                        <DialogHeader>
+                          <DialogTitle>Ta ut fra fordeling</DialogTitle>
+                        </DialogHeader>
+                        <TakeOutForm distributionId={d.id} max={d.quantity} unit={batch.unit || 'nøste'} onDone={() => refetch()} />
+                      </DialogContent>
+                    </Dialog>
                     <Dialog>
                       <DialogTrigger asChild>
                         <Button size="sm" variant="ghost"><Edit className="h-3 w-3" /></Button>
@@ -220,6 +363,81 @@ function AddDistributionForm({ locations, onSubmit }: { locations: Array<{ id: s
           if (!locationId || quantity <= 0) return
           await onSubmit({ locationId, quantity, notes: notes || undefined })
         }}>Lagre</Button>
+      </div>
+    </div>
+  )
+}
+
+function TakeOutForm({ distributionId, max, unit, onDone }: { distributionId: string, max: number, unit: string, onDone: () => void }) {
+  const [amount, setAmount] = React.useState<number>(1)
+  const [notes, setNotes] = React.useState<string>('')
+  const utils = trpc.useUtils()
+  const consume = trpc.items.consumeFromDistribution.useMutation({
+    onSuccess: () => { utils.items.getById.invalidate(); onDone(); toast.success('Uttak registrert') },
+    onError: () => toast.error('Kunne ikke gjennomføre uttak')
+  })
+  const giveBack = trpc.items.returnToDistribution.useMutation({
+    onSuccess: () => { utils.items.getById.invalidate(); onDone(); toast.success('Lagt tilbake') },
+    onError: () => toast.error('Kunne ikke legge tilbake')
+  })
+  return (
+    <div className="space-y-3">
+      <div>
+        <Label>Antall (max {max})</Label>
+        <Input type="number" min={0} max={max} value={amount} onChange={(e) => setAmount(Number(e.target.value))} />
+      </div>
+      <div>
+        <Label>Notater</Label>
+        <Input value={notes} onChange={(e) => setNotes(e.target.value)} />
+      </div>
+      <div className="flex justify-end">
+        <Button disabled={consume.isPending || amount <= 0 || amount > max} onClick={() => consume.mutate({ distributionId, amount, notes: notes || undefined })}>
+          {consume.isPending ? 'Tar ut...' : `Ta ut ${unit}`}
+        </Button>
+        <Button variant="outline" className="ml-2" disabled={giveBack.isPending || amount <= 0} onClick={() => giveBack.mutate({ distributionId, amount, notes: notes || undefined })}>
+          {giveBack.isPending ? 'Legger tilbake...' : 'Legg tilbake'}
+        </Button>
+      </div>
+    </div>
+  )
+}
+
+function MoveDistributionForm({ fromDistributionId, fromLocationId, locations, max, unit, onDone }: { fromDistributionId: string, fromLocationId: string, locations: Array<{ id: string, name: string }>, max: number, unit: string, onDone: () => void }) {
+  const availableTargets = (locations || []).filter(l => l.id !== fromLocationId)
+  const [toLocationId, setToLocationId] = React.useState<string>(availableTargets[0]?.id || '')
+  const [amount, setAmount] = React.useState<number>(1)
+  const [notes, setNotes] = React.useState<string>('')
+  const moveMutation = trpc.items.moveBetweenDistributions.useMutation({
+    onSuccess: () => { onDone(); toast.success('Flyttet') },
+    onError: () => toast.error('Kunne ikke flytte')
+  })
+  return (
+    <div className="space-y-3">
+      <div>
+        <Label>Mål-lokasjon</Label>
+        <Select value={toLocationId} onValueChange={setToLocationId}>
+          <SelectTrigger>
+            <SelectValue placeholder="Velg lokasjon" />
+          </SelectTrigger>
+          <SelectContent>
+            {availableTargets.map(l => (
+              <SelectItem key={l.id} value={l.id}>{l.name}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+      <div>
+        <Label>Antall (max {max})</Label>
+        <Input type="number" min={0} max={max} value={amount} onChange={(e) => setAmount(Number(e.target.value))} />
+      </div>
+      <div>
+        <Label>Notater</Label>
+        <Input value={notes} onChange={(e) => setNotes(e.target.value)} />
+      </div>
+      <div className="flex justify-end">
+        <Button disabled={moveMutation.isPending || amount <= 0 || amount > max || !toLocationId} onClick={() => moveMutation.mutate({ fromDistributionId, toLocationId, amount, notes: notes || undefined })}>
+          {moveMutation.isPending ? 'Flytter...' : `Flytt ${unit}`}
+        </Button>
       </div>
     </div>
   )

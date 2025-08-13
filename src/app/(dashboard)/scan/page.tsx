@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -14,6 +14,11 @@ import {
   MapPin,
   Calendar
 } from 'lucide-react'
+import { useSearchParams } from 'next/navigation'
+import { trpc } from '@/lib/trpc/client'
+import { Button } from '@/components/ui/button'
+import { dymoService } from '@/lib/printing/dymo-service'
+import { printQueue } from '@/lib/printing/print-queue'
 
 // Mock QR scan results
 const mockQRResults = {
@@ -52,15 +57,43 @@ export default function ScanPage() {
   const [manualCode, setManualCode] = useState('')
   const [scanResult, setScanResult] = useState<any>(null)
   const [isScanning, setIsScanning] = useState(false)
+  const params = useSearchParams()
+  const distributionCode = params?.get('d') || ''
 
-  const handleManualScan = () => {
-    if (manualCode.trim()) {
-      const result = mockQRResults[manualCode.trim() as keyof typeof mockQRResults]
-      if (result) {
-        setScanResult(result)
-      } else {
+  const { data: distributionData, refetch: refetchDistribution } = trpc.items.getDistributionByQRCode.useQuery(
+    { qrCode: distributionCode },
+    { enabled: !!distributionCode }
+  )
+  const consumeMutation = trpc.items.consumeFromDistribution.useMutation({
+    onSuccess: () => { refetchDistribution() },
+  })
+
+  useEffect(() => {
+    if (distributionData) {
+      setScanResult({ type: 'distribution', data: distributionData })
+    }
+  }, [distributionData])
+
+  const handleManualScan = async () => {
+    const code = manualCode.trim()
+    if (!code) return
+    // Distribution codes start with D-
+    if (code.startsWith('D-')) {
+      try {
+        const data = await consumeMutation.client.items.getDistributionByQRCode.query({ qrCode: code })
+        setScanResult({ type: 'distribution', data })
+        return
+      } catch (e) {
         setScanResult({ error: 'QR-kode ikke funnet i systemet' })
+        return
       }
+    }
+    // Fallback to mock lookup
+    const result = mockQRResults[code as keyof typeof mockQRResults]
+    if (result) {
+      setScanResult(result)
+    } else {
+      setScanResult({ error: 'QR-kode ikke funnet i systemet' })
     }
   }
 
@@ -150,9 +183,9 @@ export default function ScanPage() {
             <CardContent className="space-y-4">
               <div>
                 <Label htmlFor="manual-code">QR-kode</Label>
-                <Input
+                 <Input
                   id="manual-code"
-                  placeholder="F.eks. KJK-0001, BOD-0002"
+                   placeholder="F.eks. D-ABCDEFGH, KJK-0001"
                   value={manualCode}
                   onChange={(e) => setManualCode(e.target.value)}
                   onKeyDown={(e) => e.key === 'Enter' && handleManualScan()}
@@ -182,7 +215,79 @@ export default function ScanPage() {
       )}
 
       {/* Scan Result */}
-      {scanResult && (
+      {scanResult && scanResult.type === 'distribution' && (
+        <Card className="mb-8">
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <CardTitle className="flex items-center gap-2">
+                <Package className="w-5 h-5" />
+                Fordeling funnet
+              </CardTitle>
+              <div className="flex items-center gap-2">
+                <Button variant="outline" onClick={clearResult}>Skann ny kode</Button>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="text-sm text-muted-foreground">Batch</div>
+                <div className="font-medium">{scanResult.data.item.name}</div>
+              </div>
+              <div>
+                <div className="text-sm text-muted-foreground">Lokasjon</div>
+                <div className="font-medium">{scanResult.data.location.name}</div>
+              </div>
+              <div>
+                <div className="text-sm text-muted-foreground">Tilgjengelig</div>
+                <div className="font-medium">{scanResult.data.quantity} {scanResult.data.item.unit}</div>
+              </div>
+            </div>
+            <div className="flex items-end gap-2">
+              <div className="flex-1">
+                <Label htmlFor="take-out">Ta ut antall</Label>
+                <Input id="take-out" type="number" min={0} max={scanResult.data.quantity} defaultValue={1} />
+              </div>
+              <div className="flex-1">
+                <Label htmlFor="take-notes">Notater (valgfritt)</Label>
+                <Input id="take-notes" placeholder="F.eks. til prosjekt X" />
+              </div>
+              <Button onClick={() => {
+                const amount = Number((document.getElementById('take-out') as HTMLInputElement)?.value || '0')
+                const notes = (document.getElementById('take-notes') as HTMLInputElement)?.value || undefined
+                if (amount > 0) {
+                  consumeMutation.mutate({ distributionId: scanResult.data.id, amount, notes })
+                }
+              }}
+              >Ta ut</Button>
+            </div>
+            <div className="flex items-center gap-2 justify-end">
+              <Button variant="outline" onClick={async () => {
+                try {
+                  await dymoService.printQRLabel({
+                    itemName: scanResult.data.item.name,
+                    locationName: scanResult.data.location.name,
+                    qrCode: scanResult.data.qrCode,
+                    dateAdded: new Date().toLocaleDateString('nb-NO')
+                  }, { copies: 1 })
+                } catch (e) {
+                  console.error(e)
+                }
+              }}>Skriv ut på DYMO</Button>
+              <Button variant="outline" onClick={() => {
+                printQueue.add({
+                  itemName: scanResult.data.item.name,
+                  locationName: scanResult.data.location.name,
+                  qrCode: scanResult.data.qrCode,
+                  dateAdded: new Date().toLocaleDateString('nb-NO')
+                })
+              }}>Legg i utskriftskø</Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {scanResult && scanResult.type !== 'distribution' && (
         <Card className="mb-8">
           <CardHeader>
             <div className="flex items-center justify-between">

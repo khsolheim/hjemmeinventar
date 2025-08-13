@@ -418,12 +418,26 @@ export const itemsRouter = createTRPCRouter({
         throw new TRPCError({ code: 'BAD_REQUEST', message: 'Fordelt mengde kan ikke overstige totalt antall' })
       }
 
+      // Ensure QR code for distribution
+      async function generateDistributionCode(): Promise<string> {
+        let unique = ''
+        let exists = true
+        while (exists) {
+          const base = await generateUniqueQRCode()
+          unique = `D-${base}`
+          const found = await ctx.db.itemDistribution.findFirst({ where: { qrCode: unique } })
+          exists = !!found
+        }
+        return unique
+      }
+
       const created = await ctx.db.itemDistribution.create({
         data: {
           itemId: item.id,
           locationId: location.id,
           quantity: input.quantity,
-          notes: input.notes
+          notes: input.notes,
+          qrCode: await generateDistributionCode()
         },
         include: { location: true }
       })
@@ -519,6 +533,159 @@ export const itemsRouter = createTRPCRouter({
       })
 
       return { success: true }
+    }),
+
+  // Get distribution by QR code
+  getDistributionByQRCode: protectedProcedure
+    .input(z.object({ qrCode: z.string() }))
+    .query(async ({ ctx, input }) => {
+      const distribution = await ctx.db.itemDistribution.findFirst({
+        where: { qrCode: input.qrCode },
+        include: {
+          location: true,
+          item: true
+        }
+      })
+      if (!distribution || distribution.item.userId !== ctx.user.id) {
+        throw new TRPCError({ code: 'NOT_FOUND', message: 'QR-kode ikke funnet' })
+      }
+      return distribution
+    }),
+
+  // Consume from a distribution
+  consumeFromDistribution: protectedProcedure
+    .input(z.object({ distributionId: z.string(), amount: z.number().min(0.0001), notes: z.string().optional() }))
+    .mutation(async ({ ctx, input }) => {
+      return await ctx.db.$transaction(async (tx) => {
+        const distribution = await tx.itemDistribution.findFirst({
+          where: { id: input.distributionId },
+          include: { item: true, location: true }
+        })
+        if (!distribution || distribution.item.userId !== ctx.user.id) {
+          throw new TRPCError({ code: 'NOT_FOUND', message: 'Fordeling ikke funnet' })
+        }
+        if (input.amount > distribution.quantity) {
+          throw new TRPCError({ code: 'BAD_REQUEST', message: 'Ikke nok i denne fordelingen' })
+        }
+        const newDistributionQty = distribution.quantity - input.amount
+        const newItemAvailable = Math.max(0, distribution.item.availableQuantity - input.amount)
+        const newItemConsumed = (distribution.item.consumedQuantity || 0) + input.amount
+
+        await tx.itemDistribution.update({
+          where: { id: distribution.id },
+          data: { quantity: newDistributionQty }
+        })
+        const updatedItem = await tx.item.update({
+          where: { id: distribution.itemId },
+          data: {
+            availableQuantity: newItemAvailable,
+            consumedQuantity: newItemConsumed
+          }
+        })
+
+        await logActivity({
+          type: 'ITEM_UPDATED',
+          description: `Tok ut ${input.amount} ${distribution.item.unit} fra ${distribution.location.name}${input.notes ? ` - ${input.notes}` : ''}`,
+          userId: ctx.user.id,
+          itemId: distribution.itemId,
+          locationId: distribution.locationId,
+        })
+
+        return { distributionId: distribution.id, newDistributionQty, item: updatedItem }
+      })
+    }),
+
+  // Return quantity back to a distribution (increase available)
+  returnToDistribution: protectedProcedure
+    .input(z.object({ distributionId: z.string(), amount: z.number().min(0.0001), notes: z.string().optional() }))
+    .mutation(async ({ ctx, input }) => {
+      return await ctx.db.$transaction(async (tx) => {
+        const distribution = await tx.itemDistribution.findFirst({
+          where: { id: input.distributionId },
+          include: { item: true, location: true }
+        })
+        if (!distribution || distribution.item.userId !== ctx.user.id) {
+          throw new TRPCError({ code: 'NOT_FOUND', message: 'Fordeling ikke funnet' })
+        }
+        // Validate we don't exceed totalQuantity
+        const newDistributionQty = distribution.quantity + input.amount
+        const potentialAvailable = distribution.item.availableQuantity + input.amount
+        if (potentialAvailable > distribution.item.totalQuantity + 1e-6) {
+          throw new TRPCError({ code: 'BAD_REQUEST', message: 'Kan ikke overskride totalt antall for varen' })
+        }
+        const newConsumed = Math.max(0, (distribution.item.consumedQuantity || 0) - input.amount)
+
+        await tx.itemDistribution.update({ where: { id: distribution.id }, data: { quantity: newDistributionQty } })
+        const updatedItem = await tx.item.update({
+          where: { id: distribution.itemId },
+          data: { availableQuantity: potentialAvailable, consumedQuantity: newConsumed }
+        })
+
+        await logActivity({
+          type: 'ITEM_UPDATED',
+          description: `La tilbake ${input.amount} ${distribution.item.unit} til ${distribution.location.name}${input.notes ? ` - ${input.notes}` : ''}`,
+          userId: ctx.user.id,
+          itemId: distribution.itemId,
+          locationId: distribution.locationId,
+        })
+
+        return { distributionId: distribution.id, newDistributionQty, item: updatedItem }
+      })
+    }),
+
+  // Move amount from one distribution to another location (same item)
+  moveBetweenDistributions: protectedProcedure
+    .input(z.object({ fromDistributionId: z.string(), toLocationId: z.string(), amount: z.number().min(0.0001), notes: z.string().optional() }))
+    .mutation(async ({ ctx, input }) => {
+      return await ctx.db.$transaction(async (tx) => {
+        const from = await tx.itemDistribution.findFirst({
+          where: { id: input.fromDistributionId },
+          include: { item: true, location: true }
+        })
+        if (!from || from.item.userId !== ctx.user.id) {
+          throw new TRPCError({ code: 'NOT_FOUND', message: 'Kilde-fordeling ikke funnet' })
+        }
+        if (from.locationId === input.toLocationId) {
+          throw new TRPCError({ code: 'BAD_REQUEST', message: 'Mål-lokasjon er lik kilde' })
+        }
+        if (input.amount > from.quantity) {
+          throw new TRPCError({ code: 'BAD_REQUEST', message: 'Ikke nok i kildefordeling' })
+        }
+
+        let to = await tx.itemDistribution.findFirst({ where: { itemId: from.itemId, locationId: input.toLocationId } })
+        if (!to) {
+          // Create new distribution at target
+          // Generate QR
+          async function generateDistributionCode(): Promise<string> {
+            let unique = ''
+            let exists = true
+            while (exists) {
+              const base = await generateUniqueQRCode()
+              unique = `D-${base}`
+              const found = await tx.itemDistribution.findFirst({ where: { qrCode: unique } })
+              exists = !!found
+            }
+            return unique
+          }
+          to = await tx.itemDistribution.create({
+            data: { itemId: from.itemId, locationId: input.toLocationId, quantity: 0, qrCode: await generateDistributionCode() }
+          })
+        }
+
+        await tx.itemDistribution.update({ where: { id: from.id }, data: { quantity: from.quantity - input.amount } })
+        const updatedTo = await tx.itemDistribution.update({ where: { id: to.id }, data: { quantity: to.quantity + input.amount } })
+
+        await logActivity({
+          type: 'ITEM_MOVED',
+          description: `Flyttet ${input.amount} ${from.item.unit} fra ${from.location.name} til ny lokasjon`,
+          userId: ctx.user.id,
+          itemId: from.itemId,
+          locationId: input.toLocationId,
+          metadata: { fromDistributionId: from.id, toDistributionId: to.id, notes: input.notes }
+        })
+
+        return { fromId: from.id, toId: to.id, to: updatedTo }
+      })
     }),
 
   // Bulk operations
