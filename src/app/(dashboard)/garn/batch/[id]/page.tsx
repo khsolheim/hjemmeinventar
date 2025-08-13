@@ -10,7 +10,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from '@/components/ui/dialog'
 import { QRCode } from '@/components/ui/qr-code'
 import { toast } from 'sonner'
 import { MapPin, ChevronLeft, Edit, Trash2, QrCode, Plus, Printer } from 'lucide-react'
@@ -26,9 +26,10 @@ export default function BatchDetailPage() {
 
   const { data: batch, refetch } = trpc.items.getById.useQuery(id!, { enabled: !!id })
   const { data: master } = trpc.yarn.getMasterForBatch.useQuery({ batchId: id! }, { enabled: !!id })
-  const { data: locations } = trpc.locations.getAllFlat.useQuery(undefined, {})
-  const profiles = trpc.users.getLabelProfiles.useQuery(undefined, { enabled: status === 'authenticated' })
-  const userProfile = trpc.users.getProfile.useQuery(undefined, { enabled: status === 'authenticated' })
+  const { data: locations } = trpc.locations.getAllFlat.useQuery(undefined, { enabled: status === 'authenticated', retry: 0, refetchOnWindowFocus: false, refetchOnMount: false, staleTime: 5 * 60 * 1000 })
+  const commonOpts = { enabled: status === 'authenticated', retry: 0, refetchOnWindowFocus: false, refetchOnMount: false, staleTime: 5 * 60 * 1000 } as const
+  const profiles = trpc.users.getLabelProfiles.useQuery(undefined, commonOpts)
+  const userProfile = trpc.users.getProfile.useQuery(undefined, commonOpts)
   const [addingDistribution, setAddingDistribution] = React.useState(false)
   const [selectedProfileId, setSelectedProfileId] = React.useState('')
 
@@ -118,6 +119,7 @@ export default function BatchDetailPage() {
                   <DialogContent className="max-w-md">
                     <DialogHeader>
                       <DialogTitle>QR-kode for batch</DialogTitle>
+                      <DialogDescription>Skann koden for å åpne denne batchen.</DialogDescription>
                     </DialogHeader>
                     <div className="flex flex-col items-center">
                       <QRCode value={qrValue} title={batch.name} description="Skann for å åpne batch" />
@@ -216,6 +218,7 @@ export default function BatchDetailPage() {
                       <DialogContent className="max-w-md">
                         <DialogHeader>
                           <DialogTitle>QR-kode for fordeling</DialogTitle>
+                          <DialogDescription>Skann koden for å åpne denne fordelingen.</DialogDescription>
                         </DialogHeader>
                         <div className="flex flex-col items-center">
                           <QRCode value={`${typeof window !== 'undefined' ? window.location.origin : ''}/scan?d=${d.qrCode}`} title={`${batch.name} @ ${d.location?.name}`} description={`${d.quantity} ${batch.unit || 'nøste'} tilgjengelig`} />
@@ -231,6 +234,7 @@ export default function BatchDetailPage() {
                       <DialogContent className="max-w-md">
                         <DialogHeader>
                           <DialogTitle>Skriv ut fordeling-etikett</DialogTitle>
+                          <DialogDescription>Velg mal og innstillinger for etiketten før utskrift.</DialogDescription>
                         </DialogHeader>
                         <div className="space-y-3">
                           <div className="text-sm text-muted-foreground">
@@ -340,6 +344,7 @@ export default function BatchDetailPage() {
                       <DialogContent className="max-w-sm">
                         <DialogHeader>
                           <DialogTitle>Flytt fordeling</DialogTitle>
+                          <DialogDescription>Flytt en mengde fra denne fordelingen til en annen lokasjon.</DialogDescription>
                         </DialogHeader>
                         <MoveDistributionForm 
                           fromDistributionId={d.id}
@@ -358,6 +363,7 @@ export default function BatchDetailPage() {
                       <DialogContent className="max-w-sm">
                         <DialogHeader>
                           <DialogTitle>Ta ut fra fordeling</DialogTitle>
+                          <DialogDescription>Registrer et uttak fra denne fordelingen.</DialogDescription>
                         </DialogHeader>
                         <TakeOutForm distributionId={d.id} max={d.quantity} unit={batch.unit || 'nøste'} onDone={() => refetch()} />
                       </DialogContent>
@@ -369,6 +375,7 @@ export default function BatchDetailPage() {
                       <DialogContent className="max-w-md">
                         <DialogHeader>
                           <DialogTitle>Rediger fordeling</DialogTitle>
+                          <DialogDescription>Oppdater feltene og lagre endringene.</DialogDescription>
                         </DialogHeader>
                         <EditDistributionForm 
                           distribution={d}

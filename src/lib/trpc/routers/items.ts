@@ -2,7 +2,7 @@
 import { z } from 'zod'
 import { createTRPCRouter, protectedProcedure } from '../server'
 import { TRPCError } from '@trpc/server'
-import { logActivity } from '../../db'
+import { logActivity, generateUniqueQRCode } from '../../db'
 import { inventoryEvents } from '../../inngest/services/inventory-events'
 import { emitToHousehold } from '../../websocket/server'
 
@@ -425,7 +425,7 @@ export const itemsRouter = createTRPCRouter({
         while (exists) {
           const base = await generateUniqueQRCode()
           unique = `D-${base}`
-          const found = await ctx.db.itemDistribution.findFirst({ where: { qrCode: unique } })
+          const found = await ctx.db.itemDistribution.findFirst({ where: { OR: [{ qrCode: unique }] } })
           exists = !!found
         }
         return unique
@@ -662,7 +662,7 @@ export const itemsRouter = createTRPCRouter({
             while (exists) {
               const base = await generateUniqueQRCode()
               unique = `D-${base}`
-              const found = await tx.itemDistribution.findFirst({ where: { qrCode: unique } })
+              const found = await tx.itemDistribution.findFirst({ where: { OR: [{ qrCode: unique }] } })
               exists = !!found
             }
             return unique

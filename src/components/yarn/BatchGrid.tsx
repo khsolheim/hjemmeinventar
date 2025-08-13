@@ -286,27 +286,17 @@ export function BatchGrid({ masterId, hideMasterHeader = false, hideTotals = fal
                   onClick={handleCardClick}
                 >
                   <CardHeader className="px-3 py-2">
-                    <div className="flex justify-between items-start">
-                      <div className="flex-1">
-                        <CardTitle className="text-base flex items-center gap-2">
-                          <div 
-                            className="w-4 h-4 rounded border border-gray-300"
-                            style={colorStyle}
-                            title={batchData.color}
-                          />
-                          {batchData.color}
-                        </CardTitle>
-                        <CardDescription>
-                          Batch: {batchData.batchNumber}
-                        </CardDescription>
-                      </div>
-                       <div className="flex items-center gap-1">
-                         <Link href={`/garn/batch/${batch.id}`} className="inline-flex">
-                           <Button variant="ghost" size="sm" title="Åpne detaljer">
-                             <QrCode className="h-3 w-3" />
-                           </Button>
-                         </Link>
-                        <Dialog>
+                    <div className="flex justify-end items-start gap-1">
+                      {batch.imageUrl && (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={batch.imageUrl} alt={batchData.color || batch.name} className="h-8 w-8 rounded object-cover mr-1" />
+                      )}
+                      <Link href={`/garn/batch/${batch.id}`} className="inline-flex">
+                        <Button variant="ghost" size="sm" title="Åpne detaljer">
+                          <QrCode className="h-3 w-3" />
+                        </Button>
+                      </Link>
+                      <Dialog>
                           <DialogTrigger asChild>
                             <Button variant="ghost" size="sm">
                               <Edit className="h-3 w-3" />
@@ -385,15 +375,31 @@ export function BatchGrid({ masterId, hideMasterHeader = false, hideTotals = fal
                             </AlertDialogFooter>
                           </AlertDialogContent>
                         </AlertDialog>
-                      </div>
                     </div>
                   </CardHeader>
                   
                   <CardContent className="px-3 py-2 space-y-2">
+                    {/* Main content */}
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2 font-semibold">
+                        <span>{batchData.color}</span>
+                      </div>
+                      {batchData.colorCode && (
+                        <div className="font-semibold text-xs font-mono truncate">{batchData.colorCode}</div>
+                      )}
+                      <div className="text-xs font-mono truncate">Batch.nr: {batchData.batchNumber || ''}</div>
+                      <div className="text-xs">Antall nøster (total): <span className="font-medium">{batchData.quantity || batch.totalQuantity}</span></div>
+                    </div>
+
                     {/* Quantity and availability */}
                     <div className="flex justify-between text-xs">
                       <span className="text-muted-foreground">Antall</span>
-                      <span className="font-medium">{batch.availableQuantity}/{batchData.quantity || batch.totalQuantity}</span>
+                      {(() => {
+                        const reserved = Number(batchData.reserved || 0)
+                        const eff = Math.max((batch.availableQuantity || 0) - reserved, 0)
+                        const total = batchData.quantity || batch.totalQuantity
+                        return <span className="font-medium">{eff}/{total}</span>
+                      })()}
                     </div>
 
                     {/* Progress bar */}
@@ -401,42 +407,24 @@ export function BatchGrid({ masterId, hideMasterHeader = false, hideTotals = fal
                       <div className="w-full bg-gray-200 rounded-full h-1.5">
                         <div 
                           className={`h-1.5 rounded-full ${
-                            batch.availableQuantity === batch.totalQuantity ? 'bg-green-500' :
-                            batch.availableQuantity === 0 ? 'bg-red-500' : 'bg-yellow-500'
+                            (batch.availableQuantity || 0) === batch.totalQuantity ? 'bg-green-500' :
+                            (batch.availableQuantity || 0) === 0 ? 'bg-red-500' : 'bg-yellow-500'
                           }`}
                           style={{ 
-                            width: `${Math.round((batch.availableQuantity / batch.totalQuantity) * 100)}%` 
+                            width: `${(() => {
+                              const reserved = Number(batchData.reserved || 0)
+                              const eff = Math.max((batch.availableQuantity || 0) - reserved, 0)
+                              const total = batch.totalQuantity || 1
+                              return Math.round((eff / total) * 100)
+                            })()}%` 
                           }}
                         />
                       </div>
                     </div>
 
-                    {/* Price */}
-                    {batchData.pricePerSkein && (
-                      <div className="flex justify-between text-xs">
-                        <span className="text-muted-foreground">Pris per nøste:</span>
-                        <span className="font-medium">{formatPrice(batchData.pricePerSkein)}</span>
-                      </div>
-                    )}
+                    {/* Price and total value removed for compact UI */}
 
-                    {/* Total value */}
-                    {batchData.pricePerSkein && (
-                      <div className="flex justify-between text-xs">
-                        <span className="text-muted-foreground">Total verdi:</span>
-                        <span className="font-medium">
-                          {formatPrice(batchData.pricePerSkein * (batchData.quantity || batch.totalQuantity))}
-                        </span>
-                      </div>
-                    )}
-
-                    {/* Location */}
-                    <div className="flex justify-between text-xs">
-                      <span className="text-muted-foreground">Lokasjon:</span>
-                      <span className="font-medium flex items-center gap-1">
-                        <MapPin className="h-3 w-3" />
-                        {batch.location.name}
-                      </span>
-                    </div>
+                    {/* Location removed for compact UI */}
 
                     {/* Purchase date */}
                     {batch.purchaseDate && (
@@ -449,23 +437,9 @@ export function BatchGrid({ masterId, hideMasterHeader = false, hideTotals = fal
                       </div>
                     )}
 
-                    {/* Condition */}
-                    <div className="flex justify-between text-xs">
-                      <span className="text-muted-foreground">Tilstand:</span>
-                      <Badge variant={batchData.condition === 'Ny' ? 'default' : 'secondary'}>
-                        {batchData.condition || 'Ikke angitt'}
-                      </Badge>
-                    </div>
+                    {/* Condition removed for compact UI */}
 
-                    {/* Color code */}
-                    {batchData.colorCode && (
-                      <div className="flex justify-between text-xs">
-                        <span className="text-muted-foreground">Fargekode:</span>
-                        <span className="font-medium font-mono text-xs">
-                          {batchData.colorCode}
-                        </span>
-                      </div>
-                    )}
+                    {/* Color code moved under header */}
 
                     {/* Notes */}
                     {batchData.notes && (

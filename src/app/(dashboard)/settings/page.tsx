@@ -24,8 +24,9 @@ import { useSession } from 'next-auth/react'
 
 export default function SettingsPage() {
   const { data: session, status } = useSession()
-  const profilesQuery = trpc.users.getLabelProfiles.useQuery(undefined, { enabled: status === 'authenticated', retry: 0 })
-  const profileQuery = trpc.users.getProfile.useQuery(undefined, { enabled: status === 'authenticated', retry: 0 })
+  const commonOpts = { enabled: status === 'authenticated', retry: 0, refetchOnWindowFocus: false, refetchOnMount: false, staleTime: 5 * 60 * 1000 } as const
+  const profilesQuery = trpc.users.getLabelProfiles.useQuery(undefined, commonOpts)
+  const profileQuery = trpc.users.getProfile.useQuery(undefined, commonOpts)
   const updateUser = trpc.users.updateProfile.useMutation({ onSuccess: () => { profileQuery.refetch() } })
   const createProfile = trpc.users.createLabelProfile.useMutation({ onSuccess: () => profilesQuery.refetch() })
   const updateProfile = trpc.users.updateLabelProfile.useMutation({ onSuccess: () => profilesQuery.refetch() })

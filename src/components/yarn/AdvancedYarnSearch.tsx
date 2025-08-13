@@ -5,7 +5,7 @@ import { Search, Filter, X, Calendar, DollarSign, Package, Palette, ChevronDown 
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Badge } from '@/components/ui/badge'
 import { Slider } from '@/components/ui/slider'
@@ -131,62 +131,39 @@ export function AdvancedYarnSearch({ onSearch, onClear, isLoading, compact = fal
 
   return (
     <Card>
-      <CardHeader className={compact ? 'py-2' : undefined}>
-        <div className="flex items-center justify-between">
-          <div>
-            <CardTitle className={`flex items-center gap-2 ${compact ? 'text-base' : ''}`}>
-              <Search className={compact ? 'h-4 w-4' : 'h-5 w-5'} />
-              Avansert søk
-            </CardTitle>
-            <CardDescription className={compact ? 'text-xs' : undefined}>
-              Søk og filtrer garn etter ulike kriterier
-            </CardDescription>
-          </div>
-          <div className="flex items-center gap-2">
-            {activeFilters > 0 && (
-              <Badge variant="secondary" className={compact ? 'text-[10px] h-5' : undefined}>
-                {activeFilters} filter{activeFilters !== 1 ? 'e' : ''}
-              </Badge>
-            )}
-            <Collapsible open={isExpanded} onOpenChange={setIsExpanded}>
-              <CollapsibleTrigger asChild>
-                <Button variant="outline" size="sm" className={compact ? 'h-7' : undefined}>
-                  <Filter className={compact ? 'h-3 w-3 mr-1.5' : 'h-4 w-4 mr-2'} />
-                  {isExpanded ? 'Enkel søk' : 'Avansert'}
-                  <ChevronDown className={`ml-2 transition-transform ${isExpanded ? 'rotate-180' : ''} ${compact ? 'h-3 w-3' : 'h-4 w-4'}`} />
-                </Button>
-              </CollapsibleTrigger>
-            </Collapsible>
-          </div>
-        </div>
-      </CardHeader>
-
-      <CardContent className={compact ? 'space-y-3 py-2' : 'space-y-6'}>
-        {/* Basic Search */}
-        <div className={compact ? 'flex gap-2 items-center' : 'flex gap-2'}>
-          <div className="relative flex-1">
-            <Search className={`absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground ${compact ? 'h-3 w-3' : 'h-4 w-4'}`} />
-            <Input
-              placeholder="Søk i garn, produsent, farge, notater..."
-              value={filters.searchQuery}
-              onChange={(e) => updateFilter('searchQuery', e.target.value)}
-              className={`pl-10 ${compact ? 'h-8' : ''}`}
-            />
-          </div>
-          <Button onClick={handleSearch} disabled={isLoading} className={compact ? 'h-8' : undefined}>
-            {isLoading ? 'Søker...' : 'Søk'}
-          </Button>
-          {activeFilters > 0 && (
-            <Button variant="outline" onClick={handleClear} className={compact ? 'h-8' : undefined}>
-              <X className="h-4 w-4 mr-2" />
-              Nullstill
-            </Button>
-          )}
-        </div>
-
-        {/* Advanced Filters */}
+      <CardContent className={compact ? 'space-y-3 py-2' : 'space-y-4'}>
         <Collapsible open={isExpanded} onOpenChange={setIsExpanded}>
-          <CollapsibleContent className={compact ? 'space-y-4' : 'space-y-6'}>
+          {/* One-line search row */}
+          <div className={compact ? 'flex gap-2 items-center' : 'flex gap-2 items-center'}>
+            <div className="relative flex-1">
+              <Search className={`absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground ${compact ? 'h-3 w-3' : 'h-4 w-4'}`} />
+              <Input
+                placeholder="Søk i garn, produsent, farge, notater..."
+                value={filters.searchQuery}
+                onChange={(e) => updateFilter('searchQuery', e.target.value)}
+                className={`pl-10 ${compact ? 'h-8' : ''}`}
+              />
+            </div>
+            <Button onClick={handleSearch} disabled={isLoading} className={compact ? 'h-8' : undefined}>
+              {isLoading ? 'Søker...' : 'Søk'}
+            </Button>
+            {activeFilters > 0 && (
+              <Button variant="outline" onClick={handleClear} className={compact ? 'h-8' : undefined}>
+                <X className="h-4 w-4 mr-2" />
+                Nullstill
+              </Button>
+            )}
+            <CollapsibleTrigger asChild>
+              <Button variant="outline" size="sm" className={compact ? 'h-8' : undefined}>
+                <Filter className={compact ? 'h-3 w-3 mr-1.5' : 'h-4 w-4 mr-2'} />
+                Avansert
+                <ChevronDown className={`ml-2 transition-transform ${isExpanded ? 'rotate-180' : ''} ${compact ? 'h-3 w-3' : 'h-4 w-4'}`} />
+              </Button>
+            </CollapsibleTrigger>
+          </div>
+
+          {/* Advanced Filters */}
+          <CollapsibleContent className={compact ? 'space-y-4 mt-3' : 'space-y-6 mt-4'}>
             
             {/* Master Properties */}
             <div className="space-y-4">

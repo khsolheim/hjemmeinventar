@@ -61,8 +61,15 @@ export default function ScanPage() {
   const params = useSearchParams()
   const distributionCode = params?.get('d') || ''
   const { data: session, status } = useSession()
-  const profiles = trpc.users.getLabelProfiles.useQuery(undefined, { enabled: status === 'authenticated' })
-  const userProfile = trpc.users.getProfile.useQuery(undefined, { enabled: status === 'authenticated' })
+  const commonOpts = { retry: 0, refetchOnWindowFocus: false, refetchOnMount: false, staleTime: 5 * 60 * 1000 } as const
+  const profiles = trpc.users.getLabelProfiles.useQuery(undefined, { 
+    ...commonOpts, 
+    enabled: status === 'authenticated' && !!scanResult && scanResult.type === 'distribution' 
+  })
+  const userProfile = trpc.users.getProfile.useQuery(undefined, { 
+    ...commonOpts, 
+    enabled: status === 'authenticated' && !!scanResult && scanResult.type === 'distribution' 
+  })
   const [selectedProfileId, setSelectedProfileId] = useState('')
 
   useEffect(() => {

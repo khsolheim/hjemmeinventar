@@ -41,8 +41,9 @@ export function Header({ onToggleSidebar }: HeaderProps) {
   const [isQueueOpen, setIsQueueOpen] = useState(false)
   const [queued, setQueued] = useState<any[]>([])
   const [queueCount, setQueueCount] = useState(0)
-  const profiles = trpc.users.getLabelProfiles.useQuery(undefined, { enabled: status === 'authenticated' })
-  const userProfile = trpc.users.getProfile.useQuery(undefined, { enabled: status === 'authenticated' })
+  const commonOpts = { retry: 0, refetchOnWindowFocus: false, refetchOnMount: false, staleTime: 5 * 60 * 1000 } as const
+  const profiles = trpc.users.getLabelProfiles.useQuery(undefined, { ...commonOpts, enabled: status === 'authenticated' && isQueueOpen })
+  const userProfile = trpc.users.getProfile.useQuery(undefined, { ...commonOpts, enabled: status === 'authenticated' && isQueueOpen })
   const [selectedProfileId, setSelectedProfileId] = useState('')
 
   const refreshQueue = () => {
@@ -65,10 +66,11 @@ export function Header({ onToggleSidebar }: HeaderProps) {
   }, [])
 
   useEffect(() => {
+    if (!isQueueOpen) return
     if (!selectedProfileId && userProfile.data?.defaultLabelProfileId) {
       setSelectedProfileId(userProfile.data.defaultLabelProfileId)
     }
-  }, [userProfile.data, selectedProfileId])
+  }, [isQueueOpen, userProfile.data, selectedProfileId])
 
   const handleSignOut = async () => {
     try {
@@ -230,9 +232,9 @@ export function Header({ onToggleSidebar }: HeaderProps) {
                 <input id="pq-copies" type="number" min="1" max="10" defaultValue={1} className="w-full border rounded px-2 py-1 text-sm" />
               </div>
             </div>
-            <div>
+             <div>
               <label className="text-xs text-muted-foreground">Etikettmal</label>
-              <select id="pq-profile" className="w-full border rounded px-2 py-1 text-sm" value={selectedProfileId} onChange={(e) => setSelectedProfileId(e.target.value)}>
+               <select id="pq-profile" className="w-full border rounded px-2 py-1 text-sm" value={selectedProfileId} onChange={(e) => setSelectedProfileId(e.target.value)} disabled={profiles.isLoading}>
                 <option value="">(Bruk profil-logo/standard)</option>
                 {(profiles.data || []).map((p: any) => (
                   <option key={p.id} value={p.id}>{p.name}</option>

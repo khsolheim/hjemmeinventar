@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useSession } from 'next-auth/react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -41,15 +42,19 @@ interface NotificationCenterProps {
   className?: string
 }
 
+const EMPTY: any[] = []
+
 export function NotificationCenter({ className = '' }: NotificationCenterProps) {
   const [notifications, setNotifications] = useState<Notification[]>([])
   const [isOpen, setIsOpen] = useState(false)
   const [lastChecked, setLastChecked] = useState<Date>(new Date())
 
   // Hent gjenstander som snart utløper eller har andre problemer
-  const { data: itemsData } = trpc.items.getAll.useQuery({ limit: 1000 })
-  const items = itemsData?.items || []
-  const { data: loans = [] } = trpc.loans.getActiveLoans.useQuery()
+  const { status } = useSession()
+  const { data: itemsData } = trpc.items.getAll.useQuery({ limit: 1000 }, { enabled: status === 'authenticated' })
+  const items = (itemsData?.items ?? EMPTY)
+  const { data: loansData } = trpc.loans.getActiveLoans.useQuery(undefined, { enabled: status === 'authenticated' })
+  const loans = (loansData ?? EMPTY)
 
   // Generer notifikasjoner basert på data
   useEffect(() => {
@@ -150,9 +155,10 @@ export function NotificationCenter({ className = '' }: NotificationCenterProps) 
       setNotifications(newNotifications)
     }
 
-    if (items.length > 0) {
+    if (items.length > 0 || loans.length > 0) {
       generateNotifications()
     }
+  // items/loans are stable due to EMPTY constant when undefined
   }, [items, loans])
 
   // Merk notifikasjon som lest
