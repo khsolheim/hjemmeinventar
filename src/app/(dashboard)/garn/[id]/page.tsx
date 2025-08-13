@@ -13,6 +13,7 @@ export default function YarnDetailPage() {
   const id = Array.isArray(params?.id) ? params.id[0] : (params?.id as string)
   const { data: master } = trpc.items.getById.useQuery(id!, { enabled: !!id })
   const { data: totals } = trpc.yarn.getMasterTotals.useQuery({ masterId: id! }, { enabled: !!id })
+  const { data: colors } = trpc.yarn.getColorsForMaster.useQuery({ masterId: id! }, { enabled: !!id })
 
   if (!id) return null
 
@@ -109,6 +110,27 @@ export default function YarnDetailPage() {
               </div>
             </div>
           </div>
+
+          {/* Colors grid (compact) */}
+          {colors && colors.length > 0 && (
+            <div className="mt-6">
+              <h3 className="text-sm font-medium mb-2">Farger</h3>
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+                {colors.map((c) => (
+                  <Link key={c.id} href={`/garn/${id}/farge/${c.id}`} className="rounded-lg border p-3 hover:bg-muted/40 transition-colors">
+                    <div className="flex items-center gap-2">
+                      <span className="inline-block w-4 h-4 rounded" style={{ backgroundColor: c.colorCode || '#e5e7eb' }} />
+                      <span className="text-sm font-medium truncate">{c.name}</span>
+                    </div>
+                    <div className="mt-2 text-xs text-muted-foreground flex justify-between">
+                      <span>{c.batchCount} batches</span>
+                      <span>{c.skeinCount} nøster</span>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Batches */}
           <div className="mt-6">
