@@ -14,6 +14,8 @@ import { YarnProjectIntegration } from './YarnProjectIntegration'
 import { YarnBulkOperations } from './YarnBulkOperations'
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
 import { ChevronDown } from 'lucide-react'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 
 interface BatchGridProps {
   masterId: string
@@ -44,6 +46,17 @@ export function BatchGrid({ masterId, hideMasterHeader = false, hideTotals = fal
     onError: (error) => {
       toast.error('Feil ved sletting av batch')
       console.error(error)
+    }
+  })
+
+  const updateBatchMutation = trpc.yarn.updateBatch.useMutation({
+    onSuccess: () => {
+      refetchBatches(); refetchTotals();
+      toast.success('Batch oppdatert')
+    },
+    onError: (e) => {
+      toast.error('Kunne ikke oppdatere batch')
+      console.error(e)
     }
   })
 
@@ -273,32 +286,60 @@ export function BatchGrid({ masterId, hideMasterHeader = false, hideTotals = fal
                         </CardDescription>
                       </div>
                        <div className="flex items-center gap-1">
-                        <Button variant="ghost" size="sm" onClick={() => {
-                          const newBatchNumber = prompt('Batchnummer', batchData.batchNumber || '')
-                          const newColor = prompt('Farge', batchData.color || '')
-                          const newColorCode = prompt('Fargekode (valgfritt)', batchData.colorCode || '')
-                          const newQuantityStr = prompt('Antall nøster', String(batchData.quantity || batch.totalQuantity))
-                          const newPriceStr = prompt('Pris per nøste (kr)', String(batchData.pricePerSkein || ''))
-                          const updates: any = {}
-                          if (newBatchNumber !== null) updates.batchNumber = newBatchNumber
-                          if (newColor !== null) updates.color = newColor
-                          if (newColorCode !== null) updates.colorCode = newColorCode
-                          if (newQuantityStr !== null && newQuantityStr !== '') updates.quantity = Number(newQuantityStr)
-                          if (newPriceStr !== null && newPriceStr !== '') updates.pricePerSkein = Number(newPriceStr)
-                          // optimistic local message; real update via tRPC handled below
-                          ;(async () => {
-                            try {
-                              await (await import('@/lib/trpc/client')).trpc.yarn.updateBatch.mutateAsync({ batchId: batch.id, ...updates } as any)
-                              refetchBatches(); refetchTotals()
-                              toast.success('Batch oppdatert')
-                            } catch (e) {
-                              toast.error('Kunne ikke oppdatere batch')
-                              console.error(e)
-                            }
-                          })()
-                        }}>
-                          <Edit className="h-3 w-3" />
-                        </Button>
+                        <Dialog>
+                          <DialogTrigger asChild>
+                            <Button variant="ghost" size="sm">
+                              <Edit className="h-3 w-3" />
+                            </Button>
+                          </DialogTrigger>
+                          <DialogContent className="max-w-md">
+                            <DialogHeader>
+                              <DialogTitle>Rediger batch</DialogTitle>
+                              <DialogDescription>Oppdater feltene og lagre</DialogDescription>
+                            </DialogHeader>
+                            <div className="space-y-3">
+                              <div>
+                                <Label>Batchnummer</Label>
+                                <Input defaultValue={batchData.batchNumber || ''} id={`bn-${batch.id}`} />
+                              </div>
+                              <div className="grid grid-cols-2 gap-2">
+                                <div>
+                                  <Label>Farge</Label>
+                                  <Input defaultValue={batchData.color || ''} id={`color-${batch.id}`} />
+                                </div>
+                                <div>
+                                  <Label>Fargekode</Label>
+                                  <Input defaultValue={batchData.colorCode || ''} id={`code-${batch.id}`} />
+                                </div>
+                              </div>
+                              <div className="grid grid-cols-2 gap-2">
+                                <div>
+                                  <Label>Antall nøster</Label>
+                                  <Input type="number" defaultValue={batchData.quantity || batch.totalQuantity} id={`qty-${batch.id}`} />
+                                </div>
+                                <div>
+                                  <Label>Pris pr nøste (kr)</Label>
+                                  <Input type="number" step="0.01" defaultValue={batchData.pricePerSkein || ''} id={`price-${batch.id}`} />
+                                </div>
+                              </div>
+                              <div className="flex justify-end">
+                                <Button onClick={() => {
+                                  const updates: any = {
+                                    batchId: batch.id,
+                                    batchNumber: (document.getElementById(`bn-${batch.id}`) as HTMLInputElement)?.value,
+                                    color: (document.getElementById(`color-${batch.id}`) as HTMLInputElement)?.value,
+                                    colorCode: (document.getElementById(`code-${batch.id}`) as HTMLInputElement)?.value,
+                                    quantity: Number((document.getElementById(`qty-${batch.id}`) as HTMLInputElement)?.value),
+                                    pricePerSkein: Number((document.getElementById(`price-${batch.id}`) as HTMLInputElement)?.value)
+                                  }
+                                  updateBatchMutation.mutate(updates)
+                                }}>
+                                  Lagre
+                                </Button>
+                              </div>
+                            </div>
+                          </DialogContent>
+                        </Dialog>
                         <AlertDialog>
                           <AlertDialogTrigger asChild>
                             <Button variant="ghost" size="sm" className="text-red-600 hover:text-red-700">
