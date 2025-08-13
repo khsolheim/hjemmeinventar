@@ -755,6 +755,28 @@ export const yarnRouter = createTRPCRouter({
       imageUrl: z.string().optional()
     }))
     .mutation(async ({ ctx, input }) => {
+      // Try to find existing color for this master by name (case-insensitive) and colorCode
+      const colorCategoryExisting = await ctx.db.category.findFirst({ where: { name: 'Garn Farge' } })
+      if (colorCategoryExisting) {
+        const existingColors = await ctx.db.item.findMany({
+          where: {
+            userId: ctx.user.id,
+            categoryId: colorCategoryExisting.id,
+            OR: [
+              { relatedItems: { some: { id: input.masterId } } },
+              { relatedTo: { some: { id: input.masterId } } }
+            ]
+          }
+        })
+        const normalizedName = input.name.trim().toLowerCase()
+        const match = existingColors.find(c => {
+          const sameName = c.name.trim().toLowerCase() === normalizedName
+          const code = safeParseColorCode(c.categoryData)
+          const sameCode = (code || '').toLowerCase() === (input.colorCode || '').trim().toLowerCase()
+          return sameName && (!input.colorCode || sameCode)
+        })
+        if (match) return match
+      }
       // Finn/lag kategori "Garn Farge"
       let colorCategory = await ctx.db.category.findFirst({ where: { name: 'Garn Farge' } })
       if (!colorCategory) {
@@ -873,6 +895,63 @@ export const yarnRouter = createTRPCRouter({
       })
       return batches
     }),
+
+  // Oppdater farge
+  updateColor: protectedProcedure
+    .input(z.object({
+      colorId: z.string(),
+      name: z.string().min(1).optional(),
+      colorCode: z.string().optional(),
+      imageUrl: z.string().optional(),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const color = await ctx.db.item.findFirst({ where: { id: input.colorId, userId: ctx.user.id }, include: { category: true } })
+      if (!color || color.category?.name !== 'Garn Farge') {
+        throw new TRPCError({ code: 'NOT_FOUND', message: 'Farge ikke funnet' })
+      }
+      const current = color.categoryData ? JSON.parse(color.categoryData) : {}
+      const updated = {
+        ...current,
+        ...(input.colorCode !== undefined ? { colorCode: input.colorCode } : {}),
+      }
+      const result = await ctx.db.item.update({
+        where: { id: input.colorId },
+        data: {
+          ...(input.name ? { name: input.name } : {}),
+          ...(input.imageUrl ? { imageUrl: input.imageUrl } : {}),
+          categoryData: JSON.stringify(updated)
+        }
+      })
+      return result
+    }),
+
+  // Slett farge (kun hvis ingen batches er knyttet)
+  deleteColor: protectedProcedure
+    .input(z.object({ colorId: z.string() }))
+    .mutation(async ({ ctx, input }) => {
+      const color = await ctx.db.item.findFirst({ where: { id: input.colorId, userId: ctx.user.id }, include: { category: true } })
+      if (!color || color.category?.name !== 'Garn Farge') {
+        throw new TRPCError({ code: 'NOT_FOUND', message: 'Farge ikke funnet' })
+      }
+      const batchCategory = await ctx.db.category.findFirst({ where: { name: 'Garn Batch' } })
+      if (batchCategory) {
+        const count = await ctx.db.item.count({
+          where: {
+            userId: ctx.user.id,
+            categoryId: batchCategory.id,
+            OR: [
+              { relatedItems: { some: { id: input.colorId } } },
+              { relatedTo: { some: { id: input.colorId } } }
+            ]
+          }
+        })
+        if (count > 0) {
+          throw new TRPCError({ code: 'BAD_REQUEST', message: 'Kan ikke slette farge med tilknyttede batches' })
+        }
+      }
+      await ctx.db.item.delete({ where: { id: input.colorId } })
+      return { success: true }
+    })
 
   // Hent alle yarn masters for brukeren
   getAllMasters: protectedProcedure

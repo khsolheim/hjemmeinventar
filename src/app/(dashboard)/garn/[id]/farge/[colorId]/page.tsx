@@ -3,7 +3,7 @@
 import { useParams } from 'next/navigation'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
-import { ChevronLeft } from 'lucide-react'
+import { ChevronLeft, Pencil, Trash2, Plus } from 'lucide-react'
 import { trpc } from '@/lib/trpc/client'
 
 export default function YarnColorPage() {
@@ -11,9 +11,12 @@ export default function YarnColorPage() {
   const masterId = Array.isArray(params?.id) ? params.id[0] : (params?.id as string)
   const colorId = Array.isArray(params?.colorId) ? params.colorId[0] : (params?.colorId as string)
 
+  const utils = trpc.useUtils()
   const { data: colors } = trpc.yarn.getColorsForMaster.useQuery({ masterId }, { enabled: !!masterId })
   const color = colors?.find(c => c.id === colorId)
   const { data: batches } = trpc.yarn.getBatchesForColor.useQuery({ colorId }, { enabled: !!colorId })
+  const updateColor = trpc.yarn.updateColor.useMutation({ onSuccess: () => utils.yarn.getColorsForMaster.invalidate({ masterId }) })
+  const deleteColor = trpc.yarn.deleteColor.useMutation({ onSuccess: () => utils.yarn.getColorsForMaster.invalidate({ masterId }) })
 
   return (
     <div className="space-y-4">
@@ -29,17 +32,40 @@ export default function YarnColorPage() {
         </div>
       </div>
 
-      <div>
+      <div className="flex items-center justify-between">
         <h1 className="text-2xl font-semibold">{color?.name || 'Farge'}</h1>
-        {color?.colorCode && (
-          <div className="mt-2 flex items-center gap-2 text-sm">
-            <span className="inline-block w-4 h-4 rounded" style={{ backgroundColor: color.colorCode }} />
-            <span className="text-muted-foreground">{color.colorCode}</span>
-          </div>
-        )}
+        <div className="flex items-center gap-2">
+          <Button size="sm" variant="outline" onClick={() => {
+            const name = prompt('Nytt navn på farge', color?.name || '')
+            const code = prompt('Ny fargekode (valgfritt, f.eks. #FFB6C1)', color?.colorCode || '')
+            if (name) updateColor.mutate({ colorId, name, colorCode: code || undefined })
+          }}>
+            <Pencil className="h-3 w-3 mr-1"/> Rediger
+          </Button>
+          <Button size="sm" variant="destructive" onClick={() => {
+            if (confirm('Slette denne fargen? (Kun mulig hvis ingen batches er knyttet)')) deleteColor.mutate({ colorId })
+          }}>
+            <Trash2 className="h-3 w-3 mr-1"/> Slett
+          </Button>
+        </div>
       </div>
+      {color?.colorCode && (
+        <div className="mt-2 flex items-center gap-2 text-sm">
+          <span className="inline-block w-4 h-4 rounded" style={{ backgroundColor: color.colorCode }} />
+          <span className="text-muted-foreground">{color.colorCode}</span>
+        </div>
+      )}
 
       {/* Batches for this color */}
+      <div className="flex items-center justify-between">
+        <div className="text-sm text-muted-foreground">{batches?.length || 0} batches</div>
+        <Button size="sm" className="bg-green-600 hover:bg-green-700" onClick={() => {
+          alert('TODO: Åpne batch-veiviser forhåndsutfylt med denne fargen')
+        }}>
+          <Plus className="h-3 w-3 mr-1"/> Ny batch
+        </Button>
+      </div>
+
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {(batches || []).map(b => {
           const data = b.categoryData ? JSON.parse(b.categoryData) : {}
