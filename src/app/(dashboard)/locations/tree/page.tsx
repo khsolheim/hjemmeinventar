@@ -389,7 +389,7 @@ export default function LocationsTreePage() {
 
   if (isLoading) {
     return (
-      <div className="container mx-auto px-4 py-8">
+      <div className="page container mx-auto px-4 py-8">
         <div className="flex items-center justify-center py-12">
           <Loader2 className="w-8 h-8 animate-spin" />
           <span className="ml-2">Laster lokasjoner...</span>
@@ -400,7 +400,7 @@ export default function LocationsTreePage() {
 
   if (error) {
     return (
-      <div className="container mx-auto px-4 py-8">
+      <div className="page container mx-auto px-4 py-8">
         <div className="text-center py-12">
           <h3 className="text-lg font-medium text-red-600 mb-2">Feil ved lasting av lokasjoner</h3>
           <p className="text-sm text-muted-foreground mb-4">{error.message}</p>
@@ -411,9 +411,9 @@ export default function LocationsTreePage() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8">
+    <div className="page container mx-auto px-4 py-8">
       {/* Header */}
-      <div className="flex items-center justify-between mb-8">
+      <div className="flex items-center justify-between mb-8 cq">
         <div className="flex items-center gap-4">
           <Link href="/locations">
             <Button variant="outline" size="sm">
@@ -456,7 +456,7 @@ export default function LocationsTreePage() {
       </div>
 
       {/* Search and Filters */}
-      <div className="flex gap-4 mb-6">
+      <div className="flex gap-4 mb-6 cq">
         <div className="flex-1 relative">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
           <Input

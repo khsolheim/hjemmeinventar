@@ -96,7 +96,7 @@ export default function InviteUserPage() {
 
   if (householdLoading) {
     return (
-      <div className="container mx-auto px-4 py-8">
+      <div className="page container mx-auto px-4 py-8">
         <div className="flex justify-center items-center h-64">
           <Loader2 className="h-8 w-8 animate-spin" />
         </div>
@@ -106,7 +106,7 @@ export default function InviteUserPage() {
 
   if (!household || household.myRole !== 'ADMIN') {
     return (
-      <div className="container mx-auto px-4 py-8">
+      <div className="page container mx-auto px-4 py-8">
         <Card>
           <CardContent className="flex items-center justify-center h-64">
             <div className="text-center">
@@ -124,7 +124,7 @@ export default function InviteUserPage() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8 max-w-2xl">
+    <div className="page container mx-auto px-4 py-8 max-w-2xl cq">
       {/* Header */}
       <div className="mb-8">
         <div className="flex items-center gap-4 mb-4">

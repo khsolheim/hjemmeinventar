@@ -241,7 +241,7 @@ export default function LocationsMobilePage() {
 
   if (isLoading) {
     return (
-      <div className="container mx-auto px-4 py-8">
+      <div className="page container mx-auto px-4 py-8">
         <div className="flex items-center justify-center py-12">
           <Loader2 className="w-8 h-8 animate-spin" />
           <span className="ml-2">Laster lokasjoner...</span>
@@ -252,7 +252,7 @@ export default function LocationsMobilePage() {
 
   if (error) {
     return (
-      <div className="container mx-auto px-4 py-8">
+      <div className="page container mx-auto px-4 py-8">
         <div className="text-center py-12">
           <h3 className="text-lg font-medium text-red-600 mb-2">Feil ved lasting av lokasjoner</h3>
           <p className="text-sm text-muted-foreground mb-4">{error.message}</p>
@@ -263,7 +263,7 @@ export default function LocationsMobilePage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 cq">
       {/* Mobile Header */}
       <div className="sticky top-0 z-40 bg-white border-b shadow-sm">
         <div className="flex items-center justify-between p-4">

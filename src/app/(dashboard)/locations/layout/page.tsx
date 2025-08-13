@@ -137,7 +137,7 @@ export default function LocationsLayoutPage() {
 
   if (isLoading) {
     return (
-      <div className="container mx-auto px-4 py-8">
+      <div className="page container mx-auto px-4 py-8">
         <div className="flex items-center justify-center py-12">
           <Loader2 className="w-8 h-8 animate-spin" />
           <span className="ml-2">Laster lokasjoner...</span>
@@ -148,7 +148,7 @@ export default function LocationsLayoutPage() {
 
   if (error) {
     return (
-      <div className="container mx-auto px-4 py-8">
+      <div className="page container mx-auto px-4 py-8">
         <div className="text-center py-12">
           <h3 className="text-lg font-medium text-red-600 mb-2">Feil ved lasting av lokasjoner</h3>
           <p className="text-sm text-muted-foreground mb-4">{error.message}</p>
@@ -159,10 +159,10 @@ export default function LocationsLayoutPage() {
   }
 
   return (
-    <div className="h-screen flex flex-col">
+    <div className="h-screen flex flex-col cq layout-header">
       {/* Header */}
       <div className="border-b bg-white px-4 py-3">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between header-actions">
           <div className="flex items-center gap-4">
             <Link href="/locations">
               <Button variant="outline" size="sm">
@@ -175,7 +175,7 @@ export default function LocationsLayoutPage() {
                 <Layout className="w-6 h-6" />
                 Visuell Layout Editor
               </h1>
-              <p className="text-sm text-muted-foreground">
+              <p className="text-sm text-muted-foreground secondary-text">
                 Tegn og organiser rominnredning visuelt
               </p>
             </div>
@@ -238,9 +238,9 @@ export default function LocationsLayoutPage() {
       </div>
 
       {/* Main content */}
-      <div className="flex-1 flex">
+      <div className="flex-1 flex cq layout-main">
         {/* Sidebar */}
-        <div className="w-80 border-r bg-gray-50">
+        <div className="layout-sidebar w-80 border-r bg-gray-50">
           <Tabs defaultValue="layouts" className="h-full flex flex-col">
             <TabsList className="grid w-full grid-cols-2 m-2">
               <TabsTrigger value="layouts">Layouts</TabsTrigger>
@@ -390,7 +390,7 @@ export default function LocationsLayoutPage() {
         </div>
 
         {/* Canvas area */}
-        <div className="flex-1">
+        <div className="flex-1 layout-canvas">
           {selectedRoom ? (
             <LayoutCanvas
               roomId={selectedRoom}

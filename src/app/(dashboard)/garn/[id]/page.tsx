@@ -29,7 +29,7 @@ export default function YarnDetailPage() {
   const data = master?.categoryData ? JSON.parse(master.categoryData) : {}
 
   return (
-    <div className="space-y-4">
+    <div className="page container mx-auto px-4 py-8 cq space-y-4">
       <div className="flex items-center justify-between">
         <Button asChild variant="outline">
           <Link href="/garn">

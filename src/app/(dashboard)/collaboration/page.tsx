@@ -99,11 +99,11 @@ export default function CollaborationPage() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8">
+    <div className="page container mx-auto px-4 py-8 cq">
       {/* Header */}
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold">Real-time Samarbeid</h1>
-        <p className="text-muted-foreground">
+      <div className="mb-8 cq">
+        <h1 className="text-3xl font-bold title">Real-time Samarbeid</h1>
+        <p className="text-muted-foreground secondary-text">
           Demo av live collaboration features med WebSocket teknologi
         </p>
       </div>

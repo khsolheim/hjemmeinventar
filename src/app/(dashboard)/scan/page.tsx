@@ -132,25 +132,25 @@ export default function ScanPage() {
 
   if (status !== 'authenticated') {
     return (
-      <div className="container mx-auto px-4 py-8">
+      <div className="page container mx-auto px-4 py-8">
         <h1 className="text-3xl font-bold">QR Scanner</h1>
       </div>
     )
   }
 
   return (
-    <div className="container mx-auto px-4 py-8">
+    <div className="page container mx-auto px-4 py-8 cq">
       {/* Header */}
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold">QR Scanner</h1>
-        <p className="text-muted-foreground">
+      <div className="mb-8 cq">
+        <h1 className="text-3xl font-bold title">QR Scanner</h1>
+        <p className="text-muted-foreground secondary-text">
           Skann QR-koder for å finne gjenstander og lokasjoner
         </p>
       </div>
 
       {/* Scanner Section */}
       {!scanResult && (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+        <div className="cq-grid items-grid gap-6 mb-8" style={{"--card-min":"320px"} as any}>
           {/* Camera Scanner */}
           <Card>
             <CardHeader>

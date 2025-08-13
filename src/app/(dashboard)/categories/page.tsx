@@ -112,7 +112,7 @@ export default function CategoriesPage() {
 
   if (isLoading) {
     return (
-      <div className="container mx-auto px-4 py-8">
+      <div className="page container mx-auto px-4 py-8">
         <div className="flex items-center justify-center py-12">
           <Loader2 className="w-8 h-8 animate-spin" />
           <span className="ml-2">Laster kategorier...</span>
@@ -123,7 +123,7 @@ export default function CategoriesPage() {
 
   if (error) {
     return (
-      <div className="container mx-auto px-4 py-8">
+      <div className="page container mx-auto px-4 py-8">
         <div className="text-center py-12">
           <h3 className="text-lg font-medium text-red-600 mb-2">Feil ved lasting av kategorier</h3>
           <p className="text-sm text-muted-foreground mb-4">{error.message}</p>
@@ -134,12 +134,12 @@ export default function CategoriesPage() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8">
+    <div className="page container mx-auto px-4 py-8">
       {/* Header */}
-      <div className="flex justify-between items-center mb-8">
+      <div className="flex justify-between items-center mb-8 cq">
         <div>
-          <h1 className="text-3xl font-bold">Kategorier</h1>
-          <p className="text-muted-foreground">
+          <h1 className="text-3xl font-bold title">Kategorier</h1>
+          <p className="text-muted-foreground secondary-text">
             Administrer kategori-system for smartere organisering
           </p>
         </div>
@@ -166,7 +166,7 @@ export default function CategoriesPage() {
       </div>
 
       {/* Statistics Overview */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+      <div className="cq-grid dashboard-grid gap-4 mb-8" style={{"--card-min":"220px"} as any}>
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center gap-2">
@@ -212,7 +212,7 @@ export default function CategoriesPage() {
       </div>
 
       {/* Categories Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+      <div className="cq-grid items-grid gap-6 mb-8" style={{"--card-min":"220px"} as any}>
         {categories.map((category) => (
           <Card key={category.id} className="group hover:shadow-lg hover:scale-[1.02] transition-all duration-200 cursor-pointer border-2 hover:border-primary/20">
             <div 

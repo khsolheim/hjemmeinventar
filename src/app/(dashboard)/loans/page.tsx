@@ -249,7 +249,7 @@ export default function LoansPage() {
 
   if (isLoading) {
     return (
-      <div className="container mx-auto px-4 py-8">
+      <div className="page container mx-auto px-4 py-8">
         <div className="flex items-center justify-center h-64">
           <Loader2 className="w-8 h-8 animate-spin" />
         </div>
@@ -258,12 +258,12 @@ export default function LoansPage() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8">
+    <div className="page container mx-auto px-4 py-8 cq">
       {/* Header */}
-      <div className="flex justify-between items-center mb-8">
+      <div className="flex justify-between items-center mb-8 cq">
         <div>
-          <h1 className="text-3xl font-bold">Utlån</h1>
-          <p className="text-muted-foreground">
+          <h1 className="text-3xl font-bold title">Utlån</h1>
+          <p className="text-muted-foreground secondary-text">
             Administrer utlånte gjenstander og hold oversikt over returner
           </p>
         </div>
@@ -275,7 +275,7 @@ export default function LoansPage() {
 
       {/* Stats Cards */}
       {stats && (
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+        <div className="cq-grid dashboard-grid gap-6 mb-8" style={{"--card-min":"220px"} as any}>
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Aktive utlån</CardTitle>
@@ -319,7 +319,7 @@ export default function LoansPage() {
       )}
 
       {/* Filters */}
-      <div className="flex gap-4 mb-6">
+      <div className="flex gap-4 mb-6 cq">
         <Input
           placeholder="Søk etter gjenstand eller person..."
           value={searchQuery}
@@ -340,7 +340,7 @@ export default function LoansPage() {
       </div>
 
       {/* Loans List */}
-      <div className="grid gap-4">
+      <div className="grid gap-4 cq">
         {filteredLoans.length === 0 ? (
           <Card>
             <CardContent className="flex items-center justify-center h-64">

@@ -26,7 +26,7 @@ export default function OnboardingPage() {
 
   if (isCompleted) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-purple-50 p-4">
+      <div className="page cq min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-purple-50 p-4">
         <Card className="max-w-md text-center">
           <CardHeader>
             <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -44,7 +44,7 @@ export default function OnboardingPage() {
 
   if (!showWizard) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-purple-50 p-4">
+      <div className="page cq min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-purple-50 p-4">
         <div className="max-w-4xl w-full">
           <div className="text-center mb-8">
             <div className="w-24 h-24 bg-gradient-to-br from-blue-100 to-purple-100 rounded-full flex items-center justify-center mx-auto mb-6">
@@ -59,7 +59,7 @@ export default function OnboardingPage() {
             </p>
           </div>
 
-          <div className="grid md:grid-cols-2 gap-6 mb-8">
+          <div className="cq-grid items-grid gap-6 mb-8" style={{"--card-min":"280px"} as any}>
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
@@ -127,7 +127,7 @@ export default function OnboardingPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-50 py-8 px-4">
+    <div className="page cq min-h-screen bg-gradient-to-br from-blue-50 to-purple-50 py-8 px-4">
       <OnboardingWizard 
         onComplete={handleComplete}
         onSkip={handleSkip}

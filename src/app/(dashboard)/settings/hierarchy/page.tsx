@@ -105,7 +105,7 @@ export default function HierarchySettingsPage() {
 
   if (loadingHouseholds || loadingMatrix || loadingRuleSets) {
     return (
-      <div className="container mx-auto p-6">
+      <div className="page container mx-auto p-6">
         <div className="flex items-center justify-center h-64">
           <RefreshCw className="h-6 w-6 animate-spin" />
           <span className="ml-2">Laster hierarki-innstillinger...</span>
@@ -116,7 +116,7 @@ export default function HierarchySettingsPage() {
 
   if (!householdId) {
     return (
-      <div className="container mx-auto p-6">
+      <div className="page container mx-auto p-6">
         <Alert>
           <Info className="h-4 w-4" />
           <AlertDescription>
@@ -128,7 +128,7 @@ export default function HierarchySettingsPage() {
   }
 
   return (
-    <div className="container mx-auto p-6 space-y-6">
+    <div className="page container mx-auto p-6 space-y-6 cq">
       {/* Header */}
       <div className="flex items-center gap-3">
         <Settings className="h-6 w-6" />

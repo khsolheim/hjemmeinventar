@@ -104,7 +104,7 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8">
+    <div className="page container mx-auto px-4 py-8">
       {/* Error Display */}
       {hasErrors && (
         <Card className="mb-8 border-red-200 bg-red-50">
@@ -132,15 +132,15 @@ export default function DashboardPage() {
       )}
 
       {/* Header */}
-      <div className="flex justify-between items-center mb-8">
+      <div className="flex justify-between items-center mb-8 cq">
         <div>
-          <h1 className="text-3xl font-bold">Dashboard</h1>
-          <p className="text-muted-foreground">
+          <h1 className="text-3xl font-bold title">Dashboard</h1>
+          <p className="text-muted-foreground secondary-text">
             Velkommen tilbake! Her er en oversikt over inventaret ditt.
           </p>
         </div>
         <Link href="/items">
-          <AccessibleButton aria-label="Legg til ny gjenstand">
+          <AccessibleButton aria-label="Legg til ny gjenstand" className="cta-button">
             <Plus className="w-4 h-4 mr-2" />
             Legg til gjenstand
           </AccessibleButton>
@@ -151,15 +151,15 @@ export default function DashboardPage() {
       <InstallPrompt />
 
       {/* Quick Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-        <Card>
+      <div className="cq-grid dashboard-grid gap-6 mb-8" style={{"--card-min":"220px"} as any}>
+        <Card className="stat-card">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
+            <CardTitle className="text-sm font-medium title">
               Totale gjenstander
             </CardTitle>
             <Package className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
-          <CardContent>
+          <CardContent className="min-h-[84px]">
             <div className="text-2xl font-bold">
               {isLoading ? (
                 <Loader2 className="w-6 h-6 animate-spin" />
@@ -176,14 +176,14 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="stat-card">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
+            <CardTitle className="text-sm font-medium title">
               Lokasjoner
             </CardTitle>
             <MapPin className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
-          <CardContent>
+          <CardContent className="min-h-[84px]">
             <div className="text-2xl font-bold">
               {isLoading ? (
                 <Loader2 className="w-6 h-6 animate-spin" />
@@ -200,14 +200,14 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="stat-card">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
+            <CardTitle className="text-sm font-medium title">
               QR-koder generert
             </CardTitle>
             <QrCode className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
-          <CardContent>
+          <CardContent className="min-h-[84px]">
             <div className="text-2xl font-bold">
               {isLoading ? (
                 <Loader2 className="w-6 h-6 animate-spin" />
@@ -224,14 +224,14 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="stat-card">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
+            <CardTitle className="text-sm font-medium title">
               Denne måneden
             </CardTitle>
             <TrendingUp className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
-          <CardContent>
+          <CardContent className="min-h-[84px]">
             <div className="text-2xl font-bold">
               {isLoading ? (
                 <Loader2 className="w-6 h-6 animate-spin" />
@@ -253,16 +253,20 @@ export default function DashboardPage() {
       <NotificationSummary className="mb-8" />
 
       {/* Quick Actions */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6 mb-8">
-        {!isOnboardingCompleted && (
-          <Card>
-            <CardHeader>
-              <CardTitle>Kom i gang</CardTitle>
-              <CardDescription>
-                Sett opp ditt første inventar på noen enkle steg
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
+      <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6 mb-8 cq">
+        <Card>
+          <CardHeader>
+            <CardTitle className="title">Kom i gang</CardTitle>
+            <CardDescription>
+              Sett opp ditt første inventar på noen enkle steg
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4 min-h-[240px]">
+            {isOnboardingCompleted ? (
+              <div className="text-sm text-muted-foreground">
+                Alt er klart! Du har rom, oppbevaringssteder og gjenstander.
+              </div>
+            ) : (
               <div className="flex items-center space-x-4">
                 <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
                   hasRooms ? 'bg-green-500 text-white' : 'bg-primary text-primary-foreground'
@@ -277,7 +281,7 @@ export default function DashboardPage() {
                 </div>
                 {!hasRooms && (
                   <Link href="/locations">
-                    <Button variant="outline" size="sm">
+                    <Button variant="outline" size="sm" className="cta-button">
                       Opprett rom
                     </Button>
                   </Link>
@@ -298,7 +302,7 @@ export default function DashboardPage() {
                 </div>
                 {!hasStorageLocations && hasRooms && (
                   <Link href="/locations">
-                    <Button variant="outline" size="sm">
+                    <Button variant="outline" size="sm" className="cta-button">
                       Legg til hyller
                     </Button>
                   </Link>
@@ -319,24 +323,24 @@ export default function DashboardPage() {
                 </div>
                 {!hasItems && hasStorageLocations && (
                   <Link href="/items">
-                    <Button variant="outline" size="sm">
+                    <Button variant="outline" size="sm" className="cta-button">
                       Legg til gjenstander
                     </Button>
                   </Link>
                 )}
               </div>
-            </CardContent>
-          </Card>
-        )}
+            )}
+          </CardContent>
+        </Card>
 
         <Card>
           <CardHeader>
-            <CardTitle>Nylige aktiviteter</CardTitle>
+            <CardTitle className="title">Nylige aktiviteter</CardTitle>
             <CardDescription>
               Oversikt over dine siste handlinger
             </CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="min-h-[240px]">
             {activitiesLoading ? (
               <div className="flex items-center justify-center py-8">
                 <Loader2 className="w-6 h-6 animate-spin" />
@@ -381,19 +385,19 @@ export default function DashboardPage() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between">
             <div>
-              <CardTitle>Nylig lagt til</CardTitle>
+              <CardTitle className="title">Nylig lagt til</CardTitle>
               <CardDescription>
                 Dine sist registrerte gjenstander
               </CardDescription>
             </div>
             <Link href="/items">
-              <Button variant="outline" size="sm">
+              <Button variant="outline" size="sm" className="cta-button">
                 <Search className="w-4 h-4 mr-2" />
                 Søk i inventar
               </Button>
             </Link>
           </CardHeader>
-          <CardContent>
+          <CardContent className="min-h-[240px]">
             {isLoading ? (
               <div className="flex items-center justify-center py-8">
                 <Loader2 className="w-6 h-6 animate-spin" />

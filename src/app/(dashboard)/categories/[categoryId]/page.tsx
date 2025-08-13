@@ -124,7 +124,7 @@ export default function CategoryDetailPage({}: CategoryDetailPageProps) {
 
   if (categoryLoading) {
     return (
-      <div className="container mx-auto px-4 py-8">
+      <div className="page container mx-auto px-4 py-8">
         <div className="flex items-center justify-center py-12">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
           <span className="ml-2">Laster kategori...</span>
@@ -135,7 +135,7 @@ export default function CategoryDetailPage({}: CategoryDetailPageProps) {
 
   if (categoryError || !category) {
     return (
-      <div className="container mx-auto px-4 py-8">
+      <div className="page container mx-auto px-4 py-8">
         <div className="text-center py-12">
           <h3 className="text-lg font-medium text-red-600 mb-2">Feil ved lasting av kategori</h3>
           <p className="text-sm text-muted-foreground mb-4">
@@ -150,9 +150,9 @@ export default function CategoryDetailPage({}: CategoryDetailPageProps) {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8">
+    <div className="page container mx-auto px-4 py-8">
       {/* Header with navigation */}
-      <div className="flex items-center gap-4 mb-6">
+      <div className="flex items-center gap-4 mb-6 cq">
         <Button 
           variant="outline" 
           size="sm"
@@ -173,7 +173,7 @@ export default function CategoryDetailPage({}: CategoryDetailPageProps) {
       </div>
 
       {/* Category Header */}
-      <div className="flex items-start justify-between mb-8">
+      <div className="flex items-start justify-between mb-8 cq">
         <div className="flex items-start gap-4">
           <div className="w-16 h-16 bg-primary/10 rounded-xl flex items-center justify-center">
             <span className="text-3xl">{category.icon || '📦'}</span>
@@ -344,7 +344,7 @@ export default function CategoryDetailPage({}: CategoryDetailPageProps) {
       </Card>
 
       {/* Search and filters */}
-      <div className="flex items-center justify-between gap-4 mb-6">
+      <div className="flex items-center justify-between gap-4 mb-6 cq">
         <div className="flex items-center gap-4 flex-1">
           <div className="relative flex-1 max-w-md">
             <Search className="w-4 h-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground" />
@@ -415,9 +415,9 @@ export default function CategoryDetailPage({}: CategoryDetailPageProps) {
         </Card>
       ) : (
         <div className={viewMode === 'grid' 
-          ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4"
+          ? "cq-grid items-grid gap-4"
           : "space-y-4"
-        }>
+        } style={viewMode === 'grid' ? ({"--card-min":"220px"} as any) : undefined}>
           {filteredItems.map((item) => (
             <Card key={item.id} className="group hover:shadow-md transition-shadow">
               <CardHeader className="pb-3">

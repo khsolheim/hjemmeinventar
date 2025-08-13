@@ -43,9 +43,10 @@ export function YarnMasterDashboard() {
     search: searchTerm || undefined,
     filters: searchFilters || undefined
   }, {
-    refetchOnWindowFocus: true,
-    refetchOnMount: true,
-    staleTime: 0 // Always refetch to ensure fresh data
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
+    staleTime: 30000,
+    keepPreviousData: true
   })
 
   const handleAdvancedSearch = (filters: any) => {
@@ -87,17 +88,28 @@ export function YarnMasterDashboard() {
 
   if (isLoading) {
     return (
-      <div className="space-y-6">
-        <div className="flex justify-between items-center">
-          <h1 className="text-3xl font-bold">Garn Oversikt</h1>
+      <div className="cq space-y-2">
+        <div className="flex justify-between items-center py-1">
+          <div>
+            <div className="h-6 bg-muted rounded w-40" />
+            <div className="h-3 bg-muted rounded w-64 mt-2" />
+          </div>
+          <div className="h-9 bg-muted rounded w-40" />
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          {[...Array(4)].map((_, i) => (
-            <Card key={i} className="animate-pulse">
-              <CardHeader className="space-y-2">
-                <div className="h-4 bg-gray-200 rounded w-3/4"></div>
-                <div className="h-8 bg-gray-200 rounded w-1/2"></div>
+        <div className="cq-grid yarn-grid gap-6" style={{"--card-min":"220px"} as any}>
+          {[...Array(6)].map((_, i) => (
+            <Card key={i} className="min-h-[220px] animate-pulse">
+              <CardHeader className="min-h-[56px]">
+                <div className="h-4 bg-muted rounded w-3/4" />
               </CardHeader>
+              <CardContent className="min-h-[120px]">
+                <div className="space-y-2">
+                  <div className="h-3 bg-muted rounded w-1/2" />
+                  <div className="h-3 bg-muted rounded w-2/3" />
+                  <div className="h-3 bg-muted rounded w-1/3" />
+                </div>
+                <div className="mt-4 h-2 bg-muted rounded-full w-full"></div>
+              </CardContent>
             </Card>
           ))}
         </div>
@@ -106,7 +118,7 @@ export function YarnMasterDashboard() {
   }
 
   return (
-    <div className="space-y-2">
+    <div className="cq space-y-2">
       {/* Header */}
       <div className="flex justify-between items-center py-1">
         <div>
@@ -124,13 +136,13 @@ export function YarnMasterDashboard() {
       </div>
 
       {/* Statistics Cards - compact */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-1">
+      <div className="cq-grid yarn-grid gap-1" style={{"--card-min":"220px"} as any}>
         <Card className="py-3">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 py-1 px-3">
             <CardTitle className="text-xs font-medium">Garn-typer</CardTitle>
             <Package2 className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
-          <CardContent className="py-1 px-3">
+          <CardContent className="py-1 px-3 min-h-[56px]">
             <div className="text-lg font-bold leading-none">{overallStats.totalMasters}</div>
             <p className="text-[10px] text-muted-foreground mt-1">
               Forskjellige garntyper
@@ -143,7 +155,7 @@ export function YarnMasterDashboard() {
             <CardTitle className="text-xs font-medium">Totalt Nøster</CardTitle>
             <Hash className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
-          <CardContent className="py-1 px-3">
+          <CardContent className="py-1 px-3 min-h-[56px]">
             <div className="text-lg font-bold leading-none">{overallStats.totalSkeins}</div>
             <p className="text-[10px] text-muted-foreground mt-1">
               På tvers av alle typer
@@ -156,7 +168,7 @@ export function YarnMasterDashboard() {
             <CardTitle className="text-xs font-medium">Total Verdi</CardTitle>
             <DollarSign className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
-          <CardContent className="py-1 px-3">
+          <CardContent className="py-1 px-3 min-h-[56px]">
             <div className="text-lg font-bold leading-none">{overallStats.totalValue.toFixed(0)} kr</div>
             <p className="text-[10px] text-muted-foreground mt-1">
               Estimert beholdningsverdi
@@ -169,7 +181,7 @@ export function YarnMasterDashboard() {
             <CardTitle className="text-xs font-medium">Batches</CardTitle>
             <Palette className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
-          <CardContent className="py-1 px-3">
+          <CardContent className="py-1 px-3 min-h-[56px]">
             <div className="text-lg font-bold leading-none">{overallStats.totalBatches}</div>
             <p className="text-[10px] text-muted-foreground mt-1">
               Unike farge-batches
@@ -179,23 +191,25 @@ export function YarnMasterDashboard() {
       </div>
 
       {/* Advanced Search */}
-      <AdvancedYarnSearch 
-        onSearch={handleAdvancedSearch}
-        onClear={handleClearSearch}
-        isLoading={isLoading}
-        compact
-      />
+      <div className="min-h-[64px]">
+        <AdvancedYarnSearch 
+          onSearch={handleAdvancedSearch}
+          onClear={handleClearSearch}
+          isLoading={isLoading}
+          compact
+        />
+      </div>
 
       {/* Main Content */}
       <Tabs defaultValue="grid" className="space-y-4">
-        <TabsList>
+        <TabsList className="min-h-[44px]">
           <TabsTrigger value="grid">Rutenett</TabsTrigger>
           <TabsTrigger value="list">Liste</TabsTrigger>
           <TabsTrigger value="bulk">Bulk-ops</TabsTrigger>
           <TabsTrigger value="analytics">Analyse</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="grid" className="space-y-4">
+        <TabsContent value="grid" className="space-y-4 cq">
           {masters.length === 0 ? (
             <Card>
               <CardContent className="flex flex-col items-center justify-center py-16">
@@ -211,13 +225,13 @@ export function YarnMasterDashboard() {
               </CardContent>
             </Card>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="cq-grid yarn-grid gap-6 min-h-[800px]" style={{"--card-min":"220px"} as any}>
               {masters.map((master) => {
                 const data = getMasterData(master.categoryData)
                 return (
                   <Link key={master.id} href={`/garn/${master.id}`} className="block">
-                    <Card className="cursor-pointer hover:shadow-lg transition-shadow">
-                      <CardHeader>
+                    <Card className="cursor-pointer hover:shadow-lg transition-shadow min-h-[220px]">
+                      <CardHeader className="min-h-[56px]">
                       <div className="flex justify-between items-start">
                         <div className="flex-1">
                           <CardTitle className="text-lg">{master.name}</CardTitle>
@@ -230,7 +244,7 @@ export function YarnMasterDashboard() {
                         </Badge>
                       </div>
                       </CardHeader>
-                      <CardContent>
+                      <CardContent className="min-h-[120px]">
                       <div className="space-y-2">
                         <div className="flex justify-between text-sm">
                           <span className="text-muted-foreground">Nøster:</span>

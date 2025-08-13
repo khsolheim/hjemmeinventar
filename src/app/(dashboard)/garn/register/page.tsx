@@ -10,8 +10,8 @@ import { useRouter } from 'next/navigation'
 export default function RegisterYarnPage() {
   const router = useRouter()
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
+    <div className="page cq container mx-auto px-4 py-8 space-y-4">
+      <div className="flex items-center justify-between cq">
         <div>
           <h1 className="text-3xl font-bold">Registrer Nytt Garn</h1>
           <p className="text-muted-foreground">Opprett en ny garn-type eller legg til batch</p>
@@ -24,7 +24,7 @@ export default function RegisterYarnPage() {
         </Button>
       </div>
 
-      <Card>
+      <Card className="responsive-dialog">
         <CardHeader>
           <CardTitle>Veiviser</CardTitle>
           <CardDescription>Følg stegene for å registrere garn</CardDescription>

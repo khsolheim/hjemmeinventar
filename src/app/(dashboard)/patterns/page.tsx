@@ -160,12 +160,12 @@ export default function PatternsPage() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8">
+    <div className="page container mx-auto px-4 py-8 cq">
       {/* Header */}
-      <div className="flex justify-between items-center mb-8">
+      <div className="flex justify-between items-center mb-8 cq">
         <div>
-          <h1 className="text-3xl font-bold">Mønster og oppskrifter</h1>
-          <p className="text-muted-foreground">
+          <h1 className="text-3xl font-bold title">Mønster og oppskrifter</h1>
+          <p className="text-muted-foreground secondary-text">
             Se og administrer PDF-oppskrifter for garn og håndverk
           </p>
         </div>
@@ -176,7 +176,7 @@ export default function PatternsPage() {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+      <div className="cq-grid dashboard-grid gap-6 mb-8" style={{"--card-min":"220px"} as any}>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Totale mønstre</CardTitle>
@@ -225,7 +225,7 @@ export default function PatternsPage() {
       </div>
 
       {/* Filters */}
-      <div className="flex gap-4 mb-6">
+      <div className="flex gap-4 mb-6 cq">
         <div className="relative flex-1 max-w-sm">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
@@ -264,7 +264,7 @@ export default function PatternsPage() {
       </div>
 
       {/* Patterns Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div className="cq-grid items-grid gap-6" style={{"--card-min":"280px"} as any}>
         {filteredPatterns.map((pattern) => (
           <Card key={pattern.id} className="hover:shadow-md transition-shadow">
             <CardHeader>

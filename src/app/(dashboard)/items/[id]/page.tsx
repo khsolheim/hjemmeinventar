@@ -82,7 +82,7 @@ export default function ItemDetailPage() {
 
   if (isLoading) {
     return (
-      <div className="container mx-auto px-4 py-8">
+      <div className="page container mx-auto px-4 py-8">
         <div className="flex items-center justify-center py-12">
           <Loader2 className="w-8 h-8 animate-spin" />
           <span className="ml-2">Laster gjenstand...</span>
@@ -93,7 +93,7 @@ export default function ItemDetailPage() {
 
   if (error || !item) {
     return (
-      <div className="container mx-auto px-4 py-8">
+      <div className="page container mx-auto px-4 py-8">
         <div className="text-center py-12">
           <h3 className="text-lg font-medium text-red-600 mb-2">Gjenstand ikke funnet</h3>
           <p className="text-sm text-muted-foreground mb-4">
@@ -113,9 +113,9 @@ export default function ItemDetailPage() {
   const images = item.attachments?.filter((att: any) => att.type === 'IMAGE') || []
 
   return (
-    <div className="container mx-auto px-4 py-8">
+    <div className="page container mx-auto px-4 py-8">
       {/* Header */}
-      <div className="flex items-center gap-4 mb-6">
+      <div className="flex items-center gap-4 mb-6 cq">
         <Button variant="outline" size="sm" asChild>
           <Link href="/items">
             <ArrowLeft className="w-4 h-4 mr-2" />
@@ -126,7 +126,7 @@ export default function ItemDetailPage() {
           <span className="text-2xl">
             {item.category?.icon || '📦'}
           </span>
-          <h1 className="text-3xl font-bold">{item.name}</h1>
+          <h1 className="text-3xl font-bold title">{item.name}</h1>
         </div>
         <div className="ml-auto flex gap-2">
           <Button variant="outline" size="sm">
@@ -179,14 +179,14 @@ export default function ItemDetailPage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      <div className="detail-panel gap-8">
         {/* Left Column - Images and Gallery */}
-        <div className="lg:col-span-1">
+        <div>
           {images.length > 0 ? (
             <div className="space-y-4">
               {/* Main Image */}
               <Card>
-                <CardContent className="p-0">
+                <CardContent className="p-0 min-h-[320px]">
                   <img
                     src={images[selectedImageIndex]?.url}
                     alt={images[selectedImageIndex]?.filename}
@@ -218,7 +218,7 @@ export default function ItemDetailPage() {
             </div>
           ) : (
             <Card>
-              <CardContent className="p-8 text-center">
+              <CardContent className="p-8 text-center min-h-[320px]">
                 <ImageIcon className="w-16 h-16 mx-auto mb-4 opacity-30" />
                 <p className="text-muted-foreground">Ingen bilder tilgjengelig</p>
               </CardContent>
@@ -227,7 +227,7 @@ export default function ItemDetailPage() {
         </div>
 
         {/* Right Column - Details */}
-        <div className="lg:col-span-2 space-y-6">
+        <div className="space-y-6">
           {/* Status and Badges */}
           <div className="flex items-center gap-2 flex-wrap">
             {item.category && <Badge variant="secondary">{item.category.name}</Badge>}

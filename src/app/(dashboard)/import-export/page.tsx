@@ -132,7 +132,7 @@ export default function ImportExportPage() {
   ]
 
   return (
-    <div className="container mx-auto px-4 py-8 max-w-6xl">
+    <div className="page container mx-auto px-4 py-8 max-w-6xl cq">
       {/* Header */}
       <div className="mb-8">
         <h1 className="text-3xl font-bold flex items-center gap-3 mb-4">
@@ -145,7 +145,7 @@ export default function ImportExportPage() {
         </p>
       </div>
 
-      <Tabs defaultValue="import" className="space-y-6">
+      <Tabs defaultValue="import" className="space-y-6 cq">
         <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="import">
             <Upload className="w-4 h-4 mr-2" />
@@ -178,7 +178,7 @@ export default function ImportExportPage() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              <div className="cq-grid items-grid gap-6" style={{"--card-min":"260px"} as any}>
                 {importTypes.map((type) => (
                   <Card key={type.type} className={`${type.borderColor} ${type.bgColor}`}>
                     <CardContent className="p-6">
@@ -289,7 +289,7 @@ export default function ImportExportPage() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
+              <div className="cq-grid items-grid gap-4 mb-6" style={{"--card-min":"320px"} as any}>
                 {exportFeatures.map((feature) => (
                   <Card key={feature.id} className="border-l-4 border-l-blue-500">
                     <CardContent className="p-4">
@@ -329,7 +329,7 @@ export default function ImportExportPage() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              <div className="cq-grid items-grid gap-6" style={{"--card-min":"260px"} as any}>
                 {supportedFormats.map((format) => (
                   <Card key={format.format} className="border-l-4 border-l-blue-500">
                     <CardContent className="p-6">

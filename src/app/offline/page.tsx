@@ -121,7 +121,7 @@ export default function OfflinePage() {
   // Don't render anything until we're sure we're in the browser
   if (!isClient) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center p-4">
+      <div className="page cq min-h-screen bg-background flex items-center justify-center p-4">
         <div className="w-full max-w-md text-center">
           <div className="mx-auto w-16 h-16 bg-muted rounded-full flex items-center justify-center mb-4">
             <RefreshCw className="w-8 h-8 animate-spin text-muted-foreground" />
@@ -133,7 +133,7 @@ export default function OfflinePage() {
   }
 
   return (
-    <div className="min-h-screen bg-background flex items-center justify-center p-4">
+    <div className="page cq min-h-screen bg-background flex items-center justify-center p-4">
       <div className="w-full max-w-md space-y-6">
         {/* Main Offline Card */}
         <Card className="text-center">

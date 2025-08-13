@@ -271,7 +271,7 @@ export default function ItemsPage() {
 
   if (isLoading) {
     return (
-      <div className="container mx-auto px-4 py-8">
+      <div className="page container mx-auto px-4 py-8">
         <div className="flex items-center justify-center py-12">
           <Loader2 className="w-8 h-8 animate-spin" />
           <span className="ml-2">Laster gjenstander...</span>
@@ -282,7 +282,7 @@ export default function ItemsPage() {
 
   if (error) {
     return (
-      <div className="container mx-auto px-4 py-8">
+      <div className="page container mx-auto px-4 py-8">
         <div className="text-center py-12">
           <h3 className="text-lg font-medium text-red-600 mb-2">Feil ved lasting av gjenstander</h3>
           <p className="text-sm text-muted-foreground mb-4">{error.message}</p>
@@ -306,12 +306,12 @@ export default function ItemsPage() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8">
+    <div className="page container mx-auto px-4 py-8">
       {/* Header */}
-      <div className="flex justify-between items-center mb-8">
+      <div className="flex justify-between items-center mb-8 cq">
         <div>
-          <h1 className="text-3xl font-bold">Gjenstander</h1>
-          <p className="text-muted-foreground">
+          <h1 className="text-3xl font-bold title">Gjenstander</h1>
+          <p className="text-muted-foreground secondary-text">
             Administrer alle dine eiendeler og hold oversikt
           </p>
         </div>
@@ -344,7 +344,7 @@ export default function ItemsPage() {
       </div>
 
       {/* Search and Filters */}
-      <div className="flex flex-col md:flex-row gap-4 mb-6">
+      <div className="flex flex-col md:flex-row gap-4 mb-6 cq">
         <div className="flex-1 relative">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
           <Input
@@ -694,7 +694,7 @@ export default function ItemsPage() {
 
       {/* Items Display */}
       {viewMode === 'grid' ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="cq-grid items-grid" style={{"--card-min":"220px"} as any}>
           {items.map((item) => (
           <Card key={item.id} className="hover:shadow-md transition-shadow group cursor-pointer">
             <Link href={`/items/${item.id}`} className="block">
@@ -938,6 +938,7 @@ export default function ItemsPage() {
             <AccessibleButton 
               onClick={() => setShowCreateForm(true)}
               aria-label="Legg til din første gjenstand"
+              className="cta-button"
             >
               <Plus className="w-4 h-4 mr-2" />
               Legg til første gjenstand

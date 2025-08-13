@@ -21,7 +21,7 @@ export default function YarnColorPage() {
   const deleteColor = trpc.yarn.deleteColor.useMutation({ onSuccess: () => utils.yarn.getColorsForMaster.invalidate({ masterId }) })
 
   return (
-    <div className="space-y-4">
+    <div className="page container mx-auto px-4 py-8 cq space-y-4">
       <div className="flex items-center justify-between">
         <Button asChild variant="outline">
           <Link href={`/garn/${masterId}`}>
@@ -76,7 +76,7 @@ export default function YarnColorPage() {
         </Dialog>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="cq-grid yarn-grid gap-4" style={{"--card-min":"220px"} as any}>
         {(batches || []).map(b => {
           const data = b.categoryData ? JSON.parse(b.categoryData) : {}
           return (

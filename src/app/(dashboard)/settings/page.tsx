@@ -43,17 +43,17 @@ export default function SettingsPage() {
   }, [profileQuery.data, defaultProfileId])
   if (status !== 'authenticated') {
     return (
-      <div className="container mx-auto px-4 py-8">
+      <div className="page container mx-auto px-4 py-8">
         <h1 className="text-3xl font-bold">Innstillinger</h1>
       </div>
     )
   }
   return (
-    <div className="container mx-auto px-4 py-8">
+    <div className="page container mx-auto px-4 py-8 cq">
       {/* Header */}
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold">Innstillinger</h1>
-        <p className="text-muted-foreground">
+      <div className="mb-8 cq">
+        <h1 className="text-3xl font-bold title">Innstillinger</h1>
+        <p className="text-muted-foreground secondary-text">
           Administrer kontoinformasjon og app-preferanser
         </p>
       </div>

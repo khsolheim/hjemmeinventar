@@ -33,7 +33,7 @@ export default function AdminPage() {
 
   if (!isAdmin) {
     return (
-      <div className="container mx-auto px-4 py-8">
+      <div className="page container mx-auto px-4 py-8">
         <Card>
           <CardContent className="flex items-center justify-center h-64">
             <div className="text-center">
@@ -48,16 +48,16 @@ export default function AdminPage() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8">
+    <div className="page container mx-auto px-4 py-8 cq">
       {/* Header */}
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold">Administrator Panel</h1>
-        <p className="text-muted-foreground">
+      <div className="mb-8 cq">
+        <h1 className="text-3xl font-bold title">Administrator Panel</h1>
+        <p className="text-muted-foreground secondary-text">
           Overvåk og administrer systemet
         </p>
       </div>
 
-      <Tabs value={selectedTab} onValueChange={setSelectedTab} className="space-y-6">
+      <Tabs value={selectedTab} onValueChange={setSelectedTab} className="space-y-6 cq">
         <TabsList className="grid w-full grid-cols-5">
           <TabsTrigger value="overview" className="flex items-center gap-2">
             <BarChart3 className="w-4 h-4" />

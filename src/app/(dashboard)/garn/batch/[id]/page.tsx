@@ -73,7 +73,7 @@ export default function BatchDetailPage() {
   const qrValue = `${appOrigin}/garn/batch/${id}`
 
   return (
-    <div className="space-y-4">
+    <div className="page container mx-auto px-4 py-8 cq space-y-4">
       <div className="flex items-center justify-between">
         <Button asChild variant="outline">
           <Link href={`/garn/${master?.id || ''}`}>
@@ -83,9 +83,9 @@ export default function BatchDetailPage() {
         </Button>
       </div>
 
-      <Card>
+      <Card className="responsive-dialog">
         <CardContent className="pt-4">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-start">
+          <div className="cq-grid batches-grid gap-4 items-start" style={{"--card-min":"240px"} as any}>
             <div className="md:col-span-2 space-y-2">
               <h1 className="text-2xl font-semibold leading-tight">{batch.name}</h1>
               <div className="text-sm text-muted-foreground">
@@ -120,7 +120,7 @@ export default function BatchDetailPage() {
                   <div className="h-full w-full flex items-center justify-center text-muted-foreground text-sm">Ingen bilde</div>
                 )}
               </div>
-              <div className="mt-2 grid grid-cols-2 gap-1.5">
+              <div className="mt-2 grid grid-cols-2 gap-1.5 min-h-[36px]">
                 <Dialog>
                   <DialogTrigger asChild>
                     <Button size="sm" variant="outline"><QrCode className="h-3 w-3 mr-1" /> Vis QR</Button>

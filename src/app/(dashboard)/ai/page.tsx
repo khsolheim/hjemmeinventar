@@ -68,7 +68,7 @@ export default function AIPage() {
 
   if (!aiStatus?.enabled) {
     return (
-      <div className="container mx-auto px-4 py-8 max-w-6xl">
+      <div className="page container mx-auto px-4 py-8 max-w-6xl cq">
         <div className="text-center mb-8">
           <Brain className="w-16 h-16 mx-auto mb-4 text-gray-400" />
           <h1 className="text-3xl font-bold text-gray-500 mb-2">AI-Funksjoner</h1>
@@ -89,7 +89,7 @@ export default function AIPage() {
         </Alert>
 
         {/* Feature Preview */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-8 max-w-6xl mx-auto">
+        <div className="cq-grid items-grid gap-6 mt-8 max-w-6xl mx-auto" style={{"--card-min":"280px"} as any}>
           {[
             {
               icon: Target,
@@ -142,7 +142,7 @@ export default function AIPage() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8 max-w-6xl">
+    <div className="page container mx-auto px-4 py-8 max-w-6xl cq">
       {/* Header */}
       <div className="text-center mb-8">
         <div className="flex items-center justify-center gap-3 mb-4">
@@ -158,7 +158,7 @@ export default function AIPage() {
         </p>
       </div>
 
-      <Tabs defaultValue="dashboard" className="space-y-6">
+      <Tabs defaultValue="dashboard" className="space-y-6 cq">
         <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="dashboard">
             <TrendingUp className="w-4 h-4 mr-2" />

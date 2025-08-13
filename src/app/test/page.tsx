@@ -38,7 +38,7 @@ export default function TestPage() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8">
+    <div className="page cq container mx-auto px-4 py-8">
       <Card className="max-w-md mx-auto">
         <CardHeader>
           <CardTitle>Test Brukerregistrering (Uten Superjson)</CardTitle>

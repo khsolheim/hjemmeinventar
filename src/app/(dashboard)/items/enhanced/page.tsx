@@ -212,7 +212,7 @@ export default function EnhancedItemsPage() {
 
   if (isLoading) {
     return (
-      <div className="container mx-auto px-4 py-8">
+      <div className="page container mx-auto px-4 py-8">
         <div className="flex items-center justify-center py-12">
           <Loader2 className="w-8 h-8 animate-spin" />
           <span className="ml-2">Laster gjenstander...</span>
@@ -223,7 +223,7 @@ export default function EnhancedItemsPage() {
 
   if (error) {
     return (
-      <div className="container mx-auto px-4 py-8">
+      <div className="page container mx-auto px-4 py-8">
         <div className="text-center py-12">
           <h3 className="text-lg font-medium text-red-600 mb-2">Feil ved lasting av gjenstander</h3>
           <p className="text-sm text-muted-foreground mb-4">{error.message}</p>
@@ -234,12 +234,12 @@ export default function EnhancedItemsPage() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8">
+    <div className="page container mx-auto px-4 py-8">
       {/* Header */}
-      <div className="flex justify-between items-center mb-8">
+      <div className="flex justify-between items-center mb-8 cq">
         <div>
-          <h1 className="text-3xl font-bold">Forbedret gjenstander</h1>
-          <p className="text-muted-foreground">
+          <h1 className="text-3xl font-bold title">Forbedret gjenstander</h1>
+          <p className="text-muted-foreground secondary-text">
             {filteredItems.length} av {items.length} gjenstander{filters.query ? ` for "${filters.query}"` : ''}
           </p>
         </div>
@@ -312,7 +312,7 @@ export default function EnhancedItemsPage() {
       )}
 
       {/* View Controls */}
-      <div className="flex justify-between items-center mb-6">
+      <div className="flex justify-between items-center mb-6 cq">
         <div className="flex items-center gap-4">
           {isSelectionMode && (
             <div className="flex items-center gap-2">
@@ -355,7 +355,7 @@ export default function EnhancedItemsPage() {
 
       {/* Items Display */}
       {viewMode === 'grid' ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+        <div className="cq-grid items-grid gap-6" style={{"--card-min":"220px"} as any}>
           {filteredItems.map((item) => (
             <Card key={item.id} className="hover:shadow-md transition-shadow group cursor-pointer">
               <Link href={`/items/${item.id}`} className="block">

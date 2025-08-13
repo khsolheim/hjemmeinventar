@@ -117,7 +117,7 @@ export default function HouseholdsPage() {
 
   if (isLoading) {
     return (
-      <div className="container mx-auto px-4 py-8">
+      <div className="page container mx-auto px-4 py-8">
         <div className="flex justify-center items-center h-64">
           <Loader2 className="h-8 w-8 animate-spin" />
         </div>
@@ -127,7 +127,7 @@ export default function HouseholdsPage() {
 
   if (error) {
     return (
-      <div className="container mx-auto px-4 py-8">
+      <div className="page container mx-auto px-4 py-8">
         <Card>
           <CardContent className="flex items-center justify-center h-64">
             <div className="text-center">
@@ -143,13 +143,13 @@ export default function HouseholdsPage() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8">
+    <div className="page container mx-auto px-4 py-8">
       {/* Header */}
-      <div className="mb-8">
+      <div className="mb-8 cq">
         <div className="flex justify-between items-start">
           <div>
-            <h1 className="text-3xl font-bold">Mine Husholdninger</h1>
-            <p className="text-muted-foreground">
+            <h1 className="text-3xl font-bold title">Mine Husholdninger</h1>
+            <p className="text-muted-foreground secondary-text">
               Administrer familiemedlemmer og del inventaret ditt
             </p>
           </div>
@@ -196,7 +196,7 @@ export default function HouseholdsPage() {
 
       {/* Households Grid */}
       {filteredHouseholds.length > 0 && (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="cq-grid items-grid gap-6" style={{"--card-min":"320px"} as any}>
           {filteredHouseholds.map((household) => (
             <HouseholdCard
               key={household.id}
