@@ -270,7 +270,7 @@ export function BatchGrid({ masterId, hideMasterHeader = false, hideTotals = fal
 
               return (
                 <Card key={batch.id} className="relative">
-                  <CardHeader className="pb-2">
+                  <CardHeader className="px-3 py-2">
                     <div className="flex justify-between items-start">
                       <div className="flex-1">
                         <CardTitle className="text-base flex items-center gap-2">
@@ -369,26 +369,18 @@ export function BatchGrid({ masterId, hideMasterHeader = false, hideTotals = fal
                     </div>
                   </CardHeader>
                   
-                  <CardContent className="space-y-2.5">
+                  <CardContent className="px-3 py-2 space-y-2">
                     {/* Quantity and availability */}
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm text-muted-foreground">Antall:</span>
-                      <div className="text-right">
-                        <div className="font-medium">
-                          {batch.availableQuantity} / {batchData.quantity || batch.totalQuantity} nøster
-                        </div>
-                        <div className="text-xs text-muted-foreground">
-                          {batch.availableQuantity === batch.totalQuantity ? 'Komplett' : 
-                           batch.availableQuantity === 0 ? 'Brukt opp' : 'Delvis brukt'}
-                        </div>
-                      </div>
+                    <div className="flex justify-between text-xs">
+                      <span className="text-muted-foreground">Antall</span>
+                      <span className="font-medium">{batch.availableQuantity}/{batchData.quantity || batch.totalQuantity}</span>
                     </div>
 
                     {/* Progress bar */}
                     <div className="space-y-1">
-                      <div className="w-full bg-gray-200 rounded-full h-2">
+                      <div className="w-full bg-gray-200 rounded-full h-1.5">
                         <div 
-                          className={`h-2 rounded-full ${
+                          className={`h-1.5 rounded-full ${
                             batch.availableQuantity === batch.totalQuantity ? 'bg-green-500' :
                             batch.availableQuantity === 0 ? 'bg-red-500' : 'bg-yellow-500'
                           }`}
@@ -401,7 +393,7 @@ export function BatchGrid({ masterId, hideMasterHeader = false, hideTotals = fal
 
                     {/* Price */}
                     {batchData.pricePerSkein && (
-                      <div className="flex justify-between text-sm">
+                      <div className="flex justify-between text-xs">
                         <span className="text-muted-foreground">Pris per nøste:</span>
                         <span className="font-medium">{formatPrice(batchData.pricePerSkein)}</span>
                       </div>
@@ -409,7 +401,7 @@ export function BatchGrid({ masterId, hideMasterHeader = false, hideTotals = fal
 
                     {/* Total value */}
                     {batchData.pricePerSkein && (
-                      <div className="flex justify-between text-sm">
+                      <div className="flex justify-between text-xs">
                         <span className="text-muted-foreground">Total verdi:</span>
                         <span className="font-medium">
                           {formatPrice(batchData.pricePerSkein * (batchData.quantity || batch.totalQuantity))}
@@ -418,7 +410,7 @@ export function BatchGrid({ masterId, hideMasterHeader = false, hideTotals = fal
                     )}
 
                     {/* Location */}
-                    <div className="flex justify-between text-sm">
+                    <div className="flex justify-between text-xs">
                       <span className="text-muted-foreground">Lokasjon:</span>
                       <span className="font-medium flex items-center gap-1">
                         <MapPin className="h-3 w-3" />
@@ -428,7 +420,7 @@ export function BatchGrid({ masterId, hideMasterHeader = false, hideTotals = fal
 
                     {/* Purchase date */}
                     {batch.purchaseDate && (
-                      <div className="flex justify-between text-sm">
+                      <div className="flex justify-between text-xs">
                         <span className="text-muted-foreground">Kjøpt:</span>
                         <span className="font-medium flex items-center gap-1">
                           <Calendar className="h-3 w-3" />
@@ -438,7 +430,7 @@ export function BatchGrid({ masterId, hideMasterHeader = false, hideTotals = fal
                     )}
 
                     {/* Condition */}
-                    <div className="flex justify-between text-sm">
+                    <div className="flex justify-between text-xs">
                       <span className="text-muted-foreground">Tilstand:</span>
                       <Badge variant={batchData.condition === 'Ny' ? 'default' : 'secondary'}>
                         {batchData.condition || 'Ikke angitt'}
@@ -447,7 +439,7 @@ export function BatchGrid({ masterId, hideMasterHeader = false, hideTotals = fal
 
                     {/* Color code */}
                     {batchData.colorCode && (
-                      <div className="flex justify-between text-sm">
+                      <div className="flex justify-between text-xs">
                         <span className="text-muted-foreground">Fargekode:</span>
                         <span className="font-medium font-mono text-xs">
                           {batchData.colorCode}
@@ -459,7 +451,7 @@ export function BatchGrid({ masterId, hideMasterHeader = false, hideTotals = fal
                     {batchData.notes && (
                       <div className="pt-2 border-t">
                         <div className="text-xs text-muted-foreground mb-1">Notater:</div>
-                        <div className="text-sm">{batchData.notes}</div>
+                        <div className="text-xs line-clamp-2">{batchData.notes}</div>
                       </div>
                     )}
                   </CardContent>
