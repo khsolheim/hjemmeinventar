@@ -37,6 +37,7 @@ export default function OnboardingPage() {
               Du blir sendt til dashboard om et øyeblikk...
             </CardDescription>
           </CardHeader>
+          <CardContent className="min-h-24" />
         </Card>
       </div>
     )
@@ -70,7 +71,7 @@ export default function OnboardingPage() {
                   La oss guide deg gjennom oppsettet steg for steg
                 </CardDescription>
               </CardHeader>
-              <CardContent>
+              <CardContent className="min-h-40">
                 <ul className="space-y-2 text-sm text-muted-foreground mb-6">
                   <li>• Tilpass systemet til dine behov</li>
                   <li>• Opprett din første lokasjon</li>
@@ -97,7 +98,7 @@ export default function OnboardingPage() {
                   Utforsk på egen hånd og sett opp senere
                 </CardDescription>
               </CardHeader>
-              <CardContent>
+              <CardContent className="min-h-40">
                 <ul className="space-y-2 text-sm text-muted-foreground mb-6">
                   <li>• Kom i gang med en gang</li>
                   <li>• Utforsk alle funksjoner</li>

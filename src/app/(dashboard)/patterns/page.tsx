@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -103,11 +103,6 @@ export default function PatternsPage() {
   const [selectedDifficulty, setSelectedDifficulty] = useState<string>('all')
   const [selectedPattern, setSelectedPattern] = useState<any>(null)
   const [isViewerOpen, setIsViewerOpen] = useState(false)
-  const [isClient, setIsClient] = useState(false)
-
-  useEffect(() => {
-    setIsClient(true)
-  }, [])
 
   // In a real app, these would come from tRPC
   const patterns = mockPatterns
@@ -148,16 +143,7 @@ export default function PatternsPage() {
     }
   }
 
-  if (!isClient || isLoading) {
-    return (
-      <div className="container mx-auto px-4 py-8">
-        <div className="flex items-center justify-center h-64">
-          <Loader2 className="w-8 h-8 animate-spin" />
-          <p className="ml-2 text-muted-foreground">Laster mønster...</p>
-        </div>
-      </div>
-    )
-  }
+  // Keep rendering stable; avoid client-only gating to minimize CLS
 
   return (
     <div className="page container mx-auto px-4 py-8 cq">
@@ -182,7 +168,7 @@ export default function PatternsPage() {
             <CardTitle className="text-sm font-medium">Totale mønstre</CardTitle>
             <FileText className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
-          <CardContent>
+          <CardContent className="min-h-16">
             <div className="text-2xl font-bold">{patterns.length}</div>
           </CardContent>
         </Card>
@@ -192,7 +178,7 @@ export default function PatternsPage() {
             <CardTitle className="text-sm font-medium">Kategorier</CardTitle>
             <Grid3x3 className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
-          <CardContent>
+          <CardContent className="min-h-16">
             <div className="text-2xl font-bold">
               {new Set(patterns.map(p => p.category)).size}
             </div>
@@ -204,7 +190,7 @@ export default function PatternsPage() {
             <CardTitle className="text-sm font-medium">Lett nivå</CardTitle>
             <Badge className="h-4 w-4 bg-green-500" />
           </CardHeader>
-          <CardContent>
+          <CardContent className="min-h-16">
             <div className="text-2xl font-bold">
               {patterns.filter(p => p.difficulty === 'Lett').length}
             </div>
@@ -216,7 +202,7 @@ export default function PatternsPage() {
             <CardTitle className="text-sm font-medium">Avansert nivå</CardTitle>
             <Badge className="h-4 w-4 bg-red-500" />
           </CardHeader>
-          <CardContent>
+          <CardContent className="min-h-16">
             <div className="text-2xl font-bold">
               {patterns.filter(p => p.difficulty === 'Avansert').length}
             </div>
@@ -264,7 +250,7 @@ export default function PatternsPage() {
       </div>
 
       {/* Patterns Grid */}
-      <div className="cq-grid items-grid gap-6" style={{"--card-min":"280px"} as any}>
+      <div className="cq-grid items-grid gap-6 min-h-[60vh]" style={{"--card-min":"280px"} as any}>
         {filteredPatterns.map((pattern) => (
           <Card key={pattern.id} className="hover:shadow-md transition-shadow">
             <CardHeader>
@@ -281,7 +267,7 @@ export default function PatternsPage() {
               </div>
             </CardHeader>
             
-            <CardContent className="space-y-4">
+            <CardContent className="space-y-4 min-h-28">
               {/* Pattern Details */}
               <div className="space-y-2">
                 <div className="flex items-center justify-between text-sm">

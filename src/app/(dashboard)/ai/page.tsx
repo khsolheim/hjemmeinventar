@@ -179,12 +179,14 @@ export default function AIPage() {
         </TabsList>
 
         {/* AI Insights Dashboard */}
-        <TabsContent value="dashboard">
-          <AIInsightsDashboard />
+        <TabsContent value="dashboard" className="min-h-[720px]">
+          <div className="min-h-[700px]">
+            <AIInsightsDashboard />
+          </div>
         </TabsContent>
 
         {/* Smart Suggestions Testing */}
-        <TabsContent value="suggestions" className="space-y-6">
+        <TabsContent value="suggestions" className="space-y-6 min-h-[480px]">
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -238,7 +240,7 @@ export default function AIPage() {
         </TabsContent>
 
         {/* AI Tools */}
-        <TabsContent value="tools" className="space-y-6">
+        <TabsContent value="tools" className="space-y-6 min-h-[480px]">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* Search Enhancement Tool */}
             <Card>
@@ -326,7 +328,7 @@ export default function AIPage() {
         </TabsContent>
 
         {/* Learn More */}
-        <TabsContent value="learn" className="space-y-6">
+        <TabsContent value="learn" className="space-y-6 min-h-[480px]">
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">

@@ -195,8 +195,18 @@ export default function LoansPage() {
   const [searchQuery, setSearchQuery] = useState('')
   const [filterStatus, setFilterStatus] = useState<'all' | 'out' | 'overdue' | 'returned'>('all')
 
-  const { data: loans = [], isLoading, refetch } = trpc.loans.getUserLoans.useQuery()
-  const { data: stats } = trpc.loans.getStats.useQuery()
+  const { data: loans = [], isLoading, refetch } = trpc.loans.getUserLoans.useQuery(undefined, {
+    staleTime: 30000,
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
+    keepPreviousData: true,
+  })
+  const { data: stats, isLoading: statsLoading } = trpc.loans.getStats.useQuery(undefined, {
+    staleTime: 30000,
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
+    keepPreviousData: true,
+  })
 
   const returnLoan = trpc.loans.return.useMutation({
     onSuccess: () => {
@@ -247,15 +257,7 @@ export default function LoansPage() {
     }
   }
 
-  if (isLoading) {
-    return (
-      <div className="page container mx-auto px-4 py-8">
-        <div className="flex items-center justify-center h-64">
-          <Loader2 className="w-8 h-8 animate-spin" />
-        </div>
-      </div>
-    )
-  }
+  // Render skeletons inline to preserve layout and minimize CLS
 
   return (
     <div className="page container mx-auto px-4 py-8 cq">
@@ -274,49 +276,32 @@ export default function LoansPage() {
       </div>
 
       {/* Stats Cards */}
-      {stats && (
-        <div className="cq-grid dashboard-grid gap-6 mb-8" style={{"--card-min":"220px"} as any}>
-          <Card>
+      <div className="cq-grid dashboard-grid gap-6 mb-8" style={{"--card-min":"220px"} as any}>
+        {[0,1,2,3].map((i) => (
+          <Card key={i}>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Aktive utlån</CardTitle>
-              <Package className="h-4 w-4 text-muted-foreground" />
+              <CardTitle className="text-sm font-medium">
+                {statsLoading || !stats ? <div className="h-3 w-24 bg-muted rounded animate-pulse" /> : (
+                  i===0 ? 'Aktive utlån' : i===1 ? 'Forsinkede' : i===2 ? 'Returnerte' : 'Totalt'
+                )}
+              </CardTitle>
+              {i===0 && <Package className="h-4 w-4 text-muted-foreground" />}
+              {i===1 && <AlertTriangle className="h-4 w-4 text-red-500" />}
+              {i===2 && <CheckCircle className="h-4 w-4 text-green-500" />}
+              {i===3 && <User className="h-4 w-4 text-muted-foreground" />}
             </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stats.active}</div>
+            <CardContent className="min-h-12">
+              {statsLoading || !stats ? (
+                <div className="h-6 w-16 bg-muted rounded animate-pulse" />
+              ) : (
+                <div className={`text-2xl font-bold ${i===1 ? 'text-red-600' : ''}`}>
+                  {i===0 ? stats.active : i===1 ? stats.overdue : i===2 ? stats.returned : stats.total}
+                </div>
+              )}
             </CardContent>
           </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Forsinkede</CardTitle>
-              <AlertTriangle className="h-4 w-4 text-red-500" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-red-600">{stats.overdue}</div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Returnerte</CardTitle>
-              <CheckCircle className="h-4 w-4 text-green-500" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stats.returned}</div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Totalt</CardTitle>
-              <User className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stats.total}</div>
-            </CardContent>
-          </Card>
-        </div>
-      )}
+        ))}
+      </div>
 
       {/* Filters */}
       <div className="flex gap-4 mb-6 cq">
@@ -341,7 +326,21 @@ export default function LoansPage() {
 
       {/* Loans List */}
       <div className="grid gap-4 cq">
-        {filteredLoans.length === 0 ? (
+        {isLoading ? (
+          [...Array(3)].map((_, idx) => (
+            <Card key={idx}>
+              <CardContent className="pt-6">
+                <div className="space-y-2">
+                  <div className="h-5 w-48 bg-muted rounded animate-pulse" />
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div className="h-16 bg-muted rounded animate-pulse" />
+                    <div className="h-16 bg-muted rounded animate-pulse" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ))
+        ) : filteredLoans.length === 0 ? (
           <Card>
             <CardContent className="flex items-center justify-center h-64">
               <div className="text-center">

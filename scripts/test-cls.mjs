@@ -9,7 +9,18 @@ const paths = [
   '/locations',
   '/locations/mobile',
   '/garn',
-  '/mobile'
+  '/mobile',
+  '/loans',
+  '/admin',
+  '/ai',
+  '/patterns',
+  '/scan',
+  '/collaboration',
+  '/onboarding',
+  '/offline',
+  '/auth/signup',
+  '/test',
+  '/auth/signin'
 ]
 
 async function prepareCLSTracking(page) {
@@ -68,12 +79,42 @@ async function login(page) {
   ])
 }
 
+async function loginWithCredentials(page) {
+  try {
+    await page.setRequestInterception(false)
+    await page.goto(`${BASE}/api/auth/csrf`, { waitUntil: 'networkidle2', timeout: 120000 })
+    const csrf = await page.evaluate(async () => {
+      const res = await fetch('/api/auth/csrf')
+      return res.ok ? res.json() : null
+    })
+    const csrfToken = csrf?.csrfToken
+    if (!csrfToken) throw new Error('No csrf token')
+    await page.evaluate(async ({ csrfToken, BASE }) => {
+      const params = new URLSearchParams()
+      params.set('csrfToken', csrfToken)
+      params.set('email', 'test@example.com')
+      params.set('password', 'test123')
+      params.set('callbackUrl', BASE)
+      await fetch('/api/auth/callback/credentials?json=true', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: params,
+        credentials: 'include'
+      })
+    }, { csrfToken, BASE })
+    await page.goto(`${BASE}/dashboard`, { waitUntil: 'networkidle2', timeout: 120000 })
+  } catch (e) {
+    console.error('Programmatic login failed (continuing):', e.message)
+  }
+}
+
 ;(async () => {
   const browser = await puppeteer.launch({ headless: 'new', args: ['--no-sandbox'] })
   const page = await browser.newPage()
   page.setViewport({ width: 390, height: 844 })
+  page.setDefaultNavigationTimeout(120000)
   try {
-    await login(page)
+    await loginWithCredentials(page)
   } catch (e) {
     console.error('Login failed (continuing):', e.message)
   }
@@ -89,6 +130,34 @@ async function login(page) {
       results.push({ path: p, cls: null, error: e.message })
       console.log(p, 'ERR', e.message)
     }
+  }
+
+  // Measure categories list and one category detail
+  try {
+    const listCls = await measureCLS(page, `${BASE}/categories`)
+    results.push({ path: '/categories', cls: listCls })
+    console.log('/categories', listCls.toFixed(3))
+    // Try a category detail by navigating from list
+    try {
+      await prepareCLSTracking(page)
+      await page.goto(`${BASE}/categories`, { waitUntil: 'networkidle2' })
+      await new Promise(r => setTimeout(r, 1200))
+      const catHref = await page.evaluate(() => {
+        const anchors = Array.from(document.querySelectorAll('a[href^="/categories/"]'))
+        const href = anchors.map(a => a.getAttribute('href') || '')
+          .find(h => /^\/categories\/[a-zA-Z0-9][^/?#]*/.test(h))
+        return href || null
+      })
+      if (catHref) {
+        const detailCls = await measureCLS(page, `${BASE}${catHref}`)
+        results.push({ path: catHref, cls: detailCls })
+        console.log(catHref, detailCls.toFixed(3))
+      }
+    } catch (e) {
+      console.log('categories/[categoryId]', 'ERR', e.message)
+    }
+  } catch (e) {
+    console.log('categories', 'ERR', e.message)
   }
 
   // Try measuring first item detail by clicking from /items

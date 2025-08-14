@@ -183,6 +183,7 @@ Oppgave-matrise (kryss av ved ferdig)
 | Items (P1) | ☑ | ☑ | ☑ | ☑ | ☑ | ☑ | ☑ |
 | Items/[id] (P1) | ☑ | ☑ | ☑ | ☑ | ☑ | ☑ | ☑ |
 | Garn (P1) | ☑ | ☑ | ☑ | ☑ | ☑ | ☑ | ☑ |
+| Garn/[id] (P1) | ☑ | ☑ | ☑ | ☑ | ☑ | ☑ | ☑ |
 | Garn/batch/[id] (P1) | ☑ | ☑ | ☑ | ☑ | ☑ | ☑ | ☑ |
 | Garn/register (P2) | ☑ | ☑ | ☑ | ☐ | ☑ | ☑ | ☑ |
 | Locations (P1) | ☑ | ☑ | ☑ | ☑ | ☑ | ☑ | ☑ |
@@ -198,16 +199,16 @@ Oppgave-matrise (kryss av ved ferdig)
 | Households (P2) | ☑ | ☑ | ☑ | ☐ | ☑ | ☑ | ☑ |
 | Households/[id] (P2) | ☑ | ☑ | ☑ | ☐ | ☑ | ☑ | ☑ |
 | Households/[id]/invite (P2) | ☑ | ☑ | ☑ | ☐ | ☑ | ☑ | ☑ |
-| Loans (P2) | ☑ | ☑ | ☑ | ☐ | ☑ | ☑ | ☐ |
-| AI (P3) | ☑ | ☑ | ☑ | ☐ | ☑ | ☑ | ☐ |
-| Collaboration (P3) | ☑ | ☑ | ☐ | ☐ | ☑ | ☑ | ☐ |
-| Patterns (P3) | ☑ | ☑ | ☑ | ☐ | ☑ | ☑ | ☐ |
-| Scan (P3) | ☑ | ☑ | ☑ | ☐ | ☑ | ☑ | ☐ |
-| Admin (P2) | ☑ | ☑ | ☑ | ☐ | ☑ | ☑ | ☐ |
-| Auth/Sign in (P2) | ☑ | ☑ | ☐ | ☐ | ☑ | ☑ | ☐ |
-| Onboarding (P3) | ☑ | ☑ | ☐ | ☐ | ☑ | ☑ | ☐ |
-| Offline (P3) | ☑ | ☑ | ☐ | ☐ | ☑ | ☑ | ☐ |
-| Auth/Sign up (P2) | ☑ | ☑ | ☐ | ☐ | ☑ | ☑ | ☐ |
+| Loans (P2) | ☑ | ☑ | ☑ | ☐ | ☑ | ☑ | ☑ |
+| AI (P3) | ☑ | ☑ | ☑ | ☐ | ☑ | ☑ | ☑ |
+| Collaboration (P3) | ☑ | ☑ | ☐ | ☐ | ☑ | ☑ | ☑ |
+| Patterns (P3) | ☑ | ☑ | ☑ | ☐ | ☑ | ☑ | ☑ |
+| Scan (P3) | ☑ | ☑ | ☑ | ☐ | ☑ | ☑ | ☑ |
+| Admin (P2) | ☑ | ☑ | ☑ | ☐ | ☑ | ☑ | ☑ |
+| Auth/Sign in (P2) | ☑ | ☑ | ☐ | ☐ | ☑ | ☑ | ☑ |
+| Onboarding (P3) | ☑ | ☑ | ☐ | ☐ | ☑ | ☑ | ☑ |
+| Offline (P3) | ☑ | ☑ | ☐ | ☐ | ☑ | ☑ | ☑ |
+| Auth/Sign up (P2) | ☑ | ☑ | ☐ | ☐ | ☑ | ☑ | ☑ |
 | Test (P3) | ☑ | ☑ | ☐ | ☐ | ☑ | ☑ | ☐ |
 | … | ☐ | ☐ | ☐ | ☐ | ☐ | ☐ | ☐ |
 
