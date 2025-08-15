@@ -59,6 +59,7 @@ export class YarnService {
 		imageUrl?: string
 		unit?: string
 		categoryData: unknown
+		colorId?: string
 	}) {
 		const parsed = GarnBatchSchema.safeParse(input.categoryData)
 		if (!parsed.success) {
@@ -83,7 +84,12 @@ export class YarnService {
 				purchaseDate: data.purchaseDate,
 				imageUrl: input.imageUrl,
 				categoryData: JSON.stringify({ ...data, masterItemId: input.masterId }),
-				relatedItems: { connect: { id: input.masterId } }
+				relatedItems: {
+					connect: [
+						{ id: input.masterId },
+						...(input.colorId ? [{ id: input.colorId }] : [])
+					]
+				}
 			}
 		})
 
@@ -96,6 +102,18 @@ export class YarnService {
 				userId: this.userId
 			}
 		})
+
+		// Typed relasjon: color -> batch
+		if (input.colorId) {
+			await this.db.itemRelation.create({
+				data: {
+					relationType: RelationType.BATCH_OF,
+					fromItemId: input.colorId,
+					toItemId: batch.id,
+					userId: this.userId
+				}
+			})
+		}
 
 		return batch
 	}
