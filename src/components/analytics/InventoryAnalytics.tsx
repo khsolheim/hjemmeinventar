@@ -186,7 +186,7 @@ export function InventoryAnalytics() {
     .sort((a, b) => parseInt(a.label) - parseInt(b.label))
 
   return (
-    <div className="container mx-auto px-4 py-8">
+    <div className="container mx-auto px-4 py-8 cq">
       {/* Header */}
       <div className="flex justify-between items-center mb-8">
         <div>
@@ -221,7 +221,7 @@ export function InventoryAnalytics() {
       </div>
 
       {/* Overview Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+      <div className="cq-grid dashboard-grid grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8" style={{"--card-min":"220px"} as any}>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Totale gjenstander</CardTitle>
@@ -281,7 +281,7 @@ export function InventoryAnalytics() {
       </div>
 
       {/* Charts Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+      <div className="cq-grid dashboard-grid grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8" style={{"--card-min":"280px"} as any}>
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -386,7 +386,7 @@ export function InventoryAnalytics() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="cq-grid grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" style={{"--card-min":"240px"} as any}>
               {categoryAnalytics.map((category) => (
                 <div key={category.id} className="border rounded-lg p-4 space-y-2">
                   <div className="font-medium">{category.name}</div>
