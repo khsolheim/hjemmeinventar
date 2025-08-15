@@ -1,4 +1,4 @@
-import { type PrismaClient } from '@prisma/client'
+import { type PrismaClient, RelationType } from '@prisma/client'
 import { GarnBatchSchema, GarnMasterSchema, GarnColorSchema } from '@/lib/categories/category-schemas'
 
 export class YarnService {
@@ -69,7 +69,7 @@ export class YarnService {
 		if (!batchCategory) throw new Error('Garn Batch kategori ikke funnet')
 
 		const data = parsed.data
-		return await this.db.item.create({
+		const batch = await this.db.item.create({
 			data: {
 				name: input.name,
 				description: `Batch ${data.batchNumber} - ${data.color}`,
@@ -86,6 +86,18 @@ export class YarnService {
 				relatedItems: { connect: { id: input.masterId } }
 			}
 		})
+
+		// Typed relasjon: master -> batch
+		await this.db.itemRelation.create({
+			data: {
+				relationType: RelationType.MASTER_OF,
+				fromItemId: input.masterId,
+				toItemId: batch.id,
+				userId: this.userId
+			}
+		})
+
+		return batch
 	}
 
 	async createColor(input: { masterId: string; name: string; colorCode?: string; imageUrl?: string }) {
@@ -109,7 +121,7 @@ export class YarnService {
 			throw new Error(parsed.error.errors.map(e => e.message).join(', '))
 		}
 
-		return await this.db.item.create({
+		const color = await this.db.item.create({
 			data: {
 				name: input.name,
 				userId: this.userId,
@@ -123,5 +135,17 @@ export class YarnService {
 				relatedItems: { connect: { id: input.masterId } }
 			}
 		})
+
+		// Typed relasjon: master -> color
+		await this.db.itemRelation.create({
+			data: {
+				relationType: RelationType.COLOR_OF,
+				fromItemId: input.masterId,
+				toItemId: color.id,
+				userId: this.userId
+			}
+		})
+
+		return color
 	}
 }
