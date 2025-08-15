@@ -811,7 +811,7 @@ export const yarnRouter = createTRPCRouter({
       imageUrl: z.string().optional()
     }))
     .mutation(async ({ ctx, input }) => {
-      // Try to find existing color for this master by name (case-insensitive) and colorCode
+      // Forsøk å finne eksisterende farge for denne masteren basert på navn (case-insensitivt) og colorCode
       const colorCategoryExisting = await ctx.db.category.findFirst({ where: { name: 'Garn Farge' } })
       if (colorCategoryExisting) {
         const existingColors = await ctx.db.item.findMany({
@@ -833,43 +833,13 @@ export const yarnRouter = createTRPCRouter({
         })
         if (match) return match
       }
-      // Finn/lag kategori "Garn Farge"
-      let colorCategory = await ctx.db.category.findFirst({ where: { name: 'Garn Farge' } })
-      if (!colorCategory) {
-        colorCategory = await ctx.db.category.create({
-          data: {
-            name: 'Garn Farge',
-            description: 'Fargenivå mellom master og batch',
-            fieldSchema: JSON.stringify({
-              type: 'object',
-              properties: {
-                colorCode: { type: 'string', label: 'Fargekode' },
-                masterItemId: { type: 'string', label: 'Master', hidden: true }
-              }
-            })
-          }
-        })
-      }
 
-      const color = await ctx.db.item.create({
-        data: {
-          name: input.name,
-          description: undefined,
-          userId: ctx.user.id,
-          categoryId: colorCategory.id,
-          locationId: (await ctx.db.item.findUnique({ where: { id: input.masterId } }))!.locationId,
-          totalQuantity: 0,
-          availableQuantity: 0,
-          unit: 'nøste',
-          imageUrl: input.imageUrl,
-          categoryData: JSON.stringify({
-            colorCode: input.colorCode,
-            masterItemId: input.masterId
-          }),
-          relatedItems: {
-            connect: { id: input.masterId }
-          }
-        }
+      const service = new YarnService(ctx.db, ctx.user.id)
+      const color = await service.createColor({
+        masterId: input.masterId,
+        name: input.name,
+        colorCode: input.colorCode,
+        imageUrl: input.imageUrl
       })
 
       return color

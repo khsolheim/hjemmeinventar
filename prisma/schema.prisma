@@ -74,6 +74,9 @@ model User {
   
   // NEW: Loan tracking
   loans        Loan[]
+
+  // NEW: Typed item relations ownership
+  itemRelations ItemRelation[]
   
   // Authentication
   accounts Account[]
@@ -181,9 +184,13 @@ model Item {
   // NEW: Tag system for flexible metadata
   tags         Tag[]     @relation("ItemTags")
   
-  // NEW: Item relationships (accessories, parts, etc.)
+  // NEW: Item relationships (accessories, parts, etc.) – legacy self relation
   relatedItems Item[]    @relation("ItemRelations")
   relatedTo    Item[]    @relation("ItemRelations")
+
+  // NEW: Typed item relations
+  itemRelationsFrom ItemRelation[] @relation("ItemRelationFrom")
+  itemRelationsTo   ItemRelation[] @relation("ItemRelationTo")
   
   // NEW: Document attachments (receipts, manuals, warranties)
   attachments  Attachment[]
@@ -533,4 +540,33 @@ model DefaultHierarchyRule {
   
   @@unique([ruleSetName, parentType, childType])
   @@index([ruleSetName])
+}
+
+enum RelationType {
+  MASTER_OF
+  BATCH_OF
+  COLOR_OF
+  CHILD_OF
+  ATTACHMENT_OF
+}
+
+model ItemRelation {
+  id           String        @id @default(cuid())
+  relationType RelationType
+
+  fromItem     Item          @relation("ItemRelationFrom", fields: [fromItemId], references: [id], onDelete: Cascade)
+  fromItemId   String
+
+  toItem       Item          @relation("ItemRelationTo", fields: [toItemId], references: [id], onDelete: Cascade)
+  toItemId     String
+
+  // Owner
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId       String
+
+  createdAt    DateTime      @default(now())
+
+  @@unique([fromItemId, toItemId, relationType])
+  @@index([userId])
+  @@index([relationType])
 }

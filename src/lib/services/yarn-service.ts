@@ -1,5 +1,5 @@
 import { type PrismaClient } from '@prisma/client'
-import { GarnBatchSchema, GarnMasterSchema } from '@/lib/categories/category-schemas'
+import { GarnBatchSchema, GarnMasterSchema, GarnColorSchema } from '@/lib/categories/category-schemas'
 
 export class YarnService {
 	private db: PrismaClient
@@ -83,6 +83,43 @@ export class YarnService {
 				purchaseDate: data.purchaseDate,
 				imageUrl: input.imageUrl,
 				categoryData: JSON.stringify({ ...data, masterItemId: input.masterId }),
+				relatedItems: { connect: { id: input.masterId } }
+			}
+		})
+	}
+
+	async createColor(input: { masterId: string; name: string; colorCode?: string; imageUrl?: string }) {
+		const master = await this.db.item.findFirst({ where: { id: input.masterId, userId: this.userId } })
+		if (!master) throw new Error('Master ikke funnet')
+
+		let colorCategory = await this.db.category.findFirst({ where: { name: 'Garn Farge' } })
+		if (!colorCategory) {
+			colorCategory = await this.db.category.create({
+				data: {
+					name: 'Garn Farge',
+					description: 'Fargenivå mellom master og batch',
+					fieldSchema: JSON.stringify({ type: 'object', properties: { colorCode: { type: 'string', label: 'Fargekode' }, masterItemId: { type: 'string', label: 'Master', hidden: true } } })
+				}
+			})
+		}
+
+		const payload = { colorCode: input.colorCode, masterItemId: input.masterId }
+		const parsed = GarnColorSchema.safeParse(payload)
+		if (!parsed.success) {
+			throw new Error(parsed.error.errors.map(e => e.message).join(', '))
+		}
+
+		return await this.db.item.create({
+			data: {
+				name: input.name,
+				userId: this.userId,
+				categoryId: colorCategory.id,
+				locationId: master.locationId,
+				totalQuantity: 0,
+				availableQuantity: 0,
+				unit: 'nøste',
+				imageUrl: input.imageUrl,
+				categoryData: JSON.stringify(parsed.data),
 				relatedItems: { connect: { id: input.masterId } }
 			}
 		})
