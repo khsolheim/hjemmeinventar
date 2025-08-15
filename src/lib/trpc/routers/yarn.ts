@@ -14,6 +14,7 @@ import {
   type YarnMasterData,
   type YarnBatchData
 } from '../../utils/yarn-helpers'
+import { YarnService } from '@/lib/services/yarn-service'
 
 // Lokal helper for å lese colorCode trygt fra categoryData
 function safeParseColorCode(categoryData: string | null | undefined): string | undefined {
@@ -730,22 +731,23 @@ export const yarnRouter = createTRPCRouter({
       imageUrl: z.string().optional(),
     }))
     .mutation(async ({ ctx, input }) => {
-      const master = await createYarnMaster(ctx.db, {
+      const service = new YarnService(ctx.db, ctx.user.id)
+      const master = await service.createMaster({
         name: input.name,
         locationId: input.locationId,
-        userId: ctx.user.id,
-        producer: input.producer,
-        composition: input.composition,
-        yardage: input.yardage,
-        weight: input.weight,
-        gauge: input.gauge,
-        needleSize: input.needleSize,
-        careInstructions: input.careInstructions,
-        store: input.store,
-        notes: input.notes,
         imageUrl: input.imageUrl,
+        categoryData: {
+          producer: input.producer,
+          composition: input.composition,
+          yardage: input.yardage,
+          weight: input.weight,
+          gauge: input.gauge,
+          needleSize: input.needleSize,
+          careInstructions: input.careInstructions,
+          store: input.store,
+          notes: input.notes,
+        }
       })
-
       return master
     }),
 
@@ -862,22 +864,15 @@ export const yarnRouter = createTRPCRouter({
       colorId: z.string().optional(),
     }))
     .mutation(async ({ ctx, input }) => {
-      // Verifiser at master tilhører brukeren
       const master = await ctx.db.item.findFirst({
-        where: {
-          id: input.masterId,
-          userId: ctx.user.id
-        },
+        where: { id: input.masterId, userId: ctx.user.id },
         include: { category: true }
       })
-
       if (!master || !isYarnMaster(master.category?.name)) {
-        throw new TRPCError({
-          code: 'NOT_FOUND',
-          message: 'Garn Master ikke funnet'
-        })
+        throw new TRPCError({ code: 'NOT_FOUND', message: 'Garn Master ikke funnet' })
       }
 
+<<<<<<< Current (Your changes)
       // Duplikatsjekk: Finn eksisterende batch for samme master + (farge) + batchNumber
       const batchCategory = await ctx.db.category.findFirst({ where: { name: 'Garn Batch' } })
       if (batchCategory) {
@@ -915,30 +910,32 @@ export const yarnRouter = createTRPCRouter({
       }
 
       const batch = await createBatchForMaster(ctx.db, input.masterId, {
+=======
+      const service = new YarnService(ctx.db, ctx.user.id)
+      const batch = await service.createBatch({
+        masterId: input.masterId,
+>>>>>>> Incoming (Background Agent changes)
         name: input.name,
         locationId: input.locationId,
-        userId: ctx.user.id,
-        batchNumber: input.batchNumber,
-        color: input.color,
-        colorCode: input.colorCode,
-        quantity: input.quantity,
-        pricePerSkein: input.pricePerSkein,
-        purchaseDate: input.purchaseDate,
-        condition: input.condition,
-        notes: input.notes,
         imageUrl: input.imageUrl,
         unit: input.unit,
+        categoryData: {
+          batchNumber: input.batchNumber,
+          color: input.color,
+          colorCode: input.colorCode,
+          quantity: input.quantity,
+          pricePerSkein: input.pricePerSkein,
+          purchaseDate: input.purchaseDate,
+          condition: input.condition,
+          notes: input.notes,
+          masterItemId: input.masterId,
+        }
       })
 
-      // Relater til farge hvis oppgitt
       if (input.colorId) {
         await ctx.db.item.update({
           where: { id: batch.id },
-          data: {
-            relatedItems: {
-              connect: { id: input.colorId }
-            }
-          }
+          data: { relatedItems: { connect: { id: input.colorId } } }
         })
       }
 

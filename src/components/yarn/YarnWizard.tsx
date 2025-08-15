@@ -147,6 +147,13 @@ export function YarnWizard({ onComplete, existingMasterId, preset }: YarnWizardP
   
   const utils = trpc.useUtils()
   
+  // Invalidate helpers
+  const invalidateAfterCreate = (masterId: string) => {
+    utils.yarn.getAllMasters.invalidate()
+    utils.yarn.getBatchesForMaster.invalidate({ masterId })
+    utils.yarn.getColorsForMaster.invalidate({ masterId })
+  }
+  
   // Auto-create default location if none exists (DISABLED - fixing existing data instead)
   React.useEffect(() => {
     if (testData && testData.totalLocations === 0 && !createLocationMutation.isPending) {
@@ -218,6 +225,7 @@ export function YarnWizard({ onComplete, existingMasterId, preset }: YarnWizardP
       const master = await createMasterMutation.mutateAsync(data)
       setCreatedMaster(master)
       setSelectedMasterId(master.id)
+      invalidateAfterCreate(master.id)
       setCurrentStep('batch-details')
       toast.success('Garn-type opprettet!')
     } catch (error) {
@@ -258,6 +266,7 @@ export function YarnWizard({ onComplete, existingMasterId, preset }: YarnWizardP
         colorId,
       })
 
+      invalidateAfterCreate(masterId)
       setCurrentStep('summary')
       toast.success('Batch opprettet!')
       

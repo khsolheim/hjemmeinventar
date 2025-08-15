@@ -2,6 +2,7 @@ import { z } from 'zod'
 import { TRPCError } from '@trpc/server'
 import { createTRPCRouter, protectedProcedure } from '../server'
 import { LocationType } from '@prisma/client'
+import { validateAcyclic } from '@/lib/services/hierarchy-service'
 
 // Input validation schemas
 const LocationTypeEnum = z.nativeEnum(LocationType)
@@ -204,9 +205,8 @@ export const hierarchyRouter = createTRPCRouter({
         })
       }
 
-      // Validate for circular dependencies
-      const allowedRules = input.rules.filter(r => r.isAllowed)
-      const circularError = validateNoCircularDependencies(allowedRules)
+      // Validate for circular dependencies (server-side)
+      const circularError = validateAcyclic(input.rules)
       if (circularError) {
         throw new TRPCError({
           code: 'BAD_REQUEST',
@@ -321,6 +321,7 @@ export const hierarchyRouter = createTRPCRouter({
     })
 })
 
+<<<<<<< Current (Your changes)
 // Helper function to validate no circular dependencies
 function validateNoCircularDependencies(
   rules: Array<{ parentType: LocationType; childType: LocationType; isAllowed: boolean }>
@@ -371,3 +372,5 @@ function validateNoCircularDependencies(
 
   return null
 }
+=======
+>>>>>>> Incoming (Background Agent changes)
