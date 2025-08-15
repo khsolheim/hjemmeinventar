@@ -215,7 +215,7 @@ export function LocationModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="responsive-dialog max-w-2xl max-h-[90vh] overflow-y-auto cq">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             {mode === 'edit' ? (
@@ -255,7 +255,7 @@ export function LocationModal({
           </TabsList>
 
           <TabsContent value="basic" className="space-y-4 mt-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="form-grid grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <Label htmlFor="location-name">
                   Navn på lokasjon
@@ -468,7 +468,7 @@ export function LocationModal({
           </TabsContent>
         </Tabs>
 
-        <div className="flex justify-end gap-2 mt-6 pt-4 border-t">
+        <div className="dialog-actions flex justify-end gap-2 mt-6 pt-4 border-t">
           <Button 
             variant="outline" 
             onClick={onClose}

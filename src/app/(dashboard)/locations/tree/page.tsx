@@ -102,7 +102,8 @@ function TreeNode({
 }: TreeNodeProps) {
   const Icon = locationTypeIcons[location.type as keyof typeof locationTypeIcons] || MapPin
   const hasChildren = location.children && location.children.length > 0
-  const indent = level * 24 // 24px per level
+  // Indrykk styres av CSS-variabel for bedre responsivitet
+  const indentStyle = { marginLeft: `calc(var(--indent-step, 24px) * ${level})` }
   
   // Check if this node or any children match search
   const matchesSearch = (loc: any): boolean => {
@@ -137,7 +138,7 @@ function TreeNode({
         className={`flex items-center py-2 px-3 rounded-lg hover:bg-muted transition-colors group ${
           isHighlighted ? 'bg-yellow-50 border border-yellow-200' : ''
         }`}
-        style={{ marginLeft: `${indent}px` }}
+        style={indentStyle}
       >
         {/* Expand/Collapse toggle */}
         <div className="w-6 h-6 flex items-center justify-center">
@@ -168,8 +169,8 @@ function TreeNode({
         <Icon className="w-4 h-4 mr-2 text-muted-foreground" />
 
         {/* Location name and info */}
-        <div className="flex-1 flex items-center gap-2">
-          <span className="font-medium">{location.name}</span>
+        <div className="flex-1 flex items-center gap-2 min-w-0">
+          <span className="font-medium break-words">{location.name}</span>
           
           <Badge variant="secondary" className="text-xs">
             {locationTypeLabels[location.type as keyof typeof locationTypeLabels]}
@@ -191,6 +192,7 @@ function TreeNode({
           variant="ghost"
           size="sm"
           className="w-8 h-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
+          data-mobile-action
           onClick={() => onShowQR(location.qrCode)}
         >
           <QrCode className="w-3 h-3" />
@@ -203,6 +205,7 @@ function TreeNode({
               variant="ghost" 
               size="sm" 
               className="w-8 h-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
+              data-mobile-action
             >
               <MoreVertical className="w-4 h-4" />
             </Button>
@@ -411,7 +414,7 @@ export default function LocationsTreePage() {
   }
 
   return (
-    <div className="page container mx-auto px-4 py-8">
+    <div className="page container mx-auto px-4 py-8 cq">
       {/* Header */}
       <div className="flex items-center justify-between mb-8 cq">
         <div className="flex items-center gap-4">
@@ -497,7 +500,7 @@ export default function LocationsTreePage() {
             Bruk pilene for å utvide/skjule underlokasjoner. Dra for å reorganisere.
           </CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent style={{ minHeight: '40cqh' }} className="overflow-x-auto">
           {filteredLocations.length === 0 ? (
             <div className="text-center py-12">
               <TreePine className="w-16 h-16 mx-auto mb-4 opacity-30" />
@@ -518,7 +521,7 @@ export default function LocationsTreePage() {
               )}
             </div>
           ) : (
-            <div className="space-y-1">
+            <div className="space-y-1 tree-panel cq">
               {filteredLocations.map((location) => {
                 const isExpanded = expandedNodes.has(location.id)
                 return (

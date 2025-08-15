@@ -315,13 +315,15 @@ export function CategoriesPageClient({ initialCategories }: { initialCategories?
                   )}
                 </div>
                 {(category as any).fieldSchema && (
-                  <FieldSchemaBuilder 
-                    // View-only preview via existing viewer is complex; keep compact badge only to minimize layout jumps
-                    initialSchema={(category as any).fieldSchema}
-                    onChange={() => {}}
-                    disabled
-                    categoryName={category.name}
-                  />
+                  <div className="table-wrap">
+                    <FieldSchemaBuilder 
+                      // View-only preview via existing viewer is complex; keep compact badge only to minimize layout jumps
+                      initialSchema={(category as any).fieldSchema}
+                      onChange={() => {}}
+                      disabled
+                      categoryName={category.name}
+                    />
+                  </div>
                 )}
                 <div className="flex items-center justify-between pt-2 border-t border-border/50">
                   <div className="text-xs text-muted-foreground">Klikk for å se detaljer</div>

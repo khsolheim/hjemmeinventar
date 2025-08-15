@@ -1,6 +1,6 @@
-'use client'
+"use client"
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -28,11 +28,17 @@ import {
 import { trpc } from '@/lib/trpc/client'
 import { toast } from 'sonner'
 
-export function AIInsightsDashboard() {
+export function AIInsightsDashboard({ aiEnabled }: { aiEnabled: boolean }) {
   const [selectedAnalysis, setSelectedAnalysis] = useState<'overview' | 'optimization' | 'predictions' | 'maintenance'>('overview')
 
-  // Check if AI is enabled
-  const { data: aiStatus } = trpc.ai.isEnabled.useQuery()
+  const aiStatus = { enabled: aiEnabled }
+  
+  // Stabiliser visning: vent litt før vi viser dynamiske data for å unngå CLS
+  const [stabilized, setStabilized] = useState(false)
+  useEffect(() => {
+    const id = setTimeout(() => setStabilized(true), 3000)
+    return () => clearTimeout(id)
+  }, [])
   
   // Get AI insights
   const { 
@@ -88,7 +94,7 @@ export function AIInsightsDashboard() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 min-h-[680px]">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -114,7 +120,7 @@ export function AIInsightsDashboard() {
         </Button>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6" style={{ minHeight: '420px' }}>
         {/* Quick Insights */}
         <div className="lg:col-span-1">
           <Card>
@@ -127,12 +133,12 @@ export function AIInsightsDashboard() {
                 Personaliserte anbefalinger
               </CardDescription>
             </CardHeader>
-            <CardContent>
-              {insightsLoading ? (
+            <CardContent className="min-h-[140px]">
+              {insightsLoading || !stabilized ? (
                 <div className="space-y-3">
-                  {[1, 2, 3].map(i => (
-                    <div key={i} className="h-4 bg-muted animate-pulse rounded" />
-                  ))}
+                  <div className="h-4 bg-muted animate-pulse rounded" />
+                  <div className="h-4 bg-muted animate-pulse rounded w-5/6" />
+                  <div className="h-4 bg-muted animate-pulse rounded w-4/6" />
                 </div>
               ) : insights && insights.length > 0 ? (
                 <div className="space-y-3">
@@ -167,7 +173,7 @@ export function AIInsightsDashboard() {
                 Dyptgående inventaranalyse med AI
               </CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="min-h-[420px]">
               <Tabs value={selectedAnalysis} onValueChange={(value: any) => setSelectedAnalysis(value)}>
                 <TabsList className="grid w-full grid-cols-4">
                   <TabsTrigger value="overview" className="text-xs">
@@ -189,7 +195,7 @@ export function AIInsightsDashboard() {
                 </TabsList>
 
                 <div className="mt-4">
-                  {analysisLoading ? (
+                  {analysisLoading || !stabilized ? (
                     <div className="space-y-4">
                       <div className="h-6 bg-muted animate-pulse rounded" />
                       <div className="h-4 bg-muted animate-pulse rounded w-3/4" />

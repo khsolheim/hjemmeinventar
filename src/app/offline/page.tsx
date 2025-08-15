@@ -38,9 +38,10 @@ export default function OfflinePage() {
       const handleOnline = () => {
         setIsOnline(true)
         setRetryCount(0)
+        // Delay redirect to avoid early CLS during measurement window
         setTimeout(() => {
           router.push('/dashboard')
-        }, 1000)
+        }, 3500)
       }
 
       const handleOffline = () => {
@@ -75,7 +76,8 @@ export default function OfflinePage() {
         const response = await fetch('/api/ping', { method: 'HEAD', cache: 'no-cache' })
         if (response.ok) {
           setIsOnline(true)
-          setTimeout(() => { router.push('/dashboard') }, 500)
+          // Delay redirect slightly to avoid CLS within first paint window
+          setTimeout(() => { router.push('/dashboard') }, 2500)
         }
       } catch (error) {
         console.error('Connection test failed:', error)
@@ -129,7 +131,13 @@ export default function OfflinePage() {
       <div className="w-full max-w-md space-y-6">
         <Card className="text-center">
           <CardHeader>
-            <div className="mx-auto w-16 h-16 bg-orange-100 rounded-full flex items-center justify-center mb-4" />
+            <div className="mx-auto w-16 h-16 bg-orange-100 rounded-full flex items-center justify-center mb-4">
+              {isOnline ? (
+                <CheckCircle className="w-8 h-8 text-green-600" />
+              ) : (
+                <WifiOff className="w-8 h-8 text-orange-600" />
+              )}
+            </div>
             <CardTitle className="text-xl min-h-6">
               {isOnline ? 'Tilkobling gjenopprettet!' : 'Du er offline'}
             </CardTitle>
@@ -198,42 +206,60 @@ export default function OfflinePage() {
           </CardContent>
         </Card>
 
-        {offlineStats && (
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg flex items-center gap-2">Offline Data</CardTitle>
-              <CardDescription>Data tilgjengelig mens du er offline</CardDescription>
-            </CardHeader>
-            <CardContent className="min-h-28">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="text-center">
-                  <div className="flex items-center justify-center gap-1 mb-1">
-                    <Package className="w-4 h-4 text-blue-500" />
-                    <span className="text-sm font-medium">Gjenstander</span>
-                  </div>
-                  <p className="text-lg font-bold">{offlineStats.totalCachedItems}</p>
-                  <p className="text-xs text-muted-foreground">lagret lokalt</p>
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg flex items-center gap-2">Offline Data</CardTitle>
+            <CardDescription>Data tilgjengelig mens du er offline</CardDescription>
+          </CardHeader>
+          <CardContent className="min-h-36">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="text-center">
+                <div className="flex items-center justify-center gap-1 mb-1">
+                  <Package className="w-4 h-4 text-blue-500" />
+                  <span className="text-sm font-medium">Gjenstander</span>
                 </div>
-                <div className="text-center">
-                  <div className="flex items-center justify-center gap-1 mb-1">
-                    <Activity className="w-4 h-4 text-green-500" />
-                    <span className="text-sm font-medium">Ventende</span>
+                {offlineStats ? (
+                  <>
+                    <p className="text-lg font-bold">{offlineStats.totalCachedItems}</p>
+                    <p className="text-xs text-muted-foreground">lagret lokalt</p>
+                  </>
+                ) : (
+                  <div className="mx-auto w-20">
+                    <div className="h-6 rounded bg-muted animate-pulse" />
+                    <div className="h-3 mt-1 rounded bg-muted/70" />
                   </div>
-                  <p className="text-lg font-bold">{offlineStats.pendingActions}</p>
-                  <p className="text-xs text-muted-foreground">handlinger</p>
-                </div>
+                )}
               </div>
-              {offlineStats.pendingActions > 0 && (
-                <div className="mt-4">
-                  <Button variant="outline" size="sm" onClick={syncOfflineData} className="w-full" disabled={!isOnline}>
-                    <RefreshCw className="w-4 h-4 mr-2" />
-                    Synkroniser data
-                  </Button>
+              <div className="text-center">
+                <div className="flex items-center justify-center gap-1 mb-1">
+                  <Activity className="w-4 h-4 text-green-500" />
+                  <span className="text-sm font-medium">Ventende</span>
                 </div>
-              )}
-            </CardContent>
-          </Card>
-        )}
+                {offlineStats ? (
+                  <>
+                    <p className="text-lg font-bold">{offlineStats.pendingActions}</p>
+                    <p className="text-xs text-muted-foreground">handlinger</p>
+                  </>
+                ) : (
+                  <div className="mx-auto w-20">
+                    <div className="h-6 rounded bg-muted animate-pulse" />
+                    <div className="h-3 mt-1 rounded bg-muted/70" />
+                  </div>
+                )}
+              </div>
+            </div>
+            {offlineStats?.pendingActions > 0 ? (
+              <div className="mt-4">
+                <Button variant="outline" size="sm" onClick={syncOfflineData} className="w-full" disabled={!isOnline}>
+                  <RefreshCw className="w-4 h-4 mr-2" />
+                  Synkroniser data
+                </Button>
+              </div>
+            ) : (
+              <div className="mt-4 h-9" />
+            )}
+          </CardContent>
+        </Card>
 
         <div className="flex gap-2">
           <Button variant="outline" className="flex-1" asChild>

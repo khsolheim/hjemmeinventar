@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Plus, Search, Filter, Package2, DollarSign, Palette, Hash } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -35,6 +35,7 @@ export interface YarnMasterWithTotals {
 export function YarnMasterDashboard({ initialMasters, initialTotal }: { initialMasters?: YarnMasterWithTotals[]; initialTotal?: number }) {
   const [searchTerm, setSearchTerm] = useState('')
   const [searchFilters, setSearchFilters] = useState<any>(null)
+  const [activeTab, setActiveTab] = useState<'grid' | 'list' | 'bulk' | 'analytics' | 'colors'>('grid')
 
   // Fetch yarn masters
   const { data: mastersData, isLoading, refetch } = trpc.yarn.getAllMasters.useQuery({
@@ -64,6 +65,23 @@ export function YarnMasterDashboard({ initialMasters, initialTotal }: { initialM
 
   const masters = (mastersData?.masters || initialMasters) || []
   const total = mastersData?.total ?? initialTotal ?? 0
+
+  const { data: allColors, refetch: refetchColors } = trpc.yarn.getAllMasterColors.useQuery(
+    {},
+    {
+      enabled: activeTab === 'colors',
+      refetchOnMount: true,
+      refetchOnWindowFocus: true,
+      staleTime: 0,
+      gcTime: 0,
+    }
+  )
+
+  useEffect(() => {
+    if (activeTab === 'colors') {
+      refetchColors()
+    }
+  }, [activeTab, refetchColors])
 
   // Calculate overall statistics
   const overallStats = masters.reduce((acc, master) => {
@@ -128,12 +146,19 @@ export function YarnMasterDashboard({ initialMasters, initialTotal }: { initialM
             Administrer dine garn-typer og batches
           </p>
         </div>
-        <Button asChild>
-          <Link href="/garn/register">
-            <Plus className="h-4 w-4 mr-2" />
-            Registrer Nytt Garn
-          </Link>
-        </Button>
+        <div className="flex gap-2">
+          <Button asChild>
+            <Link href="/garn/manage">
+              Administrer
+            </Link>
+          </Button>
+          <Button asChild>
+            <Link href="/garn/register">
+              <Plus className="h-4 w-4 mr-2" />
+              Registrer Nytt Garn
+            </Link>
+          </Button>
+        </div>
       </div>
 
       {/* Statistics Cards - compact */}
@@ -202,12 +227,13 @@ export function YarnMasterDashboard({ initialMasters, initialTotal }: { initialM
       </div>
 
       {/* Main Content */}
-      <Tabs defaultValue="grid" className="space-y-4">
+      <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)} className="space-y-4">
         <TabsList className="min-h-[44px]">
           <TabsTrigger value="grid">Rutenett</TabsTrigger>
           <TabsTrigger value="list">Liste</TabsTrigger>
           <TabsTrigger value="bulk">Bulk-ops</TabsTrigger>
           <TabsTrigger value="analytics">Analyse</TabsTrigger>
+          <TabsTrigger value="colors">Farger</TabsTrigger>
         </TabsList>
 
         <TabsContent value="grid" className="space-y-4 cq">
@@ -219,9 +245,11 @@ export function YarnMasterDashboard({ initialMasters, initialTotal }: { initialM
                 <p className="text-muted-foreground text-center mb-4">
                   Kom i gang ved å registrere ditt første garn.
                 </p>
-                <Button onClick={() => setIsWizardOpen(true)}>
+                <Button asChild>
+                  <Link href="/garn/register">
                   <Plus className="h-4 w-4 mr-2" />
                   Registrer Garn
+                  </Link>
                 </Button>
               </CardContent>
             </Card>
@@ -355,6 +383,55 @@ export function YarnMasterDashboard({ initialMasters, initialTotal }: { initialM
 
         <TabsContent value="analytics">
           <YarnAnalytics />
+        </TabsContent>
+
+        <TabsContent value="colors" className="space-y-4 cq">
+          <Card>
+            <CardHeader>
+              <CardTitle>Alle farger</CardTitle>
+              <CardDescription>Samlet oversikt over farger på tvers av alle garntyper</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {!allColors || allColors.length === 0 ? (
+                <div className="text-sm text-muted-foreground">Ingen farger funnet.</div>
+              ) : (
+                <div className="cq-grid yarn-grid gap-4" style={{"--card-min":"200px"} as any}>
+                  {allColors.map((c: any, index: number) => {
+                    const href = c.colorId ? `/garn/${c.masterId}/farge/${c.colorId}` : `/garn/${c.masterId}`
+                    return (
+                    <Link key={`${c.masterId}-${c.colorId || c.colorName}-${index}`} href={href} className="block">
+                    <Card className="p-3 cursor-pointer hover:shadow-md transition-shadow">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          {c.imageUrl ? (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img
+                              src={c.imageUrl}
+                              alt={`${c.masterName} – ${c.colorName}`}
+                              className="w-10 h-10 rounded object-cover border"
+                              loading="lazy"
+                            />
+                          ) : (
+                            <div
+                              className="w-10 h-10 rounded border"
+                              style={{ backgroundColor: c.colorCode || '#ddd' }}
+                            />
+                          )}
+                          <div>
+                            <div className="font-medium text-sm">{c.masterName} – {c.colorName}</div>
+                            <div className="text-xs text-muted-foreground">{c.colorCode || 'Ukjent kode'}</div>
+                          </div>
+                        </div>
+                        <Badge variant="secondary" className="text-xs">{c.batchCount} batches</Badge>
+                      </div>
+                      <div className="mt-2 text-xs text-muted-foreground">Tilgjengelige nøster: {c.skeinCount}</div>
+                    </Card>
+                    </Link>
+                    )})}
+                </div>
+              )}
+            </CardContent>
+          </Card>
         </TabsContent>
       </Tabs>
 

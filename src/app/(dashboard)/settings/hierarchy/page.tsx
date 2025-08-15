@@ -162,13 +162,13 @@ export default function HierarchySettingsPage() {
       )}
 
       <Tabs defaultValue="presets" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-2">
+        <TabsList className="grid w-full grid-cols-2" style={{ minHeight: 44 }}>
           <TabsTrigger value="presets">Standard regel-sett</TabsTrigger>
           <TabsTrigger value="custom">Egendefinerte regler</TabsTrigger>
         </TabsList>
 
         {/* Standard Rule Sets Tab */}
-        <TabsContent value="presets" className="space-y-6">
+        <TabsContent value="presets" className="hidden data-[state=active]:block space-y-6">
           <Card>
             <CardHeader>
               <CardTitle>Velg standard regel-sett</CardTitle>
@@ -275,7 +275,7 @@ export default function HierarchySettingsPage() {
         </TabsContent>
 
         {/* Custom Rules Tab */}
-        <TabsContent value="custom" className="space-y-6">
+        <TabsContent value="custom" className="hidden data-[state=active]:block space-y-6">
           <Card>
             <CardHeader>
               <CardTitle>Egendefinerte hierarki-regler</CardTitle>
@@ -284,15 +284,17 @@ export default function HierarchySettingsPage() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              {currentMatrix && (
-                <HierarchyMatrix
-                  matrix={currentMatrix.matrix}
-                  locationTypes={currentMatrix.locationTypes}
-                  locationTypeLabels={locationTypeLabels}
-                  onUpdate={handleCustomRulesUpdate}
-                  isLoading={updateRulesMutation.isPending}
-                />
-              )}
+              <div className="table-wrap">
+                {currentMatrix && (
+                  <HierarchyMatrix
+                    matrix={currentMatrix.matrix}
+                    locationTypes={currentMatrix.locationTypes}
+                    locationTypeLabels={locationTypeLabels}
+                    onUpdate={handleCustomRulesUpdate}
+                    isLoading={updateRulesMutation.isPending}
+                  />
+                )}
+              </div>
             </CardContent>
           </Card>
 

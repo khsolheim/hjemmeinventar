@@ -51,51 +51,7 @@ const YarnPatternViewer = dynamic(
 import { trpc } from '@/lib/trpc/client'
 import { toast } from 'sonner'
 
-// Mock data for demonstration
-const mockPatterns = [
-  {
-    id: '1',
-    name: 'Enkelt sjal mønster',
-    description: 'Et vakkert og enkelt sjal som passer for begynnere',
-    pdfUrl: '/examples/pattern1.pdf',
-    difficulty: 'Lett',
-    yarnWeight: 'DK',
-    needleSize: '4.5mm',
-    category: 'Sjal',
-    tags: ['begynner', 'sjal', 'strikking'],
-    itemId: 'item1',
-    itemName: 'Alpakka garn - blå',
-    createdAt: new Date('2024-01-15')
-  },
-  {
-    id: '2',
-    name: 'Avansert genser mønster',
-    description: 'Tradisjonell norsk genser med komplekse mønstre',
-    pdfUrl: '/examples/pattern2.pdf',
-    difficulty: 'Avansert',
-    yarnWeight: 'Sport',
-    needleSize: '3.5mm',
-    category: 'Genser',
-    tags: ['avansert', 'genser', 'norsk', 'tradisjonell'],
-    itemId: 'item2',
-    itemName: 'Ullgarn - naturhvit',
-    createdAt: new Date('2024-02-10')
-  },
-  {
-    id: '3',
-    name: 'Heklet teppe mønster',
-    description: 'Fargerikt teppe i granny square teknikk',
-    pdfUrl: '/examples/pattern3.pdf',
-    difficulty: 'Middels',
-    yarnWeight: 'Worsted',
-    needleSize: '5.0mm',
-    category: 'Teppe',
-    tags: ['middels', 'teppe', 'hekling', 'granny square'],
-    itemId: 'item3',
-    itemName: 'Bomullsgarn mix',
-    createdAt: new Date('2024-03-05')
-  }
-]
+// Ingen dummydata i appen: hent fra API senere. Foreløpig tom liste.
 
 export default function PatternsPage() {
   const [searchQuery, setSearchQuery] = useState('')
@@ -104,8 +60,8 @@ export default function PatternsPage() {
   const [selectedPattern, setSelectedPattern] = useState<any>(null)
   const [isViewerOpen, setIsViewerOpen] = useState(false)
 
-  // In a real app, these would come from tRPC
-  const patterns = mockPatterns
+  // Klargjort for tRPC-integrasjon; foreløpig tom
+  const patterns: any[] = []
   const isLoading = false
 
   // Filter patterns
@@ -355,7 +311,7 @@ export default function PatternsPage() {
 
       {/* PDF Viewer Dialog */}
       <Dialog open={isViewerOpen} onOpenChange={setIsViewerOpen}>
-        <DialogContent className="max-w-4xl h-[90vh]">
+        <DialogContent className="responsive-dialog max-w-4xl h-[90vh]">
           <DialogHeader>
             <DialogTitle>Mønster visning</DialogTitle>
           </DialogHeader>

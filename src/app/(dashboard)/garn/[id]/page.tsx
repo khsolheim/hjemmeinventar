@@ -3,7 +3,8 @@ import { db } from '@/lib/db'
 import { calculateMasterTotals } from '@/lib/utils/yarn-helpers'
 import { YarnMasterDetail } from '@/components/yarn/YarnMasterDetail'
 
-export default async function YarnDetailPage({ params }: { params: { id: string } }) {
+export default async function YarnDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params
   const session = await auth()
   const userId = session?.user?.id
 
@@ -13,11 +14,11 @@ export default async function YarnDetailPage({ params }: { params: { id: string 
 
   if (userId) {
     initialMaster = await db.item.findFirst({
-      where: { id: params.id, userId },
+      where: { id, userId },
     })
 
     try {
-      initialTotals = await calculateMasterTotals(db as any, params.id, userId)
+      initialTotals = await calculateMasterTotals(db as any, id, userId)
     } catch {}
 
     try {
@@ -29,8 +30,8 @@ export default async function YarnDetailPage({ params }: { params: { id: string 
             userId,
             categoryId: colorCategory.id,
             OR: [
-              { relatedItems: { some: { id: params.id } } },
-              { relatedTo: { some: { id: params.id } } }
+               { relatedItems: { some: { id } } },
+               { relatedTo: { some: { id } } }
             ]
           }
         })
@@ -68,7 +69,7 @@ export default async function YarnDetailPage({ params }: { params: { id: string 
 
   return (
     <div className="page container mx-auto px-4 py-8">
-      <YarnMasterDetail id={params.id} initialMaster={initialMaster} initialTotals={initialTotals} initialColors={initialColors} />
+      <YarnMasterDetail id={id} initialMaster={initialMaster} initialTotals={initialTotals} initialColors={initialColors} />
     </div>
   )
 }

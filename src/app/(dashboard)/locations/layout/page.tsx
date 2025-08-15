@@ -161,7 +161,7 @@ export default function LocationsLayoutPage() {
   return (
     <div className="h-screen flex flex-col cq layout-header">
       {/* Header */}
-      <div className="border-b bg-white px-4 py-3">
+      <div className="border-b bg-white px-4 py-3" style={{ minHeight: '12cqh' }}>
         <div className="flex items-center justify-between header-actions">
           <div className="flex items-center gap-4">
             <Link href="/locations">
@@ -242,12 +242,12 @@ export default function LocationsLayoutPage() {
         {/* Sidebar */}
         <div className="layout-sidebar w-80 border-r bg-gray-50">
           <Tabs defaultValue="layouts" className="h-full flex flex-col">
-            <TabsList className="grid w-full grid-cols-2 m-2">
+            <TabsList className="grid w-full grid-cols-2 m-2" style={{ minHeight: 44 }}>
               <TabsTrigger value="layouts">Layouts</TabsTrigger>
               <TabsTrigger value="help">Hjelp</TabsTrigger>
             </TabsList>
 
-            <TabsContent value="layouts" className="flex-1 p-4 space-y-4">
+            <TabsContent value="layouts" className="hidden data-[state=active]:block flex-1 p-4 space-y-4">
               {/* Export/Import */}
               <div className="space-y-2">
                 <div className="flex gap-2">
@@ -343,7 +343,7 @@ export default function LocationsLayoutPage() {
               )}
             </TabsContent>
 
-            <TabsContent value="help" className="flex-1 p-4">
+            <TabsContent value="help" className="hidden data-[state=active]:block flex-1 p-4">
               <div className="space-y-4">
                 <Card>
                   <CardHeader>

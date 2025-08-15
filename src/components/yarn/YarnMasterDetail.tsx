@@ -6,8 +6,11 @@ import { useParams } from 'next/navigation'
 import { trpc } from '@/lib/trpc/client'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
-import { ChevronLeft, Download, CheckCircle } from 'lucide-react'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from '@/components/ui/dialog'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { ChevronLeft, Download, CheckCircle, Plus, Trash2 } from 'lucide-react'
+import { toast } from 'sonner'
 import { YarnBulkOperations } from '@/components/yarn/YarnBulkOperations'
 import { YarnProjectIntegration } from '@/components/yarn/YarnProjectIntegration'
 import { YarnWizard } from '@/components/yarn/YarnWizard'
@@ -60,6 +63,45 @@ export function YarnMasterDetail({
   const utils = trpc.useUtils()
   const [isAddBatchOpen, setIsAddBatchOpen] = React.useState(false)
   const [selectedColor, setSelectedColor] = React.useState<string>('')
+  const [selectedColorId, setSelectedColorId] = React.useState<string>('')
+  const [selectedColorCode, setSelectedColorCode] = React.useState<string>('')
+  const [isAddColorsOpen, setIsAddColorsOpen] = React.useState(false)
+  const [colorRows, setColorRows] = React.useState<Array<{ name: string; colorCode: string; imageUrl?: string }>>([
+    { name: '', colorCode: '' }
+  ])
+
+  const createColor = trpc.yarn.createColor.useMutation()
+
+  const addRow = () => setColorRows((r) => [...r, { name: '', colorCode: '' }])
+  const removeRow = (idx: number) => setColorRows((r) => r.filter((_, i) => i !== idx))
+  const updateRow = (idx: number, key: 'name'|'colorCode'|'imageUrl', value: string) => {
+    setColorRows((rows) => rows.map((row, i) => i === idx ? { ...row, [key]: value } : row))
+  }
+
+  const saveColors = async () => {
+    try {
+      const rows = colorRows.map(r => ({ ...r, name: r.name.trim(), colorCode: r.colorCode.trim() }))
+      const invalid = rows.find(r => !r.name)
+      if (invalid) {
+        toast.error('Alle rader må ha et navn på fargen')
+        return
+      }
+      await Promise.all(rows.map(async (r) => {
+        try {
+          await createColor.mutateAsync({ masterId: id, name: r.name, colorCode: r.colorCode || undefined, imageUrl: r.imageUrl || undefined })
+        } catch (e) {
+          console.error('createColor failed', e)
+        }
+      }))
+      toast.success('Farger lagt til')
+      setIsAddColorsOpen(false)
+      setColorRows([{ name: '', colorCode: '' }])
+      utils.yarn.getColorsForMaster.invalidate({ masterId: id })
+      utils.yarn.getAllMasterColors.invalidate()
+    } catch (e) {
+      toast.error('Kunne ikke lagre farger')
+    }
+  }
 
   const data = master?.categoryData ? JSON.parse(master.categoryData) : {}
   const isInitialLoading = masterLoading || totalsLoading || colorsLoading
@@ -179,7 +221,8 @@ export function YarnMasterDetail({
                   </DialogTrigger>
                   <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
                     <DialogHeader>
-                      <DialogTitle>Ny batch for {master?.name}</DialogTitle>
+                      <DialogTitle>Ny batch for {master?.name}{selectedColor ? ` – ${selectedColor}` : ''}</DialogTitle>
+                      <DialogDescription>Fyll inn detaljer for batchen.</DialogDescription>
                     </DialogHeader>
                     <YarnWizard 
                       onComplete={() => {
@@ -187,7 +230,7 @@ export function YarnMasterDetail({
                         utils.yarn.getBatchesForMaster.invalidate({ masterId: id })
                         utils.yarn.getMasterTotals.invalidate({ masterId: id })
                       }} 
-                      preset={{ masterId: id }}
+                      preset={{ masterId: id, batch: selectedColor ? { color: selectedColor, colorCode: selectedColorCode } : undefined, colorId: selectedColorId || undefined }}
                     />
                   </DialogContent>
                 </Dialog>
@@ -199,6 +242,7 @@ export function YarnMasterDetail({
                   <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
                     <DialogHeader>
                       <DialogTitle>Bulk-operasjoner for batches</DialogTitle>
+                      <DialogDescription>Endre mange batches i en operasjon.</DialogDescription>
                     </DialogHeader>
                     <div className="mt-2">
                       <YarnBulkOperations 
@@ -221,6 +265,7 @@ export function YarnMasterDetail({
                   <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
                     <DialogHeader>
                       <DialogTitle>Legg batches til prosjekt</DialogTitle>
+                      <DialogDescription>Velg hvilke batches som skal knyttes til prosjekt.</DialogDescription>
                     </DialogHeader>
                     <div className="space-y-3 mt-2">
                       {(batches || []).map((b) => {
@@ -246,7 +291,48 @@ export function YarnMasterDetail({
           <div className="mt-4">
             <div className="flex items-center justify-between mb-2">
               <h3 className="text-sm font-medium">Farger</h3>
-              <div className="text-xs text-muted-foreground">Filter: {selectedColor || 'Ingen'}</div>
+              <div className="flex items-center gap-2">
+                <div className="text-xs text-muted-foreground hidden md:block">Filter: {selectedColor || 'Ingen'}</div>
+                <Dialog open={isAddColorsOpen} onOpenChange={setIsAddColorsOpen}>
+                  <DialogTrigger asChild>
+                    <Button size="sm" variant="outline"><Plus className="h-3 w-3 mr-1" /> Legg til farger</Button>
+                  </DialogTrigger>
+                  <DialogContent className="max-w-3xl">
+                    <DialogHeader>
+                      <DialogTitle>Legg til farger for {master?.name}</DialogTitle>
+                      <DialogDescription>Registrer én eller flere farger. Fargekode og bilde-URL er valgfrie.</DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-3">
+                      {colorRows.map((row, idx) => (
+                        <div key={idx} className="grid grid-cols-1 md:grid-cols-5 gap-2 items-end">
+                          <div className="md:col-span-2">
+                            <Label className="text-xs">Fargenavn</Label>
+                            <Input value={row.name} onChange={(e) => updateRow(idx, 'name', e.target.value)} placeholder="f.eks. Hot Pink" />
+                          </div>
+                          <div>
+                            <Label className="text-xs">Fargekode</Label>
+                            <Input value={row.colorCode} onChange={(e) => updateRow(idx, 'colorCode', e.target.value)} placeholder="#FF69B4" />
+                          </div>
+                          <div>
+                            <Label className="text-xs">Bilde-URL (valgfritt)</Label>
+                            <Input value={row.imageUrl || ''} onChange={(e) => updateRow(idx, 'imageUrl', e.target.value)} placeholder="https://..." />
+                          </div>
+                          <div className="flex gap-2">
+                            <Button type="button" variant="outline" onClick={() => addRow()}><Plus className="h-3 w-3" /></Button>
+                            {colorRows.length > 1 && (
+                              <Button type="button" variant="outline" onClick={() => removeRow(idx)}><Trash2 className="h-3 w-3" /></Button>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                      <div className="flex justify-end gap-2 pt-2">
+                        <Button variant="outline" onClick={() => setIsAddColorsOpen(false)}>Avbryt</Button>
+                        <Button onClick={saveColors} className="bg-green-600 hover:bg-green-700">Lagre farger</Button>
+                      </div>
+                    </div>
+                  </DialogContent>
+                </Dialog>
+              </div>
             </div>
             {isInitialLoading ? (
               <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2 min-h-24">
@@ -257,7 +343,12 @@ export function YarnMasterDetail({
             ) : colors && colors.length > 0 ? (
               <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2">
                 {colors.map((c) => (
-                  <button key={c.id} onClick={() => setSelectedColor(prev => prev === c.name ? '' : c.name)} className={`rounded-lg border p-3 text-left transition-colors ${selectedColor === c.name ? 'bg-muted' : 'hover:bg-muted/40'}`}>
+                  <button key={c.id} onClick={() => {
+                    const isActive = selectedColor === c.name
+                    setSelectedColor(isActive ? '' : c.name)
+                    setSelectedColorId(isActive ? '' : c.id)
+                    setSelectedColorCode(isActive ? '' : (c as any).colorCode || '')
+                  }} className={`rounded-lg border p-3 text-left transition-colors ${selectedColor === c.name ? 'bg-muted' : 'hover:bg-muted/40'}`}>
                     <div className="flex items-center gap-2">
                       <span className="inline-block w-4 h-4 rounded" style={{ backgroundColor: c.colorCode || '#e5e7eb' }} />
                       <span className="text-sm font-medium truncate">{c.name}</span>

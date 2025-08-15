@@ -58,7 +58,7 @@ export default function AdminPage() {
       </div>
 
       <Tabs value={selectedTab} onValueChange={setSelectedTab} className="space-y-6 cq">
-        <TabsList className="grid w-full grid-cols-5">
+        <TabsList className="grid w-full grid-cols-5" style={{ minHeight: 44 }}>
           <TabsTrigger value="overview" className="flex items-center gap-2">
             <BarChart3 className="w-4 h-4" />
             Oversikt
@@ -82,7 +82,7 @@ export default function AdminPage() {
         </TabsList>
 
         {/* Overview Tab */}
-        <TabsContent value="overview" className="space-y-6">
+        <TabsContent value="overview" className="hidden data-[state=active]:block space-y-6">
           {/* System Health */}
           <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
             <Card>
@@ -232,12 +232,12 @@ export default function AdminPage() {
         </TabsContent>
 
         {/* Background Jobs Tab */}
-        <TabsContent value="jobs">
+        <TabsContent value="jobs" className="hidden data-[state=active]:block">
           <BackgroundJobsMonitor />
         </TabsContent>
 
         {/* System Tab */}
-        <TabsContent value="system" className="space-y-6">
+        <TabsContent value="system" className="hidden data-[state=active]:block space-y-6">
           <Card>
             <CardHeader>
               <CardTitle>Systemresurser</CardTitle>
@@ -313,7 +313,7 @@ export default function AdminPage() {
         </TabsContent>
 
         {/* Users Tab */}
-        <TabsContent value="users" className="space-y-6">
+        <TabsContent value="users" className="hidden data-[state=active]:block space-y-6">
           <Card>
             <CardHeader>
               <CardTitle>Brukeroversikt</CardTitle>
@@ -330,7 +330,7 @@ export default function AdminPage() {
         </TabsContent>
 
         {/* Settings Tab */}
-        <TabsContent value="settings" className="space-y-6">
+        <TabsContent value="settings" className="hidden data-[state=active]:block space-y-6">
           <Card>
             <CardHeader>
               <CardTitle>Systeminnstillinger</CardTitle>

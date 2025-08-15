@@ -226,7 +226,7 @@ export default function HouseholdsPage() {
 
       {/* Create Household Dialog */}
       <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-        <DialogContent className="sm:max-w-[425px]">
+        <DialogContent className="responsive-dialog sm:max-w-[425px]">
           <DialogHeader>
             <DialogTitle>Opprett ny husholdning</DialogTitle>
             <DialogDescription>

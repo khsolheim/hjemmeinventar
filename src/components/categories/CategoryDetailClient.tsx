@@ -336,13 +336,15 @@ export function CategoryDetailClient({
               </div>
             )
           ) : (
-            <FieldSchemaBuilder
-              key={`edit-${categoryId}-${isEditingFields}`}
-              initialSchema={fieldSchema}
-              onChange={handleFieldSchemaUpdate}
-              disabled={updateFieldSchemaMutation.isPending}
-              categoryName={category?.name}
-            />
+            <div className="table-wrap">
+              <FieldSchemaBuilder
+                key={`edit-${categoryId}-${isEditingFields}`}
+                initialSchema={fieldSchema}
+                onChange={handleFieldSchemaUpdate}
+                disabled={updateFieldSchemaMutation.isPending}
+                categoryName={category?.name}
+              />
+            </div>
           )}
         </CardContent>
       </Card>

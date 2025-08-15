@@ -118,7 +118,7 @@ export function HierarchyMatrix({
     : locationTypes
 
   return (
-    <div className="space-y-6">
+    <div className="matrix-panel space-y-6 cq">
       {/* Header controls */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
@@ -191,8 +191,8 @@ export function HierarchyMatrix({
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="overflow-x-auto">
-            <table className="w-full border-collapse">
+          <div className="table-wrap overflow-x-auto">
+            <table className="hierarchy-matrix table w-full border-collapse">
               <thead>
                 <tr>
                   <th className="border border-gray-200 p-2 bg-gray-50 text-left font-medium text-sm w-32">
@@ -245,6 +245,32 @@ export function HierarchyMatrix({
                 ))}
               </tbody>
             </table>
+          </div>
+          
+          {/* Compact list fallback */}
+          <div className="matrix-compact hidden">
+            {displayTypes.map(parentType => {
+              const allowedChildren = displayTypes.filter(childType => 
+                childType !== parentType && localMatrix[parentType]?.[childType]
+              )
+              
+              return (
+                <div key={parentType} className="matrix-compact__item">
+                  <div>
+                    <div className="font-medium">{locationTypeLabels[parentType]}</div>
+                    <div className="text-sm text-muted-foreground">
+                      {allowedChildren.length > 0 
+                        ? `Kan inneholde: ${allowedChildren.map(type => locationTypeLabels[type]).join(', ')}`
+                        : 'Kan ikke inneholde andre typer'
+                      }
+                    </div>
+                  </div>
+                  <Badge variant="outline">
+                    {allowedChildren.length} tillatt
+                  </Badge>
+                </div>
+              )
+            })}
           </div>
         </CardContent>
       </Card>

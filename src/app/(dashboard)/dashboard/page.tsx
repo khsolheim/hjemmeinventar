@@ -349,14 +349,14 @@ export default function DashboardPage() {
                 <span className="ml-2">Laster aktiviteter...</span>
               </div>
             ) : activities && 'activities' in activities && activities.activities?.length > 0 ? (
-              <div className="space-y-3">
+              <div className="activity-list space-y-3">
                 {activities.activities.slice(0, 5).map((activity: any) => (
-                  <div key={activity.id} className="flex items-center gap-3 p-2 rounded hover:bg-muted/50">
+                  <div key={activity.id} className="activity-item flex items-center gap-3 p-2 rounded hover:bg-muted/50">
                     <div className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center">
                       <Package className="w-4 h-4 text-primary" />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium line-clamp-1">
+                      <p className="activity-content text-sm font-medium line-clamp-1">
                         {activity.description}
                       </p>
                       <p className="text-xs text-muted-foreground">

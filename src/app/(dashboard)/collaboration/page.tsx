@@ -199,7 +199,7 @@ export default function CollaborationPage() {
 
       {selectedHousehold ? (
         <Tabs defaultValue="demo" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className="grid w-full grid-cols-4" style={{ minHeight: 44 }}>
             <TabsTrigger value="demo" className="flex items-center gap-2">
               <Zap className="w-4 h-4" />
               Live Demo
@@ -219,7 +219,7 @@ export default function CollaborationPage() {
           </TabsList>
 
           {/* Live Demo Tab */}
-          <TabsContent value="demo" className="space-y-6">
+          <TabsContent value="demo" className="hidden data-[state=active]:block space-y-6">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               {/* Test Form */}
               <Card>
@@ -371,17 +371,17 @@ export default function CollaborationPage() {
           </TabsContent>
 
           {/* Online Users Tab */}
-          <TabsContent value="users">
+          <TabsContent value="users" className="hidden data-[state=active]:block">
             <OnlineUsersList householdId={selectedHousehold} />
           </TabsContent>
 
           {/* Activity Tab */}
-          <TabsContent value="activity">
+          <TabsContent value="activity" className="hidden data-[state=active]:block">
             <LiveActivityFeed householdId={selectedHousehold} />
           </TabsContent>
 
           {/* Documentation Tab */}
-          <TabsContent value="docs">
+          <TabsContent value="docs" className="hidden data-[state=active]:block">
             <Card>
               <CardHeader>
                 <CardTitle>WebSocket Teknologi</CardTitle>

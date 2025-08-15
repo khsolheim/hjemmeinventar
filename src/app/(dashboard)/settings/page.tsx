@@ -58,7 +58,7 @@ export default function SettingsPage() {
         </p>
       </div>
 
-      <div className="grid gap-6">
+      <div className="settings-panel grid gap-6 cq">
         {/* Profile Settings */}
         <Card>
           <CardHeader>
@@ -216,24 +216,24 @@ export default function SettingsPage() {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="flex items-center justify-between">
+            <div className="setting-row flex items-center justify-between">
               <div className="space-y-0.5">
                 <Label className="text-base">Vis profil til andre brukere</Label>
                 <div className="text-sm text-gray-600">
                   Tillat andre medlemmer i husholdningen å se profilen din
                 </div>
               </div>
-              <Switch />
+              <Switch className="setting-switch" />
             </div>
 
-            <div className="flex items-center justify-between">
+            <div className="setting-row flex items-center justify-between">
               <div className="space-y-0.5">
                 <Label className="text-base">Anonymiser aktivitetslogger</Label>
                 <div className="text-sm text-gray-600">
                   Skjul ditt navn i delte aktivitetslogger
                 </div>
               </div>
-              <Switch />
+              <Switch className="setting-switch" />
             </div>
 
             <Separator />
@@ -262,34 +262,34 @@ export default function SettingsPage() {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="flex items-center justify-between">
+            <div className="setting-row flex items-center justify-between">
               <div className="space-y-0.5">
                 <Label htmlFor="pref-dark-mode" className="text-base">Mørk modus</Label>
                 <div className="text-sm text-gray-600">
                   Bruk mørk fargepalett for appen
                 </div>
               </div>
-              <Switch id="pref-dark-mode" name="pref-dark-mode" />
+              <Switch id="pref-dark-mode" name="pref-dark-mode" className="setting-switch" />
             </div>
 
-            <div className="flex items-center justify-between">
+            <div className="setting-row flex items-center justify-between">
               <div className="space-y-0.5">
                 <Label htmlFor="pref-compact-mode" className="text-base">Kompakt visning</Label>
                 <div className="text-sm text-gray-600">
                   Vis mer informasjon på mindre plass
                 </div>
               </div>
-              <Switch id="pref-compact-mode" name="pref-compact-mode" />
+              <Switch id="pref-compact-mode" name="pref-compact-mode" className="setting-switch" />
             </div>
 
-            <div className="flex items-center justify-between">
+            <div className="setting-row flex items-center justify-between">
               <div className="space-y-0.5">
                 <Label htmlFor="pref-auto-save" className="text-base">Automatisk lagring</Label>
                 <div className="text-sm text-gray-600">
                   Lagre endringer automatisk mens du skriver
                 </div>
               </div>
-              <Switch id="pref-auto-save" name="pref-auto-save" defaultChecked />
+              <Switch id="pref-auto-save" name="pref-auto-save" defaultChecked className="setting-switch" />
             </div>
 
             <div>

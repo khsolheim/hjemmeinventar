@@ -188,14 +188,14 @@ Oppgave-matrise (kryss av ved ferdig)
 | Garn/register (P2) | ☑ | ☑ | ☑ | ☐ | ☑ | ☑ | ☑ |
 | Locations (P1) | ☑ | ☑ | ☑ | ☑ | ☑ | ☑ | ☑ |
 | Locations/mobile (P1) | ☑ | ☑ | ☑ | ☑ | ☑ | ☑ | ☑ |
-| Locations/tree (P2) | ☑ | ☑ | ☐ | ☐ | ☑ | ☑ | ☑ |
+| Locations/tree (P2) | ☑ | ☑ | ☑ | ☐ | ☑ | ☑ | ☑ |
 | Locations/layout (P2) | ☑ | ☑ | ☐ | ☐ | ☑ | ☑ | ☑ |
-| Categories (P2) | ☑ | ☑ | ☐ | ☐ | ☑ | ☑ | ☑ |
-| Categories/[categoryId] (P2) | ☑ | ☑ | ☐ | ☐ | ☑ | ☑ | ☑ |
+| Categories (P2) | ☑ | ☑ | ☐ | ☑ | ☑ | ☑ | ☑ |
+| Categories/[categoryId] (P2) | ☑ | ☑ | ☐ | ☑ | ☑ | ☑ | ☑ |
 | Import-Export (P2) | ☑ | ☑ | ☑ | ☑ | ☑ | ☑ | ☑ |
 | Analytics (P2) | ☑ | ☑ | ☐ | ☐ | ☑ | ☑ | ☑ |
 | Settings (P2) | ☑ | ☑ | ☑ | ☐ | ☑ | ☑ | ☑ |
-| Settings/Hierarchy (P2) | ☑ | ☑ | ☑ | ☐ | ☑ | ☑ | ☑ |
+| Settings/Hierarchy (P2) | ☑ | ☑ | ☑ | ☑ | ☑ | ☑ | ☑ |
 | Households (P2) | ☑ | ☑ | ☑ | ☐ | ☑ | ☑ | ☑ |
 | Households/[id] (P2) | ☑ | ☑ | ☑ | ☐ | ☑ | ☑ | ☑ |
 | Households/[id]/invite (P2) | ☑ | ☑ | ☑ | ☐ | ☑ | ☑ | ☑ |
@@ -209,7 +209,7 @@ Oppgave-matrise (kryss av ved ferdig)
 | Onboarding (P3) | ☑ | ☑ | ☐ | ☐ | ☑ | ☑ | ☑ |
 | Offline (P3) | ☑ | ☑ | ☐ | ☐ | ☑ | ☑ | ☑ |
 | Auth/Sign up (P2) | ☑ | ☑ | ☐ | ☐ | ☑ | ☑ | ☑ |
-| Test (P3) | ☑ | ☑ | ☐ | ☐ | ☑ | ☑ | ☐ |
+| Test (P3) | ☑ | ☑ | ☐ | ☐ | ☑ | ☑ | ☑ |
 | … | ☐ | ☐ | ☐ | ☐ | ☐ | ☐ | ☐ |
 
 Avhengigheter og risiko per side

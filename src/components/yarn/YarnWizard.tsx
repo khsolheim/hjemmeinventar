@@ -34,14 +34,13 @@ const masterSchema = z.object({
   locationId: z.string().optional(),
 })
 
-// Schema for Batch creation
+// Schema for Batch creation (uten "Tilstand")
 const batchSchema = z.object({
   batchNumber: z.string().min(1, 'Batch nummer er påkrevd'),
   color: z.string().min(1, 'Farge er påkrevd'),
   colorCode: z.string().optional(),
   quantity: z.number().min(1, 'Antall må være minst 1'),
   pricePerSkein: z.number().min(0).optional(),
-  condition: z.string().default('Ny'),
   notes: z.string().optional(),
 })
 
@@ -53,25 +52,39 @@ interface YarnWizardProps {
   existingMasterId?: string // If adding batch to existing master
 }
 
-type WizardStep = 'choose-type' | 'url-import' | 'master-details' | 'batch-details' | 'summary'
+type WizardStep = 'choose-type' | 'url-import' | 'master-details' | 'color-details' | 'batch-details' | 'summary'
 
 // Optional preset for quick batch creation
 type YarnWizardPreset = {
   masterId?: string
   batch?: Partial<BatchFormData>
+  colorId?: string
 }
 
 export function YarnWizard({ onComplete, existingMasterId, preset }: YarnWizardProps & { preset?: YarnWizardPreset }) {
   const { data: session } = useSession()
-  const [currentStep, setCurrentStep] = useState<WizardStep>(existingMasterId ? 'batch-details' : 'choose-type')
+  const [currentStep, setCurrentStep] = useState<WizardStep>(existingMasterId ? 'color-details' : 'choose-type')
   const [creationType, setCreationType] = useState<'new-master' | 'existing-master' | 'url-import' | null>(null)
   const [selectedMasterId, setSelectedMasterId] = useState<string>(existingMasterId || '')
   const [createdMaster, setCreatedMaster] = useState<any>(null)
   const [importedData, setImportedData] = useState<YarnProductData | null>(null)
+  const [importedImageUrl, setImportedImageUrl] = useState<string | undefined>(undefined)
+  const [selectedColorId, setSelectedColorId] = useState<string | undefined>(undefined)
 
   // Fetch data
   const { data: locationsData, isLoading: locationsLoading, error: locationsError } = trpc.locations.getAll.useQuery()
   const { data: mastersData } = trpc.yarn.getAllMasters.useQuery({ limit: 100, offset: 0 })
+  const { data: colorsData } = trpc.yarn.getColorsForMaster.useQuery(
+    { masterId: selectedMasterId },
+    { enabled: !!selectedMasterId }
+  )
+
+  // Auto-velg farge når det kun finnes én
+  React.useEffect(() => {
+    if (currentStep === 'color-details' && !selectedColorId && Array.isArray(colorsData) && colorsData.length === 1) {
+      setSelectedColorId(colorsData[0].id)
+    }
+  }, [currentStep, colorsData, selectedColorId])
   
   // Test simple query to see if trpc works at all
   const { data: testData, error: testError } = trpc.locations.getStats.useQuery()
@@ -177,7 +190,6 @@ export function YarnWizard({ onComplete, existingMasterId, preset }: YarnWizardP
       colorCode: '',
       quantity: 1,
       pricePerSkein: undefined,
-      condition: 'Ny',
       notes: '',
     }
   })
@@ -187,7 +199,7 @@ export function YarnWizard({ onComplete, existingMasterId, preset }: YarnWizardP
     if (preset?.masterId) {
       setSelectedMasterId(preset.masterId)
       setCreationType('existing-master')
-      setCurrentStep('batch-details')
+      setCurrentStep('color-details')
     }
     if (preset?.batch) {
       batchForm.reset({
@@ -196,7 +208,6 @@ export function YarnWizard({ onComplete, existingMasterId, preset }: YarnWizardP
         colorCode: preset.batch.colorCode ?? '',
         quantity: preset.batch.quantity ?? 1,
         pricePerSkein: preset.batch.pricePerSkein,
-        condition: preset.batch.condition ?? 'Ny',
         notes: preset.batch.notes ?? ''
       })
     }
@@ -230,26 +241,20 @@ export function YarnWizard({ onComplete, existingMasterId, preset }: YarnWizardP
         return
       }
 
-      const batchName = `${data.color} - ${data.batchNumber}`
+      const colorDisplay = selectedColorId
+        ? (colorsData || []).find((c: any) => c.id === selectedColorId)?.name || data.color
+        : data.color
+      const batchName = `${colorDisplay || 'Batch'} - ${data.batchNumber}`
       
-      // Ensure color entity exists or create one on the fly
-      let colorId: string | undefined
-      if (data.color) {
-        try {
-          const color = await createColorMutation.mutateAsync({
-            masterId,
-            name: data.color,
-            colorCode: data.colorCode
-          })
-          colorId = color.id
-        } catch {}
-      }
+      // Bruk valgt farge fra fargesteg (eller preset)
+      let colorId: string | undefined = selectedColorId || preset?.colorId
 
       await createBatchMutation.mutateAsync({
         masterId,
         name: batchName,
         locationId,
         ...data,
+        imageUrl: importedImageUrl,
         colorId,
       })
 
@@ -261,7 +266,12 @@ export function YarnWizard({ onComplete, existingMasterId, preset }: YarnWizardP
         handleComplete()
       }, 2000)
     } catch (error) {
-      toast.error('Feil ved opprettelse av batch')
+      const code = (error as any)?.data?.code
+      if (code === 'CONFLICT') {
+        toast.error('Batch finnes allerede for valgt farge og partinummer')
+      } else {
+        toast.error('Feil ved opprettelse av batch')
+      }
       console.error(error)
     }
   }
@@ -273,6 +283,8 @@ export function YarnWizard({ onComplete, existingMasterId, preset }: YarnWizardP
   // Håndter URL import
   const handleUrlImport = (productData: YarnProductData & { downloadedImages?: any[] }) => {
     setImportedData(productData)
+    const firstDownloaded = productData.downloadedImages?.[0]?.url
+    setImportedImageUrl(firstDownloaded)
     
     // Pre-fill master form med importerte data
     const toStringWithUnit = (value: unknown, unit?: string) => {
@@ -311,7 +323,7 @@ export function YarnWizard({ onComplete, existingMasterId, preset }: YarnWizardP
     if (currentStep === 'choose-type' && creationType === 'new-master') {
       setCurrentStep('master-details')
     } else if (currentStep === 'choose-type' && creationType === 'existing-master') {
-      setCurrentStep('batch-details')
+      setCurrentStep('color-details')
     } else if (currentStep === 'choose-type' && creationType === 'url-import') {
       setCurrentStep('url-import')
     } else if (currentStep === 'url-import') {
@@ -319,6 +331,8 @@ export function YarnWizard({ onComplete, existingMasterId, preset }: YarnWizardP
       return
     } else if (currentStep === 'master-details') {
       masterForm.handleSubmit(handleMasterSubmit)()
+    } else if (currentStep === 'color-details') {
+      setCurrentStep('batch-details')
     } else if (currentStep === 'batch-details') {
       batchForm.handleSubmit(handleBatchSubmit)()
     }
@@ -334,11 +348,7 @@ export function YarnWizard({ onComplete, existingMasterId, preset }: YarnWizardP
         setCurrentStep('choose-type')
       }
     } else if (currentStep === 'batch-details') {
-      if (creationType === 'new-master' || creationType === 'url-import') {
-        setCurrentStep('master-details')
-      } else {
-        setCurrentStep('choose-type')
-      }
+      setCurrentStep('color-details')
     }
   }
 
@@ -347,6 +357,7 @@ export function YarnWizard({ onComplete, existingMasterId, preset }: YarnWizardP
       case 'choose-type': return 'Velg type registrering'
       case 'url-import': return 'Importer fra URL'
       case 'master-details': return 'Garn-type detaljer'
+      case 'color-details': return 'Farge'
       case 'batch-details': return 'Batch detaljer'
       case 'summary': return 'Fullført!'
       default: return ''
@@ -358,6 +369,7 @@ export function YarnWizard({ onComplete, existingMasterId, preset }: YarnWizardP
       case 'choose-type': return 'Velg hvordan du vil registrere garnet'
       case 'url-import': return 'Lim inn link til produktsiden for automatisk import'
       case 'master-details': return importedData ? 'Sjekk og juster den importerte informasjonen' : 'Fyll inn felles informasjon om garn-typen'
+      case 'color-details': return 'Velg eksisterende farge eller opprett ny'
       case 'batch-details': return 'Fyll inn informasjon om denne spesifikke batchen'
       case 'summary': return 'Garnet ditt er registrert og klart til bruk!'
       default: return ''
@@ -368,7 +380,7 @@ export function YarnWizard({ onComplete, existingMasterId, preset }: YarnWizardP
     <div className="space-y-4">
       {/* Progress indicator */}
       <div className="flex items-center justify-center space-x-4">
-        {['choose-type', 'master-details', 'batch-details', 'summary'].map((step, index) => {
+        {['choose-type', 'master-details', 'color-details', 'batch-details', 'summary'].map((step, index) => {
           const isActive = currentStep === step
           const isCompleted = ['choose-type', 'master-details', 'batch-details', 'summary'].indexOf(currentStep) > index
           const isVisible = existingMasterId ? step !== 'choose-type' && step !== 'master-details' : true
@@ -384,7 +396,7 @@ export function YarnWizard({ onComplete, existingMasterId, preset }: YarnWizardP
               `}>
                 {isCompleted ? <Check className="h-4 w-4" /> : index + 1}
               </div>
-              {index < 3 && (
+              {index < 4 && (
                 <div className={`w-12 h-0.5 mx-2 ${isCompleted ? 'bg-green-600' : 'bg-gray-200'}`} />
               )}
             </div>
@@ -675,6 +687,106 @@ export function YarnWizard({ onComplete, existingMasterId, preset }: YarnWizardP
             </Form>
           )}
 
+          {/* Step 2.5: Color details */}
+          {currentStep === 'color-details' && (
+            <div className="space-y-3">
+              {creationType === 'existing-master' && (
+                <div>
+                  <Label>Velg eksisterende garn-type</Label>
+                  <Select onValueChange={setSelectedMasterId} value={selectedMasterId}>
+                    <SelectTrigger className="mt-2">
+                      <SelectValue placeholder="Velg garn-type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {(mastersData?.masters || []).map((master) => {
+                        const data = master.categoryData ? JSON.parse(master.categoryData) : {}
+                        return (
+                          <SelectItem key={master.id} value={master.id}>
+                            {master.name} ({data.producer})
+                          </SelectItem>
+                        )
+                      })}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+
+              <div>
+                <Label>Velg eksisterende farge</Label>
+                <Select onValueChange={(v) => setSelectedColorId(v)} value={selectedColorId}>
+                  <SelectTrigger className="mt-2">
+                    <SelectValue placeholder={(colorsData && colorsData.length > 0) ? 'Velg farge' : 'Ingen farger – opprett ny'} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {(colorsData || []).map((c: any) => (
+                      <SelectItem key={c.id} value={c.id}>{c.name}{c.colorCode ? ` (${c.colorCode})` : ''}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="text-xs text-muted-foreground">Eller opprett ny:</div>
+              <div className="grid grid-cols-2 gap-3">
+                <Form {...batchForm}>
+                  <form className="contents">
+                    <FormField
+                      control={batchForm.control}
+                      name="color"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Fargenavn</FormLabel>
+                          <FormControl>
+                            <Input placeholder="f.eks. Skoggrønn" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={batchForm.control}
+                      name="colorCode"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Fargekode</FormLabel>
+                          <FormControl>
+                            <Input placeholder="#2F4F4F eller 8082" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </form>
+                </Form>
+              </div>
+
+              <div>
+                <Button
+                  variant="secondary"
+                  onClick={async () => {
+                    const masterId = selectedMasterId || createdMaster?.id
+                    if (!masterId) { toast.error('Ingen master valgt'); return }
+                    const name = batchForm.getValues('color')
+                    if (!name) { toast.error('Fargenavn er påkrevd'); return }
+                    try {
+                      const color = await createColorMutation.mutateAsync({
+                        masterId,
+                        name,
+                        colorCode: batchForm.getValues('colorCode') || undefined,
+                      })
+                      setSelectedColorId(color.id)
+                      await trpc.useUtils().yarn.getColorsForMaster.invalidate()
+                      toast.success('Farge opprettet!')
+                    } catch (e) {
+                      toast.error('Kunne ikke opprette farge')
+                    }
+                  }}
+                >
+                  Opprett farge
+                </Button>
+              </div>
+            </div>
+          )}
+
           {/* Step 3: Batch details */}
           {currentStep === 'batch-details' && (
             <div className="space-y-4">
@@ -701,7 +813,7 @@ export function YarnWizard({ onComplete, existingMasterId, preset }: YarnWizardP
 
               <Form {...batchForm}>
                 <form onSubmit={batchForm.handleSubmit(handleBatchSubmit)} className="space-y-3">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div className="grid grid-cols-2 gap-3">
                     <FormField
                       control={batchForm.control}
                       name="batchNumber"
@@ -766,50 +878,30 @@ export function YarnWizard({ onComplete, existingMasterId, preset }: YarnWizardP
                       )}
                     />
 
-                    <FormField
-                      control={batchForm.control}
-                      name="pricePerSkein"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Pris per Nøste (kr)</FormLabel>
-                          <FormControl>
-                            <Input 
-                              type="number" 
-                              step="0.01"
-                              min="0"
-                              placeholder="89.50"
-                              value={field.value || ''}
-                              onChange={(e) => field.onChange(e.target.value ? Number(e.target.value) : undefined)}
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={batchForm.control}
-                      name="condition"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Tilstand</FormLabel>
-                          <Select onValueChange={field.onChange} value={field.value || 'Ny'}>
+                    <div className="col-span-2">
+                      <FormField
+                        control={batchForm.control}
+                        name="pricePerSkein"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Pris per Nøste (kr)</FormLabel>
                             <FormControl>
-                              <SelectTrigger>
-                                <SelectValue />
-                              </SelectTrigger>
+                              <Input 
+                                type="number" 
+                                step="0.01"
+                                min="0"
+                                placeholder="89.50"
+                                value={field.value || ''}
+                                onChange={(e) => field.onChange(e.target.value ? Number(e.target.value) : undefined)}
+                              />
                             </FormControl>
-                            <SelectContent>
-                              <SelectItem value="Ny">Ny</SelectItem>
-                              <SelectItem value="Brukt - god">Brukt - god</SelectItem>
-                              <SelectItem value="Brukt - ok">Brukt - ok</SelectItem>
-                              <SelectItem value="Brukt - dårlig">Brukt - dårlig</SelectItem>
-                            </SelectContent>
-                          </Select>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+
+                    {/* Tilstand felt fjernet */}
                   </div>
 
                   <FormField
@@ -877,6 +969,7 @@ export function YarnWizard({ onComplete, existingMasterId, preset }: YarnWizardP
               onClick={nextStep}
               disabled={
                 (currentStep === 'choose-type' && !creationType) ||
+                (currentStep === 'color-details' && !selectedColorId && !batchForm.getValues('color')) ||
                 (currentStep === 'batch-details' && creationType === 'existing-master' && !selectedMasterId) ||
                 createMasterMutation.isPending ||
                 createBatchMutation.isPending
@@ -896,10 +989,15 @@ export function YarnWizard({ onComplete, existingMasterId, preset }: YarnWizardP
           )}
 
           {currentStep === 'summary' && (
-            <Button onClick={handleComplete} size="lg" className="bg-green-600 hover:bg-green-700">
-              <Check className="h-4 w-4 mr-2" />
-              Ferdig
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button onClick={() => { setCurrentStep('color-details'); setSelectedColorId(undefined); }} variant="secondary">
+                Legg til én til
+              </Button>
+              <Button onClick={handleComplete} size="lg" className="bg-green-600 hover:bg-green-700">
+                <Check className="h-4 w-4 mr-2" />
+                Ferdig
+              </Button>
+            </div>
           )}
         </div>
       </div>

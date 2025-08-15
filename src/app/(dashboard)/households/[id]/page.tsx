@@ -387,7 +387,7 @@ export default function HouseholdDetailPage() {
       </div>
 
       <Tabs defaultValue="members" className="space-y-6 cq">
-        <TabsList>
+        <TabsList style={{ minHeight: 44 }}>
           <TabsTrigger value="members" className="flex items-center gap-2">
             <Users className="w-4 h-4" />
             Medlemmer
@@ -399,7 +399,7 @@ export default function HouseholdDetailPage() {
         </TabsList>
 
         {/* Members Tab */}
-        <TabsContent value="members" className="space-y-6">
+        <TabsContent value="members" className="hidden data-[state=active]:block space-y-6">
           <Card>
             <CardHeader>
               <CardTitle>Medlemmer ({household.memberCount})</CardTitle>
@@ -489,7 +489,7 @@ export default function HouseholdDetailPage() {
         </TabsContent>
 
         {/* Overview Tab */}
-        <TabsContent value="overview" className="space-y-6">
+        <TabsContent value="overview" className="hidden data-[state=active]:block space-y-6">
           {stats && (
             <div className="cq-grid dashboard-grid gap-6" style={{"--card-min":"220px"} as any}>
               <Card>
@@ -550,7 +550,7 @@ export default function HouseholdDetailPage() {
 
       {/* Invite Dialog */}
       <Dialog open={isInviteDialogOpen} onOpenChange={setIsInviteDialogOpen}>
-        <DialogContent>
+        <DialogContent className="responsive-dialog">
           <DialogHeader>
             <DialogTitle>Inviter nytt medlem</DialogTitle>
             <DialogDescription>
@@ -614,7 +614,7 @@ export default function HouseholdDetailPage() {
 
       {/* Edit Dialog */}
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogContent>
+        <DialogContent className="responsive-dialog">
           <DialogHeader>
             <DialogTitle>Rediger husholdning</DialogTitle>
             <DialogDescription>

@@ -146,7 +146,7 @@ export default function ImportExportPage() {
       </div>
 
       <Tabs defaultValue="import" className="space-y-6 cq">
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-4" style={{ minHeight: 44 }}>
           <TabsTrigger value="import">
             <Upload className="w-4 h-4 mr-2" />
             Import
@@ -166,7 +166,7 @@ export default function ImportExportPage() {
         </TabsList>
 
         {/* Import Tab */}
-        <TabsContent value="import" className="space-y-6">
+        <TabsContent value="import" className="hidden data-[state=active]:block space-y-6">
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -240,7 +240,7 @@ export default function ImportExportPage() {
         </TabsContent>
 
         {/* Export Tab */}
-        <TabsContent value="export" className="space-y-6">
+        <TabsContent value="export" className="hidden data-[state=active]:block space-y-6">
           {/* Quick Stats */}
           {exportStats && (
             <Card>
@@ -320,7 +320,7 @@ export default function ImportExportPage() {
         </TabsContent>
 
         {/* Formats Tab */}
-        <TabsContent value="formats" className="space-y-6">
+        <TabsContent value="formats" className="hidden data-[state=active]:block space-y-6">
           <Card>
             <CardHeader>
               <CardTitle>Støttede Filformater</CardTitle>
@@ -367,7 +367,7 @@ export default function ImportExportPage() {
         </TabsContent>
 
         {/* Help Tab */}
-        <TabsContent value="help" className="space-y-6">
+        <TabsContent value="help" className="hidden data-[state=active]:block space-y-6">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* Import Help */}
             <Card>

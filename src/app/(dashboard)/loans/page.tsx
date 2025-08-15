@@ -90,7 +90,7 @@ function CreateLoanDialog({ itemId, isOpen, onClose }: LoanDialogProps) {
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="responsive-dialog sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Registrer nytt utlån</DialogTitle>
           <DialogDescription>

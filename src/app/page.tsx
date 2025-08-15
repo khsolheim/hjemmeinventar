@@ -15,15 +15,14 @@ export default function Home() {
           Den enkle måten å holde oversikt over alle dine eiendeler med QR-koder og smart organisering
         </p>
         <div className="flex gap-4 justify-center flex-wrap">
-          <Link href="/auth/signup">
-            <AccessibleButton 
-              size="lg"
-              aria-label="Registrer deg og kom i gang"
-              className="cta-button"
-            >
-              Kom i gang
-            </AccessibleButton>
-          </Link>
+          <AccessibleButton 
+            asChild
+            size="lg"
+            aria-label="Registrer deg og kom i gang"
+            className="cta-button"
+          >
+            <Link href="/auth/signup">Kom i gang</Link>
+          </AccessibleButton>
           <Button 
             variant="outline" 
             size="lg"
@@ -32,15 +31,14 @@ export default function Home() {
           >
             <a href="#features">Les mer</a>
           </Button>
-          <Link href="/auth/signin">
-            <Button 
-              variant="ghost" 
-              size="lg"
-              aria-label="Logg inn hvis du allerede har konto"
-            >
-              Logg inn
-            </Button>
-          </Link>
+          <Button 
+            asChild
+            variant="ghost" 
+            size="lg"
+            aria-label="Logg inn hvis du allerede har konto"
+          >
+            <Link href="/auth/signin">Logg inn</Link>
+          </Button>
         </div>
       </section>
 
@@ -140,24 +138,22 @@ export default function Home() {
             Det tar bare noen minutter å sette opp ditt første rom og legge til gjenstander
           </p>
           <div className="flex gap-4 justify-center flex-wrap">
-            <Link href="/auth/signup">
-              <AccessibleButton 
-                size="lg"
-                aria-label="Registrer deg og start med hjemmeinventar"
-                className="cta-button"
-              >
-                Registrer deg gratis
-              </AccessibleButton>
-            </Link>
-            <Link href="/auth/signin">
-              <Button 
-                variant="outline"
-                size="lg"
-                aria-label="Logg inn hvis du allerede har konto"
-              >
-                Har du konto? Logg inn
-              </Button>
-            </Link>
+            <AccessibleButton 
+              asChild
+              size="lg"
+              aria-label="Registrer deg og start med hjemmeinventar"
+              className="cta-button"
+            >
+              <Link href="/auth/signup">Registrer deg gratis</Link>
+            </AccessibleButton>
+            <Button 
+              asChild
+              variant="outline"
+              size="lg"
+              aria-label="Logg inn hvis du allerede har konto"
+            >
+              <Link href="/auth/signin">Har du konto? Logg inn</Link>
+            </Button>
           </div>
         </div>
       </section>
