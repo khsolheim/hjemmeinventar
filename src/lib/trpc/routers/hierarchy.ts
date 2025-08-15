@@ -2,6 +2,7 @@ import { z } from 'zod'
 import { TRPCError } from '@trpc/server'
 import { createTRPCRouter, protectedProcedure } from '../server'
 import { LocationType } from '@prisma/client'
+import { validateAcyclic } from '@/lib/services/hierarchy-service'
 
 // Input validation schemas
 const LocationTypeEnum = z.nativeEnum(LocationType)
@@ -204,9 +205,8 @@ export const hierarchyRouter = createTRPCRouter({
         })
       }
 
-      // Validate for circular dependencies
-      const allowedRules = input.rules.filter(r => r.isAllowed)
-      const circularError = validateNoCircularDependencies(allowedRules)
+      // Validate for circular dependencies (server-side)
+      const circularError = validateAcyclic(input.rules)
       if (circularError) {
         throw new TRPCError({
           code: 'BAD_REQUEST',
@@ -321,53 +321,3 @@ export const hierarchyRouter = createTRPCRouter({
     })
 })
 
-// Helper function to validate no circular dependencies
-function validateNoCircularDependencies(
-  rules: Array<{ parentType: LocationType; childType: LocationType; isAllowed: boolean }>
-): string | null {
-  const allowedRules = rules.filter(r => r.isAllowed)
-  const graph: Record<string, string[]> = {}
-  
-  // Build adjacency list
-  allowedRules.forEach(rule => {
-    if (!graph[rule.parentType]) {
-      graph[rule.parentType] = []
-    }
-    graph[rule.parentType].push(rule.childType)
-  })
-
-  // Check for cycles using DFS
-  const visited = new Set<string>()
-  const recursionStack = new Set<string>()
-
-  function hasCycle(node: string): boolean {
-    if (recursionStack.has(node)) {
-      return true // Back edge found, cycle detected
-    }
-    if (visited.has(node)) {
-      return false // Already processed
-    }
-
-    visited.add(node)
-    recursionStack.add(node)
-
-    const neighbors = graph[node] || []
-    for (const neighbor of neighbors) {
-      if (hasCycle(neighbor)) {
-        return true
-      }
-    }
-
-    recursionStack.delete(node)
-    return false
-  }
-
-  // Check all nodes
-  for (const node of Object.keys(graph)) {
-    if (hasCycle(node)) {
-      return `Cycle detected involving ${node}`
-    }
-  }
-
-  return null
-}
