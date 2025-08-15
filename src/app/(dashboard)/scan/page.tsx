@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, Suspense } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -21,40 +21,7 @@ import { useSession } from 'next-auth/react'
 import { dymoService } from '@/lib/printing/dymo-service'
 import { printQueue } from '@/lib/printing/print-queue'
 
-// Mock QR scan results
-const mockQRResults = {
-  'KJK-0001': {
-    type: 'location',
-    name: 'Kjøkken',
-    description: 'Hovedkjøkken i første etasje',
-    itemCount: 12,
-    items: [
-      { name: 'Kaffe Friele', category: 'Mat og Drikke' },
-      { name: 'Kokosolje', category: 'Mat og Drikke' },
-      { name: 'Krydder sett', category: 'Mat og Drikke' }
-    ]
-  },
-  'KJK-0002': {
-    type: 'location',
-    name: 'Kjøkkenskap øverst til høyre',
-    description: 'Øvre skap i kjøkkenet',
-    itemCount: 8,
-    items: [
-      { name: 'Kaffe Friele', category: 'Mat og Drikke' },
-      { name: 'Te Earl Grey', category: 'Mat og Drikke' }
-    ]
-  },
-  'ITEM-001': {
-    type: 'item',
-    name: 'DROPS Melody Garn - Perlegrå',
-    category: 'Garn og Strikking',
-    location: 'Soverom > Strikkeskap',
-    quantity: '3 av 5 nøste',
-    description: '71% Alpakka, 25% Ull, 4% Polyamid'
-  }
-}
-
-export default function ScanPage() {
+function ScanPageContent() {
   const [manualCode, setManualCode] = useState('')
   const [scanResult, setScanResult] = useState<any>(null)
   const [isScanning, setIsScanning] = useState(false)
@@ -95,7 +62,7 @@ export default function ScanPage() {
   const handleManualScan = async () => {
     const code = manualCode.trim()
     if (!code) return
-    // Distribution codes start with D-
+    // Kun distributionskoder (D-......) støttes
     if (code.startsWith('D-')) {
       try {
         const data = await consumeMutation.client.items.getDistributionByQRCode.query({ qrCode: code })
@@ -106,23 +73,16 @@ export default function ScanPage() {
         return
       }
     }
-    // Fallback to mock lookup
-    const result = mockQRResults[code as keyof typeof mockQRResults]
-    if (result) {
-      setScanResult(result)
-    } else {
-      setScanResult({ error: 'QR-kode ikke funnet i systemet' })
-    }
+    // For andre koder viser vi not found (ingen dummy-data)
+    setScanResult({ error: 'QR-kode ikke funnet i systemet' })
   }
 
   const startCameraScanning = () => {
     setIsScanning(true)
-    // In a real implementation, this would start the camera
-    // For demo purposes, we'll simulate a successful scan after 2 seconds
+    // Ingen dummy-simulering – stopp skanning uten å sette resultat
     setTimeout(() => {
-      setScanResult(mockQRResults['KJK-0001'])
       setIsScanning(false)
-    }, 2000)
+    }, 1500)
   }
 
   const clearResult = () => {
@@ -211,7 +171,7 @@ export default function ScanPage() {
                 <Label htmlFor="manual-code">QR-kode</Label>
                  <Input
                   id="manual-code"
-                   placeholder="F.eks. D-ABCDEFGH, KJK-0001"
+                   placeholder="F.eks. D-ABCDEFGH"
                   value={manualCode}
                   onChange={(e) => setManualCode(e.target.value)}
                   onKeyDown={(e) => e.key === 'Enter' && handleManualScan()}
@@ -225,16 +185,6 @@ export default function ScanPage() {
               >
                 Søk etter kode
               </Button>
-
-              {/* Test Codes */}
-              <div className="pt-4 border-t">
-                <h4 className="text-sm font-medium mb-2">Test-koder:</h4>
-                <div className="space-y-1 text-xs text-muted-foreground">
-                  <div>KJK-0001 (Kjøkken)</div>
-                  <div>KJK-0002 (Kjøkkenskap)</div>
-                  <div>ITEM-001 (Garn)</div>
-                </div>
-              </div>
             </CardContent>
           </Card>
         </div>
@@ -381,15 +331,10 @@ export default function ScanPage() {
                     <Search className="w-5 h-5 text-red-500" />
                     Ikke funnet
                   </>
-                ) : scanResult.type === 'location' ? (
-                  <>
-                    <MapPin className="w-5 h-5" />
-                    Lokasjon funnet
-                  </>
                 ) : (
                   <>
                     <Package className="w-5 h-5" />
-                    Gjenstand funnet
+                    Gjenstand/Lokasjon
                   </>
                 )}
               </CardTitle>
@@ -411,52 +356,7 @@ export default function ScanPage() {
                   Sjekk at koden er riktig eller at gjenstanden/lokasjonen er registrert i systemet
                 </p>
               </div>
-            ) : scanResult.type === 'location' ? (
-              <div>
-                <div className="mb-4">
-                  <h3 className="text-xl font-bold">{scanResult.name}</h3>
-                  <p className="text-muted-foreground">{scanResult.description}</p>
-                  <Badge variant="secondary" className="mt-2">
-                    {scanResult.itemCount} gjenstander
-                  </Badge>
-                </div>
-
-                {scanResult.items && scanResult.items.length > 0 && (
-                  <div>
-                    <h4 className="font-medium mb-3">Gjenstander i denne lokasjonen:</h4>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                      {scanResult.items.map((item: any, index: number) => (
-                        <div key={index} className="flex items-center justify-between p-3 bg-muted rounded">
-                          <div>
-                            <div className="font-medium">{item.name}</div>
-                            <div className="text-sm text-muted-foreground">{item.category}</div>
-                          </div>
-                          <Package className="w-4 h-4 text-muted-foreground" />
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-            ) : (
-              <div>
-                <div className="mb-4">
-                  <h3 className="text-xl font-bold">{scanResult.name}</h3>
-                  <p className="text-muted-foreground">{scanResult.description}</p>
-                  <div className="flex gap-2 mt-2">
-                    <Badge variant="secondary">{scanResult.category}</Badge>
-                    <Badge variant="outline">{scanResult.quantity}</Badge>
-                  </div>
-                </div>
-
-                <div className="space-y-2 text-sm">
-                  <div className="flex items-center gap-2">
-                    <MapPin className="w-4 h-4 text-muted-foreground" />
-                    <span>{scanResult.location}</span>
-                  </div>
-                </div>
-              </div>
-            )}
+            ) : null}
           </CardContent>
         </Card>
       )}
@@ -480,5 +380,13 @@ export default function ScanPage() {
         </CardContent>
       </Card>
     </div>
+  )
+}
+
+export default function ScanPage() {
+  return (
+    <Suspense fallback={<div className="page container mx-auto px-4 py-8"><h1 className="text-2xl font-semibold">Laster QR-skanner...</h1></div>}>
+      <ScanPageContent />
+    </Suspense>
   )
 }
