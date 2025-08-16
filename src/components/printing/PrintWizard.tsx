@@ -94,11 +94,19 @@ export function PrintWizard({
     { enabled: !!selectedTemplate?.id && !!selectedPrinter && quantity > 0 }
   )
 
-  const createJobMutation = trpc.printing.createJob.useMutation({
+  const createJobMutation = trpc.printing.realPrintLabel.useMutation({
     onSuccess: (data) => {
-      onComplete?.(data.id)
+      onComplete?.(data.jobId)
     }
   })
+
+  const discoverPrintersMutation = trpc.printing.discoverPrinters.useMutation({
+    onSuccess: () => {
+      refetchPrinters()
+    }
+  })
+
+  const testPrinterMutation = trpc.printing.testRealPrinter.useMutation()
 
   // Effects
   useEffect(() => {
@@ -159,10 +167,12 @@ export function PrintWizard({
       await createJobMutation.mutateAsync({
         templateId: selectedTemplate.id,
         printerId: selectedPrinter,
-        data: printData,
-        quantity,
-        priority,
-        itemIds: preselectedItems
+        labelData: printData,
+        settings: {
+          copies: quantity,
+          jobTitle: `${selectedTemplate.name} - ${new Date().toLocaleString('no-NO')}`,
+          alignment: 'center'
+        }
       })
     } catch (error) {
       console.error('Feil ved opprettelse av print job:', error)
@@ -376,10 +386,25 @@ export function PrintWizard({
   const renderPrinterSelection = () => (
     <div className="space-y-6">
       <div className="mb-4">
-        <h3 className="text-lg font-semibold mb-2">Velg skriver og innstillinger</h3>
-        <p className="text-sm text-muted-foreground">
-          Velg hvilken skriver du vil bruke og angi utskriftsinnstillinger
-        </p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h3 className="text-lg font-semibold mb-1">Velg skriver og innstillinger</h3>
+            <p className="text-sm text-muted-foreground">
+              Velg hvilken skriver du vil bruke og angi utskriftsinnstillinger
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={() => discoverPrintersMutation.mutate()}
+              disabled={discoverPrintersMutation.isLoading}
+            >
+              {discoverPrintersMutation.isLoading ? 'Søker...' : 'Oppdater skrivere'}
+            </Button>
+            <Badge variant="outline">{printers?.length || 0} tilgjengelige</Badge>
+          </div>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

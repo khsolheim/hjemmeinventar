@@ -6,6 +6,8 @@ import { z } from 'zod'
 import { createTRPCRouter, protectedProcedure, publicProcedure } from '../server'
 import { db } from '../../db'
 import { TRPCError } from '@trpc/server'
+import { printerDriverService } from '@/lib/printing/printer-driver-service'
+import { dymoService } from '@/lib/printing/dymo-service'
 import type { 
   TemplateFilters,
   CreateJobInput,
@@ -1026,6 +1028,277 @@ export const printingRouter = createTRPCRouter({
         { id: 'BROTHER_QL_800', name: 'Brother QL-800', manufacturer: 'Brother' },
         { id: 'BROTHER_QL_820NWB', name: 'Brother QL-820NWB', manufacturer: 'Brother' }
       ]
+    }),
+
+  // Real printer integration
+  discoverPrinters: protectedProcedure
+    .mutation(async ({ ctx }) => {
+      await validateUserAccess(ctx.session.user.id)
+      
+      try {
+        const discoveredPrinters = await printerDriverService.discoverPrinters()
+        
+        // Update database with discovered printers
+        for (const printer of discoveredPrinters) {
+          await db.printerProfile.upsert({
+            where: { 
+              name_userId: { 
+                name: printer.name, 
+                userId: ctx.session.user.id 
+              } 
+            },
+            update: {
+              model: printer.model,
+              connectionType: printer.connectionType,
+              isOnline: printer.isConnected,
+              capabilities: JSON.stringify(printer.capabilities),
+              updatedAt: new Date()
+            },
+            create: {
+              name: printer.name,
+              model: printer.model,
+              connectionType: printer.connectionType,
+              isOnline: printer.isConnected,
+              capabilities: JSON.stringify(printer.capabilities),
+              userId: ctx.session.user.id,
+              householdId: 'default', // TODO: Get from user context
+              isDefault: false,
+              settings: JSON.stringify({})
+            }
+          })
+        }
+        
+        await auditLog(ctx.session.user.id, 'PRINTERS_DISCOVERED', 'PrinterProfile', `${discoveredPrinters.length} printers`)
+        return { success: true, count: discoveredPrinters.length, printers: discoveredPrinters }
+      } catch (error) {
+        console.error('Printer discovery failed:', error)
+        return { success: false, error: error instanceof Error ? error.message : 'Discovery failed' }
+      }
+    }),
+
+  realPrintLabel: protectedProcedure
+    .input(z.object({
+      printerId: z.string(),
+      templateId: z.string(),
+      labelData: z.record(z.string()),
+      settings: z.object({
+        copies: z.number().default(1),
+        jobTitle: z.string().optional(),
+        cutMode: z.enum(['auto', 'manual', 'none']).optional(),
+        alignment: z.enum(['left', 'center', 'right']).optional()
+      }).optional()
+    }))
+    .mutation(async ({ input, ctx }) => {
+      await validateUserAccess(ctx.session.user.id)
+      
+      try {
+        // Get template from database
+        const template = await db.labelTemplate.findUnique({
+          where: { id: input.templateId }
+        })
+        
+        if (!template) {
+          throw new TRPCError({
+            code: 'NOT_FOUND',
+            message: 'Template not found'
+          })
+        }
+        
+        // Get printer info from database
+        const dbPrinter = await db.printerProfile.findUnique({
+          where: { id: input.printerId, userId: ctx.session.user.id }
+        })
+        
+        if (!dbPrinter) {
+          throw new TRPCError({
+            code: 'NOT_FOUND',
+            message: 'Printer not found'
+          })
+        }
+        
+        // Get universal printer from service
+        const universalPrinter = printerDriverService.getPrinter(input.printerId)
+        if (!universalPrinter) {
+          // Try to rediscover printers
+          await printerDriverService.discoverPrinters()
+          const retryPrinter = printerDriverService.getPrinter(input.printerId)
+          
+          if (!retryPrinter) {
+            throw new TRPCError({
+              code: 'NOT_FOUND',
+              message: 'Printer not available. Please check connection and try again.'
+            })
+          }
+        }
+        
+        // Create label template object
+        const labelTemplate = {
+          id: template.id,
+          name: template.name,
+          brand: 'DYMO' as const, // TODO: Determine from printer type
+          format: 'DYMO_XML',
+          width: 0, // Will be determined by template
+          height: 0,
+          content: template.content,
+          variables: Object.keys(input.labelData)
+        }
+        
+        // Print using universal service
+        const result = await printerDriverService.printLabel(
+          input.printerId,
+          labelTemplate,
+          input.labelData,
+          input.settings || {}
+        )
+        
+        if (result.success) {
+          // Create print job record
+          const printJob = await db.printJob.create({
+            data: {
+              id: result.jobId || `job_${Date.now()}`,
+              templateId: input.templateId,
+              printerProfileId: input.printerId,
+              userId: ctx.session.user.id,
+              householdId: 'default',
+              status: 'COMPLETED',
+              data: JSON.stringify(input.labelData),
+              settings: JSON.stringify(input.settings || {}),
+              copies: input.settings?.copies || 1,
+              startedAt: new Date(),
+              completedAt: new Date()
+            }
+          })
+          
+          await auditLog(ctx.session.user.id, 'LABEL_PRINTED', 'PrintJob', printJob.id)
+          
+          return {
+            success: true,
+            jobId: printJob.id,
+            message: 'Label printed successfully'
+          }
+        } else {
+          // Create failed job record
+          await db.printJob.create({
+            data: {
+              id: result.jobId || `job_failed_${Date.now()}`,
+              templateId: input.templateId,
+              printerProfileId: input.printerId,
+              userId: ctx.session.user.id,
+              householdId: 'default',
+              status: 'FAILED',
+              data: JSON.stringify(input.labelData),
+              settings: JSON.stringify(input.settings || {}),
+              copies: input.settings?.copies || 1,
+              errorMessage: result.error,
+              startedAt: new Date(),
+              completedAt: new Date()
+            }
+          })
+          
+          throw new TRPCError({
+            code: 'INTERNAL_SERVER_ERROR',
+            message: result.error || 'Print failed'
+          })
+        }
+      } catch (error) {
+        console.error('Print error:', error)
+        if (error instanceof TRPCError) {
+          throw error
+        }
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: error instanceof Error ? error.message : 'Print failed'
+        })
+      }
+    }),
+
+  testRealPrinter: protectedProcedure
+    .input(z.object({ printerId: z.string() }))
+    .mutation(async ({ input, ctx }) => {
+      await validateUserAccess(ctx.session.user.id)
+      
+      try {
+        // Test using universal service
+        const result = await printerDriverService.testPrinter(input.printerId)
+        
+        if (result.success) {
+          await auditLog(ctx.session.user.id, 'PRINTER_TEST_SUCCESS', 'PrinterProfile', input.printerId)
+        } else {
+          await auditLog(ctx.session.user.id, 'PRINTER_TEST_FAILED', 'PrinterProfile', input.printerId)
+        }
+        
+        return result
+      } catch (error) {
+        console.error('Printer test error:', error)
+        return { 
+          success: false, 
+          error: error instanceof Error ? error.message : 'Test failed' 
+        }
+      }
+    }),
+
+  getPrinterQueue: protectedProcedure
+    .query(async ({ ctx }) => {
+      await validateUserAccess(ctx.session?.user?.id)
+      
+      const queueStatus = printerDriverService.getQueueStatus()
+      return queueStatus
+    }),
+
+  generateQuickTemplate: protectedProcedure
+    .input(z.object({
+      type: z.enum(['address', 'shipping', 'barcode', 'qr']),
+      size: z.enum(['small', 'medium', 'large']).default('medium'),
+      printerBrand: z.enum(['DYMO', 'ZEBRA', 'BROTHER']).default('DYMO')
+    }))
+    .mutation(async ({ input, ctx }) => {
+      await validateUserAccess(ctx.session.user.id)
+      
+      try {
+        const template = printerDriverService.generateTemplate(
+          input.printerBrand,
+          input.type,
+          input.size
+        )
+        
+        if (!template) {
+          throw new TRPCError({
+            code: 'INTERNAL_SERVER_ERROR',
+            message: 'Failed to generate template'
+          })
+        }
+        
+        // Save to database
+        const savedTemplate = await db.labelTemplate.create({
+          data: {
+            name: template.name,
+            content: template.content,
+            size: input.size.toUpperCase() as any,
+            type: input.type.toUpperCase() as any,
+            userId: ctx.session.user.id,
+            householdId: 'default',
+            isPublic: false,
+            version: 1
+          }
+        })
+        
+        await auditLog(ctx.session.user.id, 'TEMPLATE_GENERATED', 'LabelTemplate', savedTemplate.id)
+        
+        return {
+          success: true,
+          template: savedTemplate,
+          variables: template.variables
+        }
+      } catch (error) {
+        console.error('Template generation error:', error)
+        if (error instanceof TRPCError) {
+          throw error
+        }
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: error instanceof Error ? error.message : 'Template generation failed'
+        })
+      }
     })
 })
 
