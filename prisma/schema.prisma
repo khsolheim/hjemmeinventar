@@ -84,6 +84,11 @@ model User {
 
   // Label profiles
   labelProfiles LabelProfile[] @relation("UserLabelProfiles")
+
+  // Printing relations
+  labelTemplates LabelTemplate[]
+  printerProfiles PrinterProfile[]
+  printJobs     PrintJob[]
 }
 
 // Physical organization
@@ -297,6 +302,11 @@ model Household {
 
   // Label profiles
   labelProfiles LabelProfile[]
+
+  // Printing relations
+  labelTemplates LabelTemplate[]
+  printerProfiles PrinterProfile[]
+  printJobs     PrintJob[]
 }
 
 model HouseholdMember {
@@ -569,4 +579,100 @@ model ItemRelation {
   @@unique([fromItemId, toItemId, relationType])
   @@index([userId])
   @@index([relationType])
+}
+
+enum LabelType {
+  QR
+  BARCODE
+  CUSTOM
+}
+
+enum LabelSize {
+  SMALL
+  STANDARD
+  LARGE
+}
+
+enum PrintJobStatus {
+  QUEUED
+  PROCESSING
+  SUCCESS
+  FAILED
+  CANCELLED
+}
+
+model LabelTemplate {
+  id             String      @id @default(cuid())
+  name           String
+  type           LabelType
+  size           LabelSize
+  xml            String
+  fieldMapping   String?
+  isSystemDefault Boolean    @default(false)
+
+  // Ownership
+  user           User?       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId         String?
+  household      Household?  @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  householdId    String?
+
+  // Relations
+  printJobs      PrintJob[]
+
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+
+  @@index([userId])
+  @@index([householdId])
+}
+
+model PrinterProfile {
+  id             String      @id @default(cuid())
+  name           String
+  printerName    String
+  size           LabelSize
+  defaultCopies  Int         @default(1)
+
+  // Ownership
+  user           User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId         String
+  household      Household?  @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  householdId    String?
+
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+
+  @@index([userId])
+  @@index([householdId])
+}
+
+model PrintJob {
+  id             String         @id @default(cuid())
+  jobTitle       String
+  type           LabelType
+  status         PrintJobStatus @default(QUEUED)
+  printerName    String?
+  copies         Int            @default(1)
+  size           LabelSize?
+  payload        String
+  errorMessage   String?
+
+  template       LabelTemplate? @relation(fields: [templateId], references: [id], onDelete: SetNull)
+  templateId     String?
+
+  // Ownership
+  user           User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId         String
+  household      Household?     @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  householdId    String?
+
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+  startedAt      DateTime?
+  finishedAt     DateTime?
+
+  @@index([userId])
+  @@index([status])
+  @@index([createdAt])
+  @@index([templateId])
 }

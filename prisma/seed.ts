@@ -330,6 +330,41 @@ async function main() {
     }
   }
 
+  // Seed systemmaler for printing (ingen brukeravhengige data)
+  const existingQR = await prisma.labelTemplate.findFirst({ where: { isSystemDefault: true, type: 'QR' as any } })
+  if (!existingQR) {
+    await prisma.labelTemplate.create({
+      data: {
+        name: 'System: QR Standard (30252)',
+        type: 'QR' as any,
+        size: 'STANDARD' as any,
+        xml: '<?xml version="1.0" encoding="utf-8"?><DieCutLabel></DieCutLabel>',
+        fieldMapping: JSON.stringify({ ITEM_NAME: 'item.name', LOCATION_NAME: 'location.name', QR_CODE: 'qrCode', DATE_ADDED: 'dateAdded' }),
+        isSystemDefault: true
+      }
+    })
+    console.log('✅ Opprettet systemmal: QR Standard')
+  } else {
+    console.log('⏭️  Systemmal finnes: QR Standard')
+  }
+
+  const existingBarcode = await prisma.labelTemplate.findFirst({ where: { isSystemDefault: true, type: 'BARCODE' as any } })
+  if (!existingBarcode) {
+    await prisma.labelTemplate.create({
+      data: {
+        name: 'System: Code128 Standard (30252)',
+        type: 'BARCODE' as any,
+        size: 'STANDARD' as any,
+        xml: '<?xml version="1.0" encoding="utf-8"?><DieCutLabel></DieCutLabel>',
+        fieldMapping: JSON.stringify({ ITEM_NAME: 'item.name', BARCODE: 'barcode', LOCATION_NAME: 'location.name' }),
+        isSystemDefault: true
+      }
+    })
+    console.log('✅ Opprettet systemmal: Barcode Standard')
+  } else {
+    console.log('⏭️  Systemmal finnes: Barcode Standard')
+  }
+
   console.log('🎉 Database seeding completed!')
 }
 
