@@ -535,6 +535,81 @@ export const printingRouter = createTRPCRouter({
       }))
     }),
 
+  cancelJob: protectedProcedure
+    .input(z.object({ jobId: z.string() }))
+    .mutation(async ({ input, ctx }) => {
+      await validateUserAccess(ctx.session.user.id)
+      
+      const job = await db.printJob.update({
+        where: { 
+          id: input.jobId,
+          userId: ctx.session.user.id
+        },
+        data: { 
+          status: 'CANCELLED',
+          completedAt: new Date()
+        }
+      })
+      
+      await auditLog(ctx.session.user.id, 'JOB_CANCELLED', 'PrintJob', job.id)
+      return job
+    }),
+
+  retryJob: protectedProcedure
+    .input(z.object({ jobId: z.string() }))
+    .mutation(async ({ input, ctx }) => {
+      await validateUserAccess(ctx.session.user.id)
+      
+      const job = await db.printJob.update({
+        where: { 
+          id: input.jobId,
+          userId: ctx.session.user.id
+        },
+        data: { 
+          status: 'QUEUED',
+          errorMessage: null,
+          completedAt: null
+        }
+      })
+      
+      await auditLog(ctx.session.user.id, 'JOB_RETRIED', 'PrintJob', job.id)
+      return job
+    }),
+
+  pauseJob: protectedProcedure
+    .input(z.object({ jobId: z.string() }))
+    .mutation(async ({ input, ctx }) => {
+      await validateUserAccess(ctx.session.user.id)
+      
+      const job = await db.printJob.update({
+        where: { 
+          id: input.jobId,
+          userId: ctx.session.user.id
+        },
+        data: { status: 'PAUSED' }
+      })
+      
+      await auditLog(ctx.session.user.id, 'JOB_PAUSED', 'PrintJob', job.id)
+      return job
+    }),
+
+  resumeJob: protectedProcedure
+    .input(z.object({ jobId: z.string() }))
+    .mutation(async ({ input, ctx }) => {
+      await validateUserAccess(ctx.session.user.id)
+      
+      const job = await db.printJob.update({
+        where: { 
+          id: input.jobId,
+          userId: ctx.session.user.id
+        },
+        data: { status: 'QUEUED' }
+      })
+      
+      await auditLog(ctx.session.user.id, 'JOB_RESUMED', 'PrintJob', job.id)
+      return job
+    }),
+
   // ============================================================================
   // Validation and AI
   // ============================================================================
@@ -797,6 +872,39 @@ export const printingRouter = createTRPCRouter({
         printerUtilization: [],
         timeRange: input.timeRange || { from: new Date(), to: new Date() }
       }
+    }),
+
+  // Printer Management
+  listPrinters: publicProcedure
+    .query(async ({ ctx }) => {
+      await validateUserAccess(ctx.session?.user?.id)
+      
+      return await ctx.db.printerProfile.findMany({
+        where: {
+          household: {
+            users: {
+              some: {
+                id: ctx.session?.user?.id
+              }
+            }
+          }
+        },
+        orderBy: {
+          name: 'asc'
+        }
+      })
+    }),
+
+  // Label Media Management
+  listLabelMedia: publicProcedure
+    .query(async ({ ctx }) => {
+      await validateUserAccess(ctx.session?.user?.id)
+      
+      return await ctx.db.labelMedia.findMany({
+        orderBy: {
+          size: 'asc'
+        }
+      })
     })
 })
 
