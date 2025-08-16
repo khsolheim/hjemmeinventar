@@ -1,5 +1,6 @@
 // Database seed script
 import { PrismaClient } from '@prisma/client'
+import { seedPrintingSystem } from './seed-printing'
 
 const prisma = new PrismaClient()
 
@@ -329,6 +330,9 @@ async function main() {
       }
     }
   }
+
+  // Seed printing system
+  await seedPrintingSystem()
 
   console.log('🎉 Database seeding completed!')
 }

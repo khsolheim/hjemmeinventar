@@ -13,6 +13,7 @@ import { householdsRouter } from './routers/households'
 import { aiRouter } from './routers/ai'
 import { importExportRouter } from './routers/import-export'
 import { hierarchyRouter } from './routers/hierarchy'
+import { printingRouter } from './routers/printing'
 
 export const appRouter = createTRPCRouter({
   items: itemsRouter,
@@ -27,7 +28,8 @@ export const appRouter = createTRPCRouter({
   households: householdsRouter,
   ai: aiRouter,
   importExport: importExportRouter,
-  hierarchy: hierarchyRouter
+  hierarchy: hierarchyRouter,
+  printing: printingRouter
 })
 
 export type AppRouter = typeof appRouter

@@ -56,6 +56,10 @@ model User {
   defaultLabelProfileId String? @unique
   defaultLabelProfile   LabelProfile? @relation("UserDefaultLabelProfile", fields: [defaultLabelProfileId], references: [id])
   password  String?  // For credentials-based authentication
+  role      String   @default("USER")
+  isActive  Boolean  @default(true)
+  tenantId  String?
+  tenant    Tenant?  @relation("TenantUsers", fields: [tenantId], references: [id], onDelete: SetNull)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   
@@ -84,6 +88,65 @@ model User {
 
   // Label profiles
   labelProfiles LabelProfile[] @relation("UserLabelProfiles")
+
+  // PRINTING SYSTEM RELATIONS
+  // Label media relations
+  labelMediaCreated    LabelMedia[]    @relation("LabelMediaCreatedBy")
+  labelMediaUpdated    LabelMedia[]    @relation("LabelMediaUpdatedBy")
+  labelMediaDeleted    LabelMedia[]    @relation("LabelMediaDeletedBy")
+  
+  // Label template relations
+  labelTemplates       LabelTemplate[] @relation("UserLabelTemplates")
+  labelTemplatesCreated LabelTemplate[] @relation("LabelTemplateCreatedBy")
+  labelTemplatesUpdated LabelTemplate[] @relation("LabelTemplateUpdatedBy")
+  labelTemplatesDeleted LabelTemplate[] @relation("LabelTemplateDeletedBy")
+  
+  // Template history relations
+  templateHistoryCreated LabelTemplateHistory[] @relation("TemplateHistoryCreatedBy")
+  
+  // Template permission relations
+  templatePermissionsUser TemplatePermission[] @relation("TemplatePermissionUser")
+  templatePermissionsGranted TemplatePermission[] @relation("TemplatePermissionGrantedBy")
+  templatePermissionsRevoked TemplatePermission[] @relation("TemplatePermissionRevokedBy")
+  
+  // Template translation relations
+  templateTranslations TemplateTranslation[] @relation("TemplateTranslationTranslatedBy")
+  
+  // Template marketplace relations
+  publishedTemplates   TemplateMarketplace[] @relation("TemplateMarketplacePublisher")
+  
+  // Printer profile relations
+  printerProfiles      PrinterProfile[] @relation("PrinterProfileUser")
+  printerProfilesCreated PrinterProfile[] @relation("PrinterProfileCreatedBy")
+  printerProfilesUpdated PrinterProfile[] @relation("PrinterProfileUpdatedBy")
+  printerProfilesDeleted PrinterProfile[] @relation("PrinterProfileDeletedBy")
+  
+  // Print job relations
+  printJobs            PrintJob[]       @relation("PrintJobUser")
+  printJobsCreated     PrintJob[]       @relation("PrintJobCreatedBy")
+  
+  // Approval workflow relations
+  approvalWorkflowsRequested PrintApprovalWorkflow[] @relation("ApprovalWorkflowRequester")
+  approvalsGiven       PrintApproval[]  @relation("PrintApprovalApprover")
+  approvalsEscalatedFrom PrintApproval[] @relation("PrintApprovalEscalatedFrom")
+  
+  // Quota and cost relations
+  printQuotas          PrintQuota[]     @relation("PrintQuotaUser")
+  printingCosts        PrintingCost[]   @relation("PrintingCostUser")
+  
+  // Audit and compliance relations
+  printAuditLogs       PrintAuditLog[]  @relation("PrintAuditLogUser")
+  complianceLogs       ComplianceLog[]  @relation("ComplianceLogUser")
+  
+  // AI/ML relations
+  printPatternAnalysis PrintPatternAnalysis[] @relation("PrintPatternAnalysisUser")
+  
+  // Notification and preference relations
+  notificationPreferences UserNotificationPreference[] @relation("UserNotificationPreferences")
+  themePreference      UserThemePreference? @relation("UserThemePreference")
+  
+  // Voice command relations
+  voiceCommands        VoiceCommand[]   @relation("VoiceCommands")
 }
 
 // Physical organization
@@ -288,6 +351,10 @@ model Household {
   id          String            @id @default(cuid())
   name        String
   description String?
+  ownerId     String
+  tenantId    String?
+  tenant      Tenant?           @relation("TenantHouseholds", fields: [tenantId], references: [id], onDelete: SetNull)
+  isActive    Boolean           @default(true)
   
   members     HouseholdMember[]
   hierarchyRules HierarchyRule[]
@@ -297,6 +364,16 @@ model Household {
 
   // Label profiles
   labelProfiles LabelProfile[]
+
+  // PRINTING SYSTEM RELATIONS
+  labelTemplates       LabelTemplate[]     @relation("HouseholdLabelTemplates")
+  templatePermissions  TemplatePermission[] @relation("TemplatePermissionHousehold")
+  printerProfiles      PrinterProfile[]    @relation("PrinterProfileHousehold")
+  printJobs            PrintJob[]          @relation("PrintJobHousehold")
+  printQuotas          PrintQuota[]        @relation("PrintQuotaHousehold")
+  printingCosts        PrintingCost[]      @relation("PrintingCostHousehold")
+  notificationTemplates NotificationTemplate[] @relation("NotificationTemplateHousehold")
+  externalIntegrations ExternalIntegration[] @relation("ExternalIntegrationHousehold")
 }
 
 model HouseholdMember {
@@ -569,4 +646,896 @@ model ItemRelation {
   @@unique([fromItemId, toItemId, relationType])
   @@index([userId])
   @@index([relationType])
+}
+
+// =============================================================================
+// PRINTING SYSTEM - Complete V3.1 Implementation
+// =============================================================================
+
+// Printing-specific enums
+enum LabelType {
+  QR
+  BARCODE
+  CUSTOM
+  DYNAMIC
+}
+
+enum LabelSize {
+  SMALL
+  STANDARD
+  LARGE
+  CUSTOM
+}
+
+enum PrintJobStatus {
+  QUEUED
+  PROCESSING
+  SUCCESS
+  FAILED
+  CANCELLED
+  RETRYING
+  SCHEDULED
+  PENDING_APPROVAL
+}
+
+enum ConnectionType {
+  USB
+  NETWORK
+  BLUETOOTH
+  CLOUD
+}
+
+enum Permission {
+  READ
+  WRITE
+  DELETE
+  SHARE
+  APPROVE
+  ADMIN
+}
+
+enum AuditAction {
+  TEMPLATE_CREATED
+  TEMPLATE_UPDATED
+  TEMPLATE_DELETED
+  JOB_PRINTED
+  JOB_CANCELLED
+  JOB_SCHEDULED
+  APPROVAL_GRANTED
+  APPROVAL_DENIED
+  SETTINGS_CHANGED
+  USER_LOGIN
+  DATA_EXPORTED
+}
+
+enum IntegrationType {
+  INVENTORY_SYSTEM
+  ERP
+  WAREHOUSE
+  WMS
+  CRM
+  API_WEBHOOK
+}
+
+enum ConfigScope {
+  GLOBAL
+  TENANT
+  HOUSEHOLD
+  USER
+}
+
+enum NotificationType {
+  EMAIL
+  SMS
+  PUSH
+  WEBHOOK
+  SLACK
+}
+
+enum ApprovalStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  ESCALATED
+}
+
+enum ConditionType {
+  FIELD_VALUE
+  TIME_RANGE
+  USER_ROLE
+  INVENTORY_LEVEL
+  COST_THRESHOLD
+}
+
+enum DataClassification {
+  PUBLIC
+  INTERNAL
+  CONFIDENTIAL
+  RESTRICTED
+}
+
+enum ValidationRuleType {
+  BARCODE_FORMAT
+  QR_CONTENT
+  FIELD_REQUIRED
+  LENGTH_CHECK
+  REGEX_PATTERN
+}
+
+enum TemplateComplexity {
+  SIMPLE
+  MEDIUM
+  COMPLEX
+  DYNAMIC
+}
+
+enum BillingPlan {
+  FREE
+  BASIC
+  PROFESSIONAL
+  ENTERPRISE
+}
+
+enum ChangeType {
+  CREATED
+  UPDATED
+  REVERTED
+  INHERITED
+  MIGRATED
+}
+
+enum SeverityLevel {
+  INFO
+  WARNING
+  ERROR
+  CRITICAL
+}
+
+enum DataType {
+  STRING
+  INTEGER
+  BOOLEAN
+  JSON
+  ENCRYPTED
+  DECIMAL
+}
+
+// Multi-tenant support
+model Tenant {
+  id                   String    @id @default(cuid())
+  name                 String
+  subdomain            String    @unique
+  customDomain         String?
+  billingPlan          BillingPlan
+  maxUsers             Int       @default(10)
+  maxPrintsPerMonth    Int       @default(1000)
+  maxTemplates         Int       @default(50)
+  settings             String?   // JSON tenant-specific settings
+  isActive             Boolean   @default(true)
+  subscriptionEndsAt   DateTime?
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
+
+  // Relations
+  users                User[]                    @relation("TenantUsers")
+  households           Household[]               @relation("TenantHouseholds")
+  labelMedia           LabelMedia[]
+  labelTemplates       LabelTemplate[]
+  printerProfiles      PrinterProfile[]
+  printJobs            PrintJob[]
+  printQuotas          PrintQuota[]
+  printingCosts        PrintingCost[]
+  printAuditLogs       PrintAuditLog[]
+  complianceLogs       ComplianceLog[]
+  performanceBenchmarks PerformanceBenchmark[]
+  notificationTemplates NotificationTemplate[]
+  searchIndexes        SearchIndex[]
+  externalIntegrations ExternalIntegration[]
+  labelValidationRules LabelValidationRule[]
+  roles                Role[]
+
+  @@index([isActive, billingPlan], map: "idx_tenant_active_plan")
+}
+
+// Role-based access control
+model Role {
+  id              String     @id @default(cuid())
+  name            String
+  description     String?
+  permissions     String     // JSON array of permissions
+  isSystemRole    Boolean    @default(false)
+  tenantId        String?
+  tenant          Tenant?    @relation(fields: [tenantId], references: [id], onDelete: SetNull)
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
+
+  // Relations
+  templatePermissions TemplatePermission[]
+
+  @@unique([name, tenantId])
+  @@index([isSystemRole, tenantId])
+}
+
+// Label media definitions
+model LabelMedia {
+  id                String     @id @default(cuid())
+  code              String     // e.g. 30252
+  dymoId            String     // XML <Id> e.g. Address
+  paperName         String     // e.g. "30252 Address"
+  size              LabelSize
+  widthMm           Float?
+  heightMm          Float?
+  isActive          Boolean    @default(true)
+  supportedPrinters String?    // JSON array
+  costPerLabel      Float      @default(0.0000)
+  supplier          String?
+  stockQuantity     Int        @default(0)
+  tenantId          String?
+  tenant            Tenant?    @relation(fields: [tenantId], references: [id], onDelete: SetNull)
+  createdAt         DateTime   @default(now())
+  updatedAt         DateTime   @updatedAt
+  createdBy         String?
+  createdByUser     User?      @relation("LabelMediaCreatedBy", fields: [createdBy], references: [id])
+  updatedBy         String?
+  updatedByUser     User?      @relation("LabelMediaUpdatedBy", fields: [updatedBy], references: [id])
+  deletedAt         DateTime?
+  deletedBy         String?
+  deletedByUser     User?      @relation("LabelMediaDeletedBy", fields: [deletedBy], references: [id])
+
+  // Relations
+  labelTemplates    LabelTemplate[]
+
+  @@unique([code, dymoId, tenantId])
+  @@index([size, isActive, tenantId], map: "idx_labelmedia_search")
+}
+
+// Label templates with inheritance
+model LabelTemplate {
+  id                  String      @id @default(cuid())
+  name                String
+  description         String?
+  type                LabelType
+  size                LabelSize
+  category            String?     // QR_LOCATION, BARCODE_ITEM, etc.
+  xml                 String      // DYMO Label XML
+  fieldMapping        String?     // JSON
+  thumbnail           String?     // base64 or URL
+  isSystemDefault     Boolean     @default(false)
+  usageCount          Int         @default(0)
+  lastUsedAt          DateTime?
+  version             Int         @default(1)
+  locale              String      @default("nb-NO")
+  textDirection       String      @default("ltr")
+  parentTemplateId    String?
+  parentTemplate      LabelTemplate? @relation("TemplateInheritance", fields: [parentTemplateId], references: [id], onDelete: SetNull)
+  childTemplates      LabelTemplate[] @relation("TemplateInheritance")
+  inheritanceLevel    Int         @default(0)
+  overriddenFields    String?     // JSON array
+  complexity          TemplateComplexity @default(SIMPLE)
+  estimatedRenderTime Int         @default(100) // milliseconds
+  labelMediaId        String?
+  labelMedia          LabelMedia? @relation(fields: [labelMediaId], references: [id], onDelete: SetNull)
+  userId              String?
+  user                User?       @relation("UserLabelTemplates", fields: [userId], references: [id], onDelete: Cascade)
+  householdId         String?
+  household           Household?  @relation("HouseholdLabelTemplates", fields: [householdId], references: [id], onDelete: Cascade)
+  tenantId            String?
+  tenant              Tenant?     @relation(fields: [tenantId], references: [id], onDelete: SetNull)
+  createdAt           DateTime    @default(now())
+  updatedAt           DateTime    @updatedAt
+  createdBy           String?
+  createdByUser       User?       @relation("LabelTemplateCreatedBy", fields: [createdBy], references: [id])
+  updatedBy           String?
+  updatedByUser       User?       @relation("LabelTemplateUpdatedBy", fields: [updatedBy], references: [id])
+  deletedAt           DateTime?
+  deletedBy           String?
+  deletedByUser       User?       @relation("LabelTemplateDeletedBy", fields: [deletedBy], references: [id])
+
+  // Relations
+  printJobs           PrintJob[]
+  templateHistory     LabelTemplateHistory[]
+  inheritanceChains   TemplateInheritanceChain[]
+  permissions         TemplatePermission[]
+  translations        TemplateTranslation[]
+  marketplace         TemplateMarketplace?
+  printConditions     PrintCondition[]
+  validationRules     LabelValidationRule[]
+  testCases           PrintTestCase[]
+  printPatternAnalysis PrintPatternAnalysis[]
+  voiceCommands       VoiceCommand[]
+
+  @@index([userId, householdId, labelMediaId, tenantId], map: "idx_template_user_household")
+  @@index([type, isSystemDefault, tenantId], map: "idx_template_type_system")
+  @@index([category, usageCount, deletedAt], map: "idx_template_category_usage")
+  @@index([parentTemplateId, inheritanceLevel], map: "idx_template_inheritance")
+}
+
+// Template version history
+model LabelTemplateHistory {
+  id           String        @id @default(cuid())
+  templateId   String
+  template     LabelTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  version      Int
+  xml          String
+  fieldMapping String?       // JSON
+  changes      String?       // JSON description of changes
+  changeType   ChangeType
+  createdAt    DateTime      @default(now())
+  createdBy    String?
+  createdByUser User?        @relation("TemplateHistoryCreatedBy", fields: [createdBy], references: [id])
+
+  @@unique([templateId, version])
+  @@index([templateId, version], map: "idx_template_history_version")
+}
+
+// Template inheritance chain tracking
+model TemplateInheritanceChain {
+  id                String        @id @default(cuid())
+  childTemplateId   String
+  childTemplate     LabelTemplate @relation(fields: [childTemplateId], references: [id], onDelete: Cascade)
+  parentTemplateId  String
+  level             Int
+  inheritedFields   String?       // JSON array
+  createdAt         DateTime      @default(now())
+
+  @@index([childTemplateId, level], map: "idx_inheritance_child_level")
+  @@index([parentTemplateId], map: "idx_inheritance_parent")
+}
+
+// Template permissions
+model TemplatePermission {
+  id           String        @id @default(cuid())
+  templateId   String
+  template     LabelTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  userId       String?
+  user         User?         @relation("TemplatePermissionUser", fields: [userId], references: [id], onDelete: Cascade)
+  householdId  String?
+  household    Household?    @relation("TemplatePermissionHousehold", fields: [householdId], references: [id], onDelete: Cascade)
+  roleId       String?
+  role         Role?         @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission   Permission
+  grantedBy    String
+  grantedByUser User         @relation("TemplatePermissionGrantedBy", fields: [grantedBy], references: [id])
+  conditions   String?       // JSON conditions
+  createdAt    DateTime      @default(now())
+  expiresAt    DateTime?
+  revokedAt    DateTime?
+  revokedBy    String?
+  revokedByUser User?        @relation("TemplatePermissionRevokedBy", fields: [revokedBy], references: [id])
+
+  @@index([templateId, userId], map: "idx_permission_template_user")
+  @@index([templateId, householdId], map: "idx_permission_template_household")
+  @@index([expiresAt, revokedAt], map: "idx_permission_expiry")
+}
+
+// Template translations
+model TemplateTranslation {
+  id           String        @id @default(cuid())
+  templateId   String
+  template     LabelTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  locale       String
+  name         String
+  description  String?
+  fieldLabels  String?       // JSON mapping
+  translatedBy String?
+  translatedByUser User?     @relation("TemplateTranslationTranslatedBy", fields: [translatedBy], references: [id])
+  quality      Int           @default(0) // 0-100 quality score
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  @@unique([templateId, locale])
+  @@index([quality, locale], map: "idx_translation_quality")
+}
+
+// Template marketplace
+model TemplateMarketplace {
+  id             String        @id @default(cuid())
+  templateId     String        @unique
+  template       LabelTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  publisherId    String
+  publisher      User          @relation("TemplateMarketplacePublisher", fields: [publisherId], references: [id], onDelete: Cascade)
+  title          String
+  description    String
+  tags           String?       // JSON array
+  downloadCount  Int           @default(0)
+  rating         Float         @default(0.0)
+  reviewCount    Int           @default(0)
+  price          Float         @default(0.0)
+  isPublic       Boolean       @default(false)
+  isFeatured     Boolean       @default(false)
+  publishedAt    DateTime?
+  lastUpdatedAt  DateTime?
+  createdAt      DateTime      @default(now())
+
+  @@index([isPublic, isFeatured, rating], map: "idx_marketplace_public_featured")
+  @@index([downloadCount, publishedAt], map: "idx_marketplace_popularity")
+}
+
+// Printer profiles
+model PrinterProfile {
+  id              String     @id @default(cuid())
+  name            String     // e.g. "Hjemmekontor"
+  printerName     String     // reported from DYMO
+  size            LabelSize
+  defaultCopies   Int        @default(1)
+  isDefault       Boolean    @default(false)
+  connectionType  ConnectionType
+  ipAddress       String?
+  settings        String?    // JSON printer-specific settings
+  lastSeenAt      DateTime?
+  isOnline        Boolean    @default(false)
+  locationName    String?
+  floor           String?
+  building        String?
+  coordinates     String?    // JSON: {lat, lng}
+  department      String?
+  userId          String
+  user            User       @relation("PrinterProfileUser", fields: [userId], references: [id], onDelete: Cascade)
+  householdId     String?
+  household       Household? @relation("PrinterProfileHousehold", fields: [householdId], references: [id], onDelete: Cascade)
+  tenantId        String?
+  tenant          Tenant?    @relation(fields: [tenantId], references: [id], onDelete: SetNull)
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
+  createdBy       String?
+  createdByUser   User?      @relation("PrinterProfileCreatedBy", fields: [createdBy], references: [id])
+  updatedBy       String?
+  updatedByUser   User?      @relation("PrinterProfileUpdatedBy", fields: [updatedBy], references: [id])
+  deletedAt       DateTime?
+  deletedBy       String?
+  deletedByUser   User?      @relation("PrinterProfileDeletedBy", fields: [deletedBy], references: [id])
+
+  @@index([userId, householdId, tenantId], map: "idx_printer_user_household")
+  @@index([printerName, isOnline], map: "idx_printer_status")
+  @@index([locationName, department], map: "idx_printer_location")
+}
+
+// Print jobs
+model PrintJob {
+  id                  String      @id @default(cuid())
+  jobTitle            String
+  type                LabelType
+  status              PrintJobStatus @default(QUEUED)
+  printerName         String?
+  copies              Int         @default(1)
+  size                LabelSize?
+  payload             String      // JSON array of labels
+  isEncrypted         Boolean     @default(false)
+  dataClassification  DataClassification @default(INTERNAL)
+  errorMessage        String?
+  failureReason       String?
+  debugInfo           String?
+  supportTicketId     String?
+  retryCount          Int         @default(0)
+  maxRetries          Int         @default(3)
+  priority            Int         @default(0)
+  estimatedDuration   Int?        // seconds
+  actualDuration      Int?        // seconds
+  scheduledAt         DateTime?
+  approvalRequired    Boolean     @default(false)
+  costEstimate        Float?
+  actualCost          Float?
+  retentionPolicy     String?     // JSON
+  templateId          String?
+  template            LabelTemplate? @relation(fields: [templateId], references: [id], onDelete: SetNull)
+  userId              String
+  user                User        @relation("PrintJobUser", fields: [userId], references: [id], onDelete: Cascade)
+  householdId         String?
+  household           Household?  @relation("PrintJobHousehold", fields: [householdId], references: [id], onDelete: Cascade)
+  tenantId            String?
+  tenant              Tenant?     @relation(fields: [tenantId], references: [id], onDelete: SetNull)
+  createdAt           DateTime    @default(now())
+  updatedAt           DateTime    @updatedAt
+  startedAt           DateTime?
+  finishedAt          DateTime?
+  createdBy           String?
+  createdByUser       User?       @relation("PrintJobCreatedBy", fields: [createdBy], references: [id])
+  deletedAt           DateTime?
+
+  // Relations
+  scheduledJob        ScheduledPrintJob?
+  approvalWorkflow    PrintApprovalWorkflow?
+  jobItems            PrintJobItem[]
+  printingCosts       PrintingCost[]
+
+  @@index([userId, status, createdAt, tenantId], map: "idx_printjob_user_status")
+  @@index([templateId, status], map: "idx_printjob_template")
+  @@index([status, priority, scheduledAt], map: "idx_printjob_queue")
+  @@index([approvalRequired, status], map: "idx_printjob_approval")
+}
+
+// Scheduled print jobs
+model ScheduledPrintJob {
+  id             String    @id @default(cuid())
+  printJobId     String    @unique
+  printJob       PrintJob  @relation(fields: [printJobId], references: [id], onDelete: Cascade)
+  scheduledAt    DateTime
+  timezone       String    @default("Europe/Oslo")
+  isRecurring    Boolean   @default(false)
+  cronExpression String?
+  nextRun        DateTime?
+  lastRun        DateTime?
+  maxRuns        Int?
+  runCount       Int       @default(0)
+  isActive       Boolean   @default(true)
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  @@index([scheduledAt, isActive], map: "idx_scheduled_active")
+  @@index([nextRun, isRecurring], map: "idx_scheduled_next_run")
+}
+
+// Print approval workflow
+model PrintApprovalWorkflow {
+  id                String      @id @default(cuid())
+  printJobId        String      @unique
+  printJob          PrintJob    @relation(fields: [printJobId], references: [id], onDelete: Cascade)
+  requiredApprovers String      // JSON array of userIds
+  currentStep       Int         @default(1)
+  totalSteps        Int
+  status            ApprovalStatus @default(PENDING)
+  escalationRules   String?     // JSON
+  timeoutMinutes    Int         @default(1440)
+  requestedBy       String
+  requestedByUser   User        @relation("ApprovalWorkflowRequester", fields: [requestedBy], references: [id])
+  createdAt         DateTime    @default(now())
+  updatedAt         DateTime    @updatedAt
+
+  // Relations
+  approvals         PrintApproval[]
+
+  @@index([status, currentStep], map: "idx_approval_workflow_status")
+  @@index([requestedBy, status], map: "idx_approval_workflow_requester")
+}
+
+// Print approvals
+model PrintApproval {
+  id             String                @id @default(cuid())
+  workflowId     String
+  workflow       PrintApprovalWorkflow @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+  approverId     String
+  approver       User                  @relation("PrintApprovalApprover", fields: [approverId], references: [id])
+  decision       ApprovalStatus
+  comments       String?
+  decidedAt      DateTime              @default(now())
+  escalatedFrom  String?
+  escalatedFromUser User?              @relation("PrintApprovalEscalatedFrom", fields: [escalatedFrom], references: [id])
+
+  @@index([workflowId, approverId], map: "idx_approval_workflow_approver")
+  @@index([decidedAt, decision], map: "idx_approval_decision")
+}
+
+// Print job items
+model PrintJobItem {
+  id               String    @id @default(cuid())
+  printJobId       String
+  printJob         PrintJob  @relation(fields: [printJobId], references: [id], onDelete: Cascade)
+  itemData         String    // JSON
+  status           String    @default("PENDING")
+  errorMessage     String?
+  printedAt        DateTime?
+  sequenceNumber   Int
+  barcode          String?   // generated barcode
+  qrCode           String?   // generated QR code
+  validationResult String?   // JSON
+  createdAt        DateTime  @default(now())
+
+  @@index([printJobId, sequenceNumber], map: "idx_jobitem_sequence")
+  @@index([printJobId, status], map: "idx_jobitem_status")
+}
+
+// Print conditions
+model PrintCondition {
+  id              String        @id @default(cuid())
+  templateId      String
+  template        LabelTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  name            String
+  conditionType   ConditionType
+  conditionConfig String        // JSON conditions
+  action          String        // PRINT, SKIP, MODIFY_TEMPLATE, REQUEST_APPROVAL
+  priority        Int           @default(0)
+  isActive        Boolean       @default(true)
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  @@index([templateId, isActive], map: "idx_condition_template")
+  @@index([conditionType, priority], map: "idx_condition_type_priority")
+}
+
+// Label validation rules
+model LabelValidationRule {
+  id           String            @id @default(cuid())
+  name         String
+  description  String?
+  ruleType     ValidationRuleType
+  ruleConfig   String            // JSON configuration
+  errorMessage String
+  isActive     Boolean           @default(true)
+  severity     SeverityLevel     @default(ERROR)
+  templateId   String?
+  template     LabelTemplate?    @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  tenantId     String?
+  tenant       Tenant?           @relation(fields: [tenantId], references: [id], onDelete: SetNull)
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
+
+  @@index([templateId, isActive], map: "idx_validation_template")
+  @@index([ruleType, severity], map: "idx_validation_rule_severity")
+}
+
+// Print quotas
+model PrintQuota {
+  id                    String     @id @default(cuid())
+  userId                String
+  user                  User       @relation("PrintQuotaUser", fields: [userId], references: [id], onDelete: Cascade)
+  householdId           String?
+  household             Household? @relation("PrintQuotaHousehold", fields: [householdId], references: [id], onDelete: Cascade)
+  tenantId              String?
+  tenant                Tenant?    @relation(fields: [tenantId], references: [id], onDelete: SetNull)
+  dailyLimit            Int        @default(100)
+  weeklyLimit           Int        @default(500)
+  monthlyLimit          Int        @default(1000)
+  yearlyLimit           Int?
+  currentDailyUsage     Int        @default(0)
+  currentWeeklyUsage    Int        @default(0)
+  currentMonthlyUsage   Int        @default(0)
+  currentYearlyUsage    Int        @default(0)
+  resetDate             DateTime
+  isBlocked             Boolean    @default(false)
+  blockReason           String?
+  createdAt             DateTime   @default(now())
+  updatedAt             DateTime   @updatedAt
+
+  @@unique([userId, resetDate])
+  @@index([householdId, tenantId, resetDate], map: "idx_quota_household_reset")
+  @@index([isBlocked], map: "idx_quota_blocked")
+}
+
+// Printing costs
+model PrintingCost {
+  id             String     @id @default(cuid())
+  userId         String
+  user           User       @relation("PrintingCostUser", fields: [userId], references: [id], onDelete: Cascade)
+  householdId    String?
+  household      Household? @relation("PrintingCostHousehold", fields: [householdId], references: [id], onDelete: Cascade)
+  tenantId       String?
+  tenant         Tenant?    @relation(fields: [tenantId], references: [id], onDelete: SetNull)
+  jobId          String
+  job            PrintJob   @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  labelCount     Int
+  costPerLabel   Float      @default(0.0000)
+  totalCost      Float      @default(0.00)
+  currency       String     @default("NOK")
+  billingPeriod  String
+  taxRate        Float      @default(0.25)
+  taxAmount      Float      @default(0.00)
+  netCost        Float      @default(0.00)
+  createdAt      DateTime   @default(now())
+
+  @@index([userId, billingPeriod, tenantId], map: "idx_cost_user_period")
+  @@index([householdId, billingPeriod], map: "idx_cost_household_period")
+}
+
+// Print audit log
+model PrintAuditLog {
+  id                  String      @id @default(cuid())
+  userId              String
+  user                User        @relation("PrintAuditLogUser", fields: [userId], references: [id], onDelete: Cascade)
+  tenantId            String?
+  tenant              Tenant?     @relation(fields: [tenantId], references: [id], onDelete: SetNull)
+  action              AuditAction
+  resourceType        String
+  resourceId          String
+  details             String?     // JSON
+  ipAddress           String?
+  userAgent           String?
+  sessionId           String?
+  riskScore           Int         @default(0) // 0-100
+  geolocation         String?     // JSON
+  complianceCategory  String?     // GDPR, CCPA, SOX
+  createdAt           DateTime    @default(now())
+
+  @@index([userId, action, createdAt, tenantId], map: "idx_audit_user_action")
+  @@index([resourceType, resourceId], map: "idx_audit_resource")
+  @@index([riskScore, complianceCategory], map: "idx_audit_risk_compliance")
+}
+
+// Compliance logging
+model ComplianceLog {
+  id               String    @id @default(cuid())
+  regulation       String    // GDPR, CCPA, SOX, HIPAA
+  action           String
+  userId           String
+  user             User      @relation("ComplianceLogUser", fields: [userId], references: [id])
+  tenantId         String?
+  tenant           Tenant?   @relation(fields: [tenantId], references: [id])
+  dataType         String
+  retentionPeriod  Int?      // days
+  legalBasis       String?
+  consentGiven     Boolean?
+  anonymized       Boolean   @default(false)
+  createdAt        DateTime  @default(now())
+
+  @@index([regulation, userId, tenantId], map: "idx_compliance_regulation_user")
+  @@index([retentionPeriod, anonymized], map: "idx_compliance_retention")
+}
+
+// AI/ML Pattern analysis
+model PrintPatternAnalysis {
+  id                 String        @id @default(cuid())
+  userId             String
+  user               User          @relation("PrintPatternAnalysisUser", fields: [userId], references: [id])
+  templateId         String
+  template           LabelTemplate @relation(fields: [templateId], references: [id])
+  predictedUsage     Int
+  optimalPrintTimes  String?       // JSON array
+  costOptimization   String?       // JSON
+  seasonalPatterns   String?       // JSON
+  anomalyDetected    Boolean       @default(false)
+  confidence         Float         // 0.0000 to 1.0000
+  modelVersion       String
+  generatedAt        DateTime      @default(now())
+  expiresAt          DateTime
+
+  @@index([userId, templateId, generatedAt], map: "idx_pattern_user_template")
+  @@index([confidence, anomalyDetected], map: "idx_pattern_confidence")
+}
+
+// Performance benchmarking
+model PerformanceBenchmark {
+  id                  String            @id @default(cuid())
+  operation           String
+  duration            Int               // milliseconds
+  itemCount           Int               @default(1)
+  printerModel        String?
+  templateComplexity  TemplateComplexity?
+  memoryUsage         Int?              // bytes
+  cpuUsage            Float?            // percent
+  timestamp           DateTime          @default(now())
+  version             String
+  tenantId            String?
+  tenant              Tenant?           @relation(fields: [tenantId], references: [id])
+
+  @@index([operation, timestamp, version], map: "idx_benchmark_operation")
+  @@index([templateComplexity, duration], map: "idx_benchmark_complexity")
+}
+
+// Notification templates
+model NotificationTemplate {
+  id          String           @id @default(cuid())
+  name        String
+  type        NotificationType
+  trigger     String
+  subject     String?
+  body        String
+  variables   String?          // JSON available variables
+  isActive    Boolean          @default(true)
+  householdId String?
+  household   Household?       @relation("NotificationTemplateHousehold", fields: [householdId], references: [id], onDelete: Cascade)
+  tenantId    String?
+  tenant      Tenant?          @relation(fields: [tenantId], references: [id], onDelete: SetNull)
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+}
+
+// User notification preferences
+model UserNotificationPreference {
+  id                String           @id @default(cuid())
+  userId            String
+  user              User             @relation("UserNotificationPreferences", fields: [userId], references: [id], onDelete: Cascade)
+  notificationType  String
+  channel           NotificationType
+  isEnabled         Boolean          @default(true)
+  quietHoursStart   String?          // TIME format
+  quietHoursEnd     String?          // TIME format
+  priority          Int              @default(0)
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+}
+
+// User theme preferences
+model UserThemePreference {
+  id                String   @id @default(cuid())
+  userId            String   @unique
+  user              User     @relation("UserThemePreference", fields: [userId], references: [id], onDelete: Cascade)
+  theme             String   @default("system") // light, dark, system
+  printPreviewMode  String   @default("light")
+  customColors      String?  // JSON
+  fontSize          String   @default("medium") // small, medium, large
+  highContrast      Boolean  @default(false)
+  updatedAt         DateTime @default(now())
+}
+
+// Voice commands
+model VoiceCommand {
+  id            String        @id @default(cuid())
+  command       String
+  action        String        // JSON with action
+  templateId    String?
+  template      LabelTemplate? @relation(fields: [templateId], references: [id])
+  userId        String
+  user          User          @relation("VoiceCommands", fields: [userId], references: [id])
+  language      String        @default("nb-NO")
+  isActive      Boolean       @default(true)
+  usageCount    Int           @default(0)
+  accuracyScore Float         @default(0.0)
+  createdAt     DateTime      @default(now())
+}
+
+// Search indexing
+model SearchIndex {
+  id                String   @id @default(cuid())
+  resourceType      String
+  resourceId        String
+  tenantId          String?
+  tenant            Tenant?  @relation(fields: [tenantId], references: [id])
+  searchableContent String
+  keywords          String?  // JSON array
+  boostScore        Float    @default(1.0)
+  lastIndexed       DateTime @default(now())
+
+  @@index([resourceType, resourceId, tenantId], map: "idx_search_resource")
+  @@index([boostScore], map: "idx_search_boost")
+}
+
+// Print test cases
+model PrintTestCase {
+  id             String        @id @default(cuid())
+  name           String
+  description    String?
+  templateId     String
+  template       LabelTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  testData       String        // JSON
+  expectedOutput String?
+  assertions     String?       // JSON array of test assertions
+  isActive       Boolean       @default(true)
+  lastRunAt      DateTime?
+  lastRunResult  String?
+  passRate       Float         @default(0.0)
+  executionTime  Int?          // milliseconds
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+}
+
+// External integrations
+model ExternalIntegration {
+  id               String          @id @default(cuid())
+  type             IntegrationType
+  name             String
+  apiEndpoint      String?
+  authConfig       String?         // JSON, encrypted
+  templateMapping  String?         // JSON
+  webhookUrl       String?
+  webhookSecret    String?
+  rateLimitPerHour Int             @default(1000)
+  currentUsage     Int             @default(0)
+  isActive         Boolean         @default(true)
+  lastSyncAt       DateTime?
+  lastError        String?
+  householdId      String
+  household        Household       @relation("ExternalIntegrationHousehold", fields: [householdId], references: [id], onDelete: Cascade)
+  tenantId         String?
+  tenant           Tenant?         @relation(fields: [tenantId], references: [id], onDelete: SetNull)
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+}
+
+// Printing configuration
+model PrintingConfig {
+  id                  String    @id @default(cuid())
+  key                 String
+  value               String
+  dataType            DataType
+  description         String?
+  isUserConfigurable  Boolean   @default(false)
+  scope               ConfigScope @default(GLOBAL)
+  scopeId             String?
+  defaultValue        String?
+  validationRule      String?   // JSON
+  category            String?
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @default(now())
+
+  @@unique([key, scope, scopeId])
+  @@index([category, isUserConfigurable], map: "idx_config_category")
 }
