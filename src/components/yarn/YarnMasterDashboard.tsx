@@ -120,7 +120,7 @@ export function YarnMasterDashboard({ initialMasters, initialTotal }: { initialM
     }
   }
 
-  if (isLoading || isLoadingAll || isLoadingSearch) {
+  if (isLoadingAll || isLoadingSearch) {
     return (
       <div className="cq space-y-2">
         <div className="flex justify-between items-center py-1">
@@ -236,7 +236,7 @@ export function YarnMasterDashboard({ initialMasters, initialTotal }: { initialM
         <AdvancedYarnSearch 
           onSearch={handleAdvancedSearch}
           onClear={handleClearSearch}
-          isLoading={isLoading || isLoadingAll || isLoadingSearch}
+          isLoading={isLoadingAll || isLoadingSearch}
           compact
         />
       </div>

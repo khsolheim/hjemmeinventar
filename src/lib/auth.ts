@@ -28,28 +28,51 @@ export const authConfig = {
       },
       async authorize(credentials) {
         try {
+          console.log('🔍 NextAuth authorize called with:', { email: credentials?.email })
+          console.log('🔍 DATABASE_URL:', process.env.DATABASE_URL?.substring(0, 50) + '...')
+          
           const validatedFields = signInSchema.safeParse(credentials)
           
           if (!validatedFields.success) {
+            console.log('❌ Validation failed:', validatedFields.error)
             return null
           }
           
           const { email, password } = validatedFields.data
+          console.log('✅ Fields validated, looking for user:', email)
           
           const user = await db.user.findUnique({
-            where: { email }
+            where: { email },
+            select: {
+              id: true,
+              email: true,
+              name: true,
+              image: true,
+              password: true
+            }
           })
           
-          if (!user || !user.password) {
+          if (!user) {
+            console.log('❌ User not found:', email)
             return null
           }
+          
+          if (!user.password) {
+            console.log('❌ User has no password:', email)
+            return null
+          }
+          
+          console.log('✅ User found, checking password')
           
           // Verify password
           const passwordsMatch = await bcrypt.compare(password, user.password)
           
           if (!passwordsMatch) {
+            console.log('❌ Password mismatch for:', email)
             return null
           }
+          
+          console.log('✅ Authentication successful for:', email)
           
           return {
             id: user.id,
@@ -58,7 +81,7 @@ export const authConfig = {
             image: user.image
           }
         } catch (error) {
-          console.error('Auth error:', error)
+          console.error('❌ Auth error:', error)
           return null
         }
       }
@@ -92,7 +115,8 @@ export const authConfig = {
   session: {
     strategy: 'jwt'
   },
-  secret: process.env.NEXTAUTH_SECRET
+  secret: process.env.NEXTAUTH_SECRET,
+  trustHost: true
 } satisfies NextAuthConfig
 
 // Type definitions for enhanced session

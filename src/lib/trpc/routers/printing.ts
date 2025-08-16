@@ -825,8 +825,8 @@ export const printingRouter = createTRPCRouter({
   getPrintStats: protectedProcedure
     .input(z.object({
       timeRange: z.object({
-        from: z.date(),
-        to: z.date()
+        from: z.union([z.date(), z.string()]).transform(val => typeof val === 'string' ? new Date(val) : val),
+        to: z.union([z.date(), z.string()]).transform(val => typeof val === 'string' ? new Date(val) : val)
       }).optional(),
       userId: z.string().optional(),
       householdId: z.string().optional()

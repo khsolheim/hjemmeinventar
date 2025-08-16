@@ -261,7 +261,7 @@ export function InventoryAnalytics() {
               {analytics.overview.totalValue.toLocaleString('nb-NO')} kr
             </div>
             <p className="text-xs text-muted-foreground">
-              Basert på {analytics.valueEstimate.itemsWithPrice} gjenstander med pris
+              Basert på {analytics.valueEstimate?.itemsWithPrice || 0} gjenstander med pris
             </p>
           </CardContent>
         </Card>
@@ -338,19 +338,19 @@ export function InventoryAnalytics() {
             <div className="space-y-2">
               <div className="flex justify-between">
                 <span className="text-sm text-gray-600">Total verdi:</span>
-                <span className="font-medium">{analytics.valueEstimate.total.toLocaleString('nb-NO')} kr</span>
+                <span className="font-medium">{(analytics.valueEstimate.total || 0).toLocaleString('nb-NO')} kr</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-sm text-gray-600">Gjennomsnitt:</span>
-                <span className="font-medium">{analytics.valueEstimate.average.toLocaleString('nb-NO')} kr</span>
+                <span className="font-medium">{(analytics.valueEstimate.average || 0).toLocaleString('nb-NO')} kr</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-sm text-gray-600">Høyeste verdi:</span>
-                <span className="font-medium">{analytics.valueEstimate.highest.toLocaleString('nb-NO')} kr</span>
+                <span className="font-medium">{(analytics.valueEstimate.highest || 0).toLocaleString('nb-NO')} kr</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-sm text-gray-600">Med pris:</span>
-                <span className="font-medium">{analytics.valueEstimate.itemsWithPrice} / {analytics.overview.totalItems}</span>
+                <span className="font-medium">{analytics.valueEstimate?.itemsWithPrice || 0} / {analytics.overview.totalItems}</span>
               </div>
             </div>
           </CardContent>
