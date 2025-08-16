@@ -1,5 +1,5 @@
 // Hjelpefunksjoner for Yarn Master/Batch system
-import { type PrismaClient } from '@prisma/client'
+import { type PrismaClient, RelationType } from '@prisma/client'
 
 export interface YarnMasterData {
   producer?: string
@@ -47,60 +47,53 @@ export async function getBatchesForMaster(
   masterId: string,
   userId: string
 ) {
-  // Find batch category first
-  const batchCategory = await db.category.findFirst({
-    where: { name: 'Garn Batch' }
+  // Forsøk typed relasjoner først
+  const typedLinks = await db.itemRelation.findMany({
+    where: { userId, relationType: RelationType.MASTER_OF, fromItemId: masterId },
+    select: { toItemId: true }
   })
 
-  if (!batchCategory) {
-    return []
-  }
+  let batchIds = typedLinks.map(l => l.toItemId)
 
-  // Try to find batches using relatedItems relation first
-  let batches = await db.item.findMany({
-    where: {
-      userId,
-      categoryId: batchCategory.id,
-      relatedItems: {
-        some: {
-          id: masterId
-        }
-      }
-    },
-    include: {
-      location: true,
-      tags: true,
-      category: true
-    },
-    orderBy: [
-      { createdAt: 'desc' }
-    ]
-  })
+  if (batchIds.length === 0) {
+    // Fallback til legacy relasjoner
+    const batchCategory = await db.category.findFirst({ where: { name: 'Garn Batch' } })
+    if (!batchCategory) return []
 
-  // Fallback: Search by categoryData if no batches found via relation
-  if (batches.length === 0) {
-    batches = await db.item.findMany({
+    const legacy = await db.item.findMany({
       where: {
         userId,
         categoryId: batchCategory.id,
-        categoryData: {
-          contains: `"masterItemId":"${masterId}"`
-        }
+        relatedItems: { some: { id: masterId } }
       },
-      include: {
-        location: true,
-        tags: true,
-        category: true
-      },
-      orderBy: [
-        { createdAt: 'desc' }
-      ]
+      select: { id: true }
     })
+    batchIds = legacy.map(b => b.id)
+
+    // Fallback #2: categoryData masterItemId
+    if (batchIds.length === 0) {
+      const legacyData = await db.item.findMany({
+        where: {
+          userId,
+          categoryId: batchCategory.id,
+          categoryData: { contains: `"masterItemId":"${masterId}"` }
+        },
+        select: { id: true }
+      })
+      batchIds = legacyData.map(b => b.id)
+    }
   }
 
-  // Debug logging
+  if (batchIds.length === 0) return []
+
+  const batches = await db.item.findMany({
+    where: { id: { in: batchIds } },
+    include: { location: true, tags: true, category: true },
+    orderBy: [{ createdAt: 'desc' }]
+  })
+
   if (process.env.NODE_ENV === 'development') {
-    console.log(`[DEBUG] getBatchesForMaster(${masterId}): Found ${batches.length} batches`)
+    console.log(`[DEBUG] getBatchesForMaster(${masterId}): Found ${batches.length} batches (typed=${typedLinks.length > 0})`)
   }
 
   return batches
@@ -114,23 +107,23 @@ export async function getMasterForBatch(
   batchId: string,
   userId: string
 ) {
+  // Forsøk typed relasjon først
+  const typed = await db.itemRelation.findFirst({
+    where: { userId, relationType: RelationType.MASTER_OF, toItemId: batchId },
+    select: { fromItemId: true }
+  })
+  if (typed?.fromItemId) {
+    return await db.item.findFirst({ where: { id: typed.fromItemId, userId } })
+  }
+
+  // Fallback: legacy via relatedItems
   const batch = await db.item.findFirst({
-    where: {
-      id: batchId,
-      userId
-    },
-    include: {
-      relatedItems: {
-        include: {
-          category: true
-        }
-      }
-    }
+    where: { id: batchId, userId },
+    include: { relatedItems: { include: { category: true } } }
   })
 
   if (!batch) return null
 
-  // Finn master blant relaterte items
   const master = batch.relatedItems.find(item => 
     isYarnMaster(item.category?.name)
   )
@@ -171,7 +164,6 @@ export async function calculateMasterTotals(
     const quantity = Number(batchData.quantity) || 0
     const pricePerSkein = Number(batchData.pricePerSkein) || 0
     
-    // Debug logging for quantity issues
     if (process.env.NODE_ENV === 'development') {
       console.log(`[DEBUG] Batch ${batch.id}:`, {
         name: batch.name,
@@ -195,7 +187,6 @@ export async function calculateMasterTotals(
     batchCount: 0
   })
 
-  // Debug final totals
   if (process.env.NODE_ENV === 'development') {
     console.log(`[DEBUG] Master ${masterId} totals:`, totals)
   }
@@ -226,7 +217,6 @@ export async function createBatchForMaster(
     throw new Error('Garn Batch kategori ikke funnet')
   }
 
-  // Debug logging before creating batch
   if (process.env.NODE_ENV === 'development') {
     console.log(`[DEBUG] Creating batch with quantity:`, {
       inputQuantity: batchData.quantity,
@@ -252,8 +242,8 @@ export async function createBatchForMaster(
       userId: batchData.userId,
       categoryId: batchCategory.id,
       locationId: batchData.locationId,
-      totalQuantity: Math.floor(batchData.quantity), // Ensure it's an integer
-      availableQuantity: Number(batchData.quantity), // Ensure it's a number
+      totalQuantity: Math.floor(batchData.quantity),
+      availableQuantity: Number(batchData.quantity),
       unit: batchData.unit || 'nøste',
       price: batchData.pricePerSkein,
       purchaseDate: batchData.purchaseDate,
@@ -279,7 +269,6 @@ export async function createBatchForMaster(
     }
   })
 
-  // Debug logging after creating batch
   if (process.env.NODE_ENV === 'development') {
     console.log(`[DEBUG] Created batch:`, {
       id: batch.id,
@@ -289,6 +278,16 @@ export async function createBatchForMaster(
       categoryData: batch.categoryData
     })
   }
+
+  // Typed relasjon master -> batch
+  await db.itemRelation.create({
+    data: {
+      relationType: RelationType.MASTER_OF,
+      fromItemId: masterId,
+      toItemId: batch.id,
+      userId: batchData.userId
+    }
+  })
 
   return batch
 }
@@ -378,17 +377,13 @@ export async function syncMasterDataToBatches(
 ) {
   const batches = await getBatchesForMaster(db, masterId, userId)
   
-  // Oppdater alle batches med nye felles data
   const updatePromises = batches.map(async (batch) => {
     const currentBatchData = batch.categoryData ? JSON.parse(batch.categoryData) : {}
     
-    // Behold batch-spesifikke data, oppdater kun master-data
     const updatedBatchData = {
       ...currentBatchData,
-      // Oppdater kun master-data som er endret
       ...(updatedMasterData.producer && { masterProducer: updatedMasterData.producer }),
       ...(updatedMasterData.composition && { masterComposition: updatedMasterData.composition }),
-      // Legg til andre master-felter som ønsket
     }
     
     return db.item.update({

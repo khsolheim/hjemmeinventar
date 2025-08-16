@@ -1,5 +1,5 @@
-import { type PrismaClient } from '@prisma/client'
-import { GarnBatchSchema, GarnMasterSchema } from '@/lib/categories/category-schemas'
+import { type PrismaClient, RelationType } from '@prisma/client'
+import { GarnBatchSchema, GarnMasterSchema, GarnColorSchema } from '@/lib/categories/category-schemas'
 
 export class YarnService {
 	private db: PrismaClient
@@ -59,6 +59,7 @@ export class YarnService {
 		imageUrl?: string
 		unit?: string
 		categoryData: unknown
+		colorId?: string
 	}) {
 		const parsed = GarnBatchSchema.safeParse(input.categoryData)
 		if (!parsed.success) {
@@ -69,7 +70,7 @@ export class YarnService {
 		if (!batchCategory) throw new Error('Garn Batch kategori ikke funnet')
 
 		const data = parsed.data
-		return await this.db.item.create({
+		const batch = await this.db.item.create({
 			data: {
 				name: input.name,
 				description: `Batch ${data.batchNumber} - ${data.color}`,
@@ -83,8 +84,94 @@ export class YarnService {
 				purchaseDate: data.purchaseDate,
 				imageUrl: input.imageUrl,
 				categoryData: JSON.stringify({ ...data, masterItemId: input.masterId }),
+				relatedItems: {
+					connect: [
+						{ id: input.masterId },
+						...(input.colorId ? [{ id: input.colorId }] : [])
+					]
+				}
+			}
+		})
+
+		// Typed relasjon: master -> batch (idempotent)
+		try {
+			await this.db.itemRelation.create({
+				data: {
+					relationType: RelationType.MASTER_OF,
+					fromItemId: input.masterId,
+					toItemId: batch.id,
+					userId: this.userId
+				}
+			})
+		} catch (e) {
+			// Unikhetsbrudd er ok
+		}
+
+		// Typed relasjon: color -> batch (idempotent)
+		if (input.colorId) {
+			try {
+				await this.db.itemRelation.create({
+					data: {
+						relationType: RelationType.BATCH_OF,
+						fromItemId: input.colorId,
+						toItemId: batch.id,
+						userId: this.userId
+					}
+				})
+			} catch (e) {}
+		}
+
+		return batch
+	}
+
+	async createColor(input: { masterId: string; name: string; colorCode?: string; imageUrl?: string }) {
+		const master = await this.db.item.findFirst({ where: { id: input.masterId, userId: this.userId } })
+		if (!master) throw new Error('Master ikke funnet')
+
+		let colorCategory = await this.db.category.findFirst({ where: { name: 'Garn Farge' } })
+		if (!colorCategory) {
+			colorCategory = await this.db.category.create({
+				data: {
+					name: 'Garn Farge',
+					description: 'Fargenivå mellom master og batch',
+					fieldSchema: JSON.stringify({ type: 'object', properties: { colorCode: { type: 'string', label: 'Fargekode' }, masterItemId: { type: 'string', label: 'Master', hidden: true } } })
+				}
+			})
+		}
+
+		const payload = { colorCode: input.colorCode, masterItemId: input.masterId }
+		const parsed = GarnColorSchema.safeParse(payload)
+		if (!parsed.success) {
+			throw new Error(parsed.error.errors.map(e => e.message).join(', '))
+		}
+
+		const color = await this.db.item.create({
+			data: {
+				name: input.name,
+				userId: this.userId,
+				categoryId: colorCategory.id,
+				locationId: master.locationId,
+				totalQuantity: 0,
+				availableQuantity: 0,
+				unit: 'nøste',
+				imageUrl: input.imageUrl,
+				categoryData: JSON.stringify(parsed.data),
 				relatedItems: { connect: { id: input.masterId } }
 			}
 		})
+
+		// Typed relasjon: master -> color (idempotent)
+		try {
+			await this.db.itemRelation.create({
+				data: {
+					relationType: RelationType.COLOR_OF,
+					fromItemId: input.masterId,
+					toItemId: color.id,
+					userId: this.userId
+				}
+			})
+		} catch (e) {}
+
+		return color
 	}
 }

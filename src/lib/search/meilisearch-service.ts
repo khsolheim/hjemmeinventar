@@ -27,6 +27,22 @@ export interface SearchDocument {
   icon?: string
   itemCount?: number
   
+  // Yarn specific fields
+  isYarnMaster?: boolean
+  isYarnBatch?: boolean
+  isYarnColor?: boolean
+  yarnProducer?: string
+  yarnComposition?: string
+  yarnWeight?: string
+  yarnNeedleSize?: string
+  yarnStore?: string
+  batchColor?: string
+  batchColorCode?: string
+  batchNumber?: string
+  batchPricePerSkein?: number
+  masterId?: string
+  colorId?: string
+  
   // Computed fields for better search
   searchableText?: string
   createdAt: string
@@ -75,7 +91,15 @@ export class MeilisearchService {
         'categoryName',
         'locationName',
         'tags',
-        'barcode'
+        'barcode',
+        // Yarn fields
+        'yarnProducer',
+        'yarnComposition',
+        'yarnWeight',
+        'yarnNeedleSize',
+        'yarnStore',
+        'batchColor',
+        'batchNumber'
       ])
 
       // Configure filterable attributes
@@ -90,7 +114,22 @@ export class MeilisearchService {
         'expiryDate',
         'tags',
         'createdAt',
-        'updatedAt'
+        'updatedAt',
+        // Yarn filters
+        'isYarnMaster',
+        'isYarnBatch',
+        'isYarnColor',
+        'yarnProducer',
+        'yarnComposition',
+        'yarnWeight',
+        'yarnNeedleSize',
+        'yarnStore',
+        'batchColor',
+        'batchColorCode',
+        'batchNumber',
+        'batchPricePerSkein',
+        'masterId',
+        'colorId'
       ])
 
       // Configure sortable attributes
@@ -98,6 +137,7 @@ export class MeilisearchService {
         'name',
         'price',
         'quantity',
+        'batchPricePerSkein',
         'createdAt',
         'updatedAt',
         'expiryDate'
@@ -350,6 +390,13 @@ export class MeilisearchService {
       document.categoryName,
       document.locationName,
       document.parentLocationName,
+      document.yarnProducer,
+      document.yarnComposition,
+      document.yarnWeight,
+      document.yarnNeedleSize,
+      document.yarnStore,
+      document.batchColor,
+      document.batchNumber,
       ...(document.tags || [])
     ].filter(Boolean)
 

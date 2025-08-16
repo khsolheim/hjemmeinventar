@@ -12,6 +12,7 @@ import { Slider } from '@/components/ui/slider'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
 import { DatePicker } from '@/components/ui/date-picker'
+import { trpc } from '@/lib/trpc/client'
 
 interface AdvancedSearchFilters {
   // Text search

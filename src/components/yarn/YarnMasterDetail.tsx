@@ -47,9 +47,9 @@ export function YarnMasterDetail({
   })
   const { data: colors, isLoading: colorsLoading } = trpc.yarn.getColorsForMaster.useQuery({ masterId: id }, {
     enabled: !!id,
-    staleTime: 30000,
+    staleTime: 0,
     refetchOnWindowFocus: false,
-    refetchOnMount: false,
+    refetchOnMount: true,
     keepPreviousData: true,
     initialData: initialColors,
   })

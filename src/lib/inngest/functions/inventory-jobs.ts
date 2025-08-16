@@ -286,6 +286,11 @@ export const onItemCreated = inngest.createFunction(
       })
 
       if (item) {
+        const isMaster = item.category?.name === 'Garn Master'
+        const isBatch = item.category?.name === 'Garn Batch'
+        const isColor = item.category?.name === 'Garn Farge'
+        const data = item.categoryData ? (() => { try { return JSON.parse(item.categoryData as any) } catch { return {} } })() : {}
+
         const searchDoc = {
           id: `item_${item.id}`,
           type: 'item' as const,
@@ -302,7 +307,21 @@ export const onItemCreated = inngest.createFunction(
           expiryDate: item.expiryDate?.toISOString(),
           imageUrl: item.imageUrl || undefined,
           createdAt: item.createdAt.toISOString(),
-          updatedAt: item.updatedAt.toISOString()
+          updatedAt: item.updatedAt.toISOString(),
+          // Yarn fields
+          isYarnMaster: isMaster || undefined,
+          isYarnBatch: isBatch || undefined,
+          isYarnColor: isColor || undefined,
+          yarnProducer: isMaster ? data.producer : undefined,
+          yarnComposition: isMaster ? data.composition : undefined,
+          yarnWeight: isMaster ? data.weight : undefined,
+          yarnNeedleSize: isMaster ? data.needleSize : undefined,
+          yarnStore: isMaster ? data.store : undefined,
+          batchColor: isBatch ? data.color : undefined,
+          batchColorCode: isBatch ? data.colorCode : undefined,
+          batchNumber: isBatch ? data.batchNumber : undefined,
+          batchPricePerSkein: isBatch ? data.pricePerSkein : undefined,
+          masterId: isBatch ? data.masterItemId : (isColor ? data.masterItemId : undefined),
         }
 
         await meilisearchService.indexDocument(searchDoc)
@@ -402,5 +421,82 @@ export const sendUserNotification = inngest.createFunction(
       type,
       message: 'Notification sent successfully'
     }
+  }
+)
+
+// Weekly consistency check for Yarn typed relations
+export const weeklyYarnRelationsConsistency = inngest.createFunction(
+  { id: 'weekly-yarn-relations-consistency' },
+  { cron: '0 4 * * 0' }, // Søndag 04:00
+  async ({ step }) => {
+    const users = await step.run('fetch-users', async () => {
+      return db.user.findMany({ select: { id: true } })
+    })
+
+    let created = 0
+
+    for (const u of users) {
+      await step.run(`user-${u.id}-ensure-relations`, async () => {
+        const [masterCategory, batchCategory, colorCategory] = await Promise.all([
+          db.category.findFirst({ where: { name: 'Garn Master' } }),
+          db.category.findFirst({ where: { name: 'Garn Batch' } }),
+          db.category.findFirst({ where: { name: 'Garn Farge' } })
+        ])
+
+        if (!masterCategory || !batchCategory) return
+
+        // Master -> Batch (typed MASTER_OF) basert på legacy koblinger og categoryData
+        const masters = await db.item.findMany({ where: { userId: u.id, categoryId: masterCategory.id }, select: { id: true } })
+        for (const m of masters) {
+          const batches = await db.item.findMany({
+            where: {
+              userId: u.id,
+              categoryId: batchCategory.id,
+              OR: [
+                { relatedItems: { some: { id: m.id } } },
+                { relatedTo: { some: { id: m.id } } },
+                { categoryData: { contains: `"masterItemId":"${m.id}"` } }
+              ]
+            },
+            select: { id: true }
+          })
+          for (const b of batches) {
+            try {
+              await db.itemRelation.create({ data: { relationType: 'MASTER_OF', fromItemId: m.id, toItemId: b.id, userId: u.id } })
+              created++
+            } catch {}
+          }
+        }
+
+        // Master -> Color (typed COLOR_OF)
+        if (colorCategory) {
+          const colors = await db.item.findMany({ where: { userId: u.id, categoryId: colorCategory.id }, select: { id: true, categoryData: true, relatedItems: { select: { id: true } } } })
+          for (const c of colors) {
+            const data = c.categoryData ? JSON.parse(c.categoryData) : {}
+            const masterId = data.masterItemId || c.relatedItems[0]?.id
+            if (!masterId) continue
+            try {
+              await db.itemRelation.create({ data: { relationType: 'COLOR_OF', fromItemId: masterId, toItemId: c.id, userId: u.id } })
+              created++
+            } catch {}
+          }
+        }
+
+        // Color -> Batch (typed BATCH_OF)
+        if (colorCategory) {
+          const batches = await db.item.findMany({ where: { userId: u.id, categoryId: batchCategory.id }, select: { id: true, relatedItems: { select: { id: true, categoryId: true } } } })
+          for (const b of batches) {
+            const relColor = b.relatedItems.find(r => r.categoryId === colorCategory.id)
+            if (!relColor) continue
+            try {
+              await db.itemRelation.create({ data: { relationType: 'BATCH_OF', fromItemId: relColor.id, toItemId: b.id, userId: u.id } })
+              created++
+            } catch {}
+          }
+        }
+      })
+    }
+
+    return { success: true, created }
   }
 )

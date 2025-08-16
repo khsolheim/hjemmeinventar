@@ -38,17 +38,32 @@ export function YarnMasterDashboard({ initialMasters, initialTotal }: { initialM
   const [activeTab, setActiveTab] = useState<'grid' | 'list' | 'bulk' | 'analytics' | 'colors'>('grid')
 
   // Fetch yarn masters
-  const { data: mastersData, isLoading, refetch } = trpc.yarn.getAllMasters.useQuery({
+  const useSearchApi = Boolean((searchFilters && Object.keys(searchFilters).length > 0) || (searchTerm && searchTerm.trim().length > 0))
+  const { data: mastersData, isLoading: isLoadingAll, refetch } = trpc.yarn.getAllMasters.useQuery({
     limit: 50,
     offset: 0,
-    search: searchTerm || undefined,
-    filters: searchFilters || undefined
+    search: useSearchApi ? undefined : (searchTerm || undefined),
+    filters: useSearchApi ? undefined : (searchFilters || undefined)
   }, {
     refetchOnWindowFocus: false,
     refetchOnMount: false,
     staleTime: 30000,
     keepPreviousData: true,
+    enabled: !useSearchApi,
     initialData: initialMasters ? { masters: initialMasters, total: initialTotal ?? initialMasters.length } : undefined
+  })
+
+  const { data: mastersSearchData, isLoading: isLoadingSearch } = trpc.yarn.searchMasters.useQuery({
+    limit: 50,
+    offset: 0,
+    search: searchTerm || undefined,
+    filters: searchFilters || undefined,
+  }, {
+    enabled: useSearchApi,
+    refetchOnWindowFocus: false,
+    refetchOnMount: true,
+    staleTime: 0,
+    keepPreviousData: false,
   })
 
   const handleAdvancedSearch = (filters: any) => {
@@ -63,8 +78,8 @@ export function YarnMasterDashboard({ initialMasters, initialTotal }: { initialM
     refetch()
   }
 
-  const masters = (mastersData?.masters || initialMasters) || []
-  const total = mastersData?.total ?? initialTotal ?? 0
+  const masters = ((useSearchApi ? mastersSearchData?.masters : mastersData?.masters) || initialMasters) || []
+  const total = useSearchApi ? (mastersSearchData?.total ?? 0) : (mastersData?.total ?? initialTotal ?? 0)
 
   const { data: allColors, refetch: refetchColors } = trpc.yarn.getAllMasterColors.useQuery(
     {},
@@ -105,7 +120,7 @@ export function YarnMasterDashboard({ initialMasters, initialTotal }: { initialM
     }
   }
 
-  if (isLoading) {
+  if (isLoading || isLoadingAll || isLoadingSearch) {
     return (
       <div className="cq space-y-2">
         <div className="flex justify-between items-center py-1">
@@ -221,7 +236,7 @@ export function YarnMasterDashboard({ initialMasters, initialTotal }: { initialM
         <AdvancedYarnSearch 
           onSearch={handleAdvancedSearch}
           onClear={handleClearSearch}
-          isLoading={isLoading}
+          isLoading={isLoading || isLoadingAll || isLoadingSearch}
           compact
         />
       </div>

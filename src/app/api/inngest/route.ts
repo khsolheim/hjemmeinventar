@@ -4,7 +4,8 @@ import {
   dailyInventoryMaintenance,
   weeklyInventoryCleanup,
   onItemCreated,
-  sendUserNotification
+  sendUserNotification,
+  weeklyYarnRelationsConsistency,
 } from '@/lib/inngest/functions/inventory-jobs'
 import {
   generateAnalytics,
@@ -19,6 +20,7 @@ export const { GET, POST, PUT } = serve({
     dailyInventoryMaintenance,
     weeklyInventoryCleanup,
     monthlyAnalyticsReport,
+    weeklyYarnRelationsConsistency,
 
     // Event-driven functions
     onItemCreated,

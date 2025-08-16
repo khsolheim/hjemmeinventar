@@ -15,11 +15,13 @@ export async function POST(request: NextRequest) {
 
     const { query, filters = {}, limit = 20, offset = 0, sort } = await request.json()
 
-    if (!query || typeof query !== 'string') {
-      return NextResponse.json(
-        { error: 'Query is required' },
-        { status: 400 }
-      )
+    if (!query || typeof query !== 'string' || query.trim() === '') {
+      // Returner bare facetter ved tomt søk
+      const facets = await meilisearchService.getFacets(session.user.id, [
+        'type', 'categoryName', 'locationName', 'tags',
+        'isYarnMaster','isYarnBatch','isYarnColor','yarnProducer','yarnComposition','yarnWeight','yarnNeedleSize','yarnStore','batchColor','batchNumber'
+      ])
+      return NextResponse.json({ success: true, query: '', hits: [], totalHits: 0, processingTimeMs: 0, facets })
     }
 
     const searchOptions = {
@@ -75,7 +77,9 @@ export async function GET(request: NextRequest) {
           'type',
           'categoryName',
           'locationName',
-          'tags'
+          'tags',
+          // Yarn facets
+          'isYarnMaster','isYarnBatch','isYarnColor','yarnProducer','yarnComposition','yarnWeight','yarnNeedleSize','yarnStore','batchColor','batchNumber'
         ])
 
         return NextResponse.json({

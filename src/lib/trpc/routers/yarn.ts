@@ -15,16 +15,7 @@ import {
   type YarnBatchData
 } from '../../utils/yarn-helpers'
 import { YarnService } from '@/lib/services/yarn-service'
-
-// Lokal helper for å lese colorCode trygt fra categoryData
-function safeParseColorCode(categoryData: string | null | undefined): string | undefined {
-  try {
-    const data = categoryData ? JSON.parse(categoryData) : {}
-    return typeof data.colorCode === 'string' ? data.colorCode : undefined
-  } catch {
-    return undefined
-  }
-}
+import { meilisearchService } from '@/lib/search/meilisearch-service'
 
 export const yarnRouter = createTRPCRouter({
   // Get all yarn patterns for user
@@ -74,97 +65,6 @@ export const yarnRouter = createTRPCRouter({
       ])
       
       return { patterns, total }
-    }),
-
-  // Hent alle farger gruppert per master (én linje per Master+Farge)
-  getAllMasterColors: protectedProcedure
-    .input(z.object({ search: z.string().optional() }).optional())
-    .query(async ({ ctx, input }) => {
-      // Finn nødvendige kategorier
-      const [masterCategory, batchCategory, colorCategory] = await Promise.all([
-        ctx.db.category.findFirst({ where: { name: 'Garn Master' } }),
-        ctx.db.category.findFirst({ where: { name: 'Garn Batch' } }),
-        ctx.db.category.findFirst({ where: { name: 'Garn Farge' } }),
-      ])
-
-      if (!batchCategory || !masterCategory) return []
-
-      // Hent alle batches for bruker
-      const batches = await ctx.db.item.findMany({
-        where: {
-          userId: ctx.user.id,
-          categoryId: batchCategory.id,
-          ...(input?.search && {
-            OR: [
-              { name: { contains: input.search, mode: 'insensitive' as const } },
-              { description: { contains: input.search, mode: 'insensitive' as const } },
-              { categoryData: { contains: input.search } },
-            ],
-          }),
-        },
-        include: {
-          relatedItems: { include: { category: true } },
-          relatedTo: { include: { category: true } },
-        },
-      })
-
-      type Row = {
-        masterId: string
-        masterName: string
-        colorId?: string
-        colorName: string
-        colorCode?: string
-        batchCount: number
-        skeinCount: number
-        imageUrl?: string | null
-      }
-
-      const byKey = new Map<string, Row>()
-
-      const getMasterFromRelations = (rels: any[]): any | undefined =>
-        rels.find((r) => r.category?.name === 'Garn Master')
-      const getColorFromRelations = (rels: any[]): any | undefined =>
-        rels.find((r) => r.category?.name === 'Garn Farge')
-
-      for (const b of batches) {
-        const allRels = [...(b.relatedItems || []), ...(b.relatedTo || [])]
-        const master = getMasterFromRelations(allRels)
-        if (!master) continue // batch uten master – hopp over
-
-        const color = colorCategory ? getColorFromRelations(allRels) : undefined
-        const bd = b.categoryData ? JSON.parse(b.categoryData) : {}
-        const colorName: string = color?.name || bd.color || 'Ukjent'
-        const colorCode: string | undefined = (color?.categoryData ? (() => { try { return JSON.parse(color.categoryData).colorCode } catch { return undefined } })() : undefined) || bd.colorCode
-
-        const masterId = master.id as string
-        const masterName = master.name as string
-        const colorId = color?.id as string | undefined
-        const colorKey = colorId ? `id:${colorId}` : `name:${(colorName || '').toLowerCase()}`
-        const key = `${masterId}|${colorKey}`
-
-        if (!byKey.has(key)) {
-          byKey.set(key, {
-            masterId,
-            masterName,
-            colorId,
-            colorName,
-            colorCode,
-            batchCount: 0,
-            skeinCount: 0,
-            imageUrl: color?.imageUrl || b.imageUrl || null,
-          })
-        }
-
-        const row = byKey.get(key)!
-        row.batchCount += 1
-        row.skeinCount += Math.max(0, b.availableQuantity || 0)
-        if (!row.imageUrl) row.imageUrl = color?.imageUrl || b.imageUrl || null
-      }
-
-      const rows = Array.from(byKey.values())
-      return rows
-        .filter((r) => r.batchCount > 0)
-        .sort((a, b) => (a.masterName.localeCompare(b.masterName) || a.colorName.localeCompare(b.colorName)))
     }),
 
   // Get pattern by ID
@@ -751,100 +651,6 @@ export const yarnRouter = createTRPCRouter({
       return master
     }),
 
-  // Oppdater eksisterende garn master
-  updateMaster: protectedProcedure
-    .input(z.object({
-      id: z.string(),
-      name: z.string().min(1).optional(),
-      locationId: z.string().optional(),
-      producer: z.string().optional(),
-      composition: z.string().optional(),
-      yardage: z.string().optional(),
-      weight: z.string().optional(),
-      gauge: z.string().optional(),
-      needleSize: z.string().optional(),
-      careInstructions: z.string().optional(),
-      store: z.string().optional(),
-      notes: z.string().optional(),
-      imageUrl: z.string().optional(),
-      syncToBatches: z.boolean().optional(),
-    }))
-    .mutation(async ({ ctx, input }) => {
-      const master = await ctx.db.item.findFirst({
-        where: { id: input.id, userId: ctx.user.id },
-        include: { category: true }
-      })
-      if (!master || !isYarnMaster(master.category?.name)) {
-        throw new TRPCError({ code: 'NOT_FOUND', message: 'Garn Master ikke funnet' })
-      }
-
-      const current = master.categoryData ? JSON.parse(master.categoryData) : {}
-      const updatedCategoryData = {
-        ...current,
-        ...(input.producer !== undefined ? { producer: input.producer } : {}),
-        ...(input.composition !== undefined ? { composition: input.composition } : {}),
-        ...(input.yardage !== undefined ? { yardage: input.yardage } : {}),
-        ...(input.weight !== undefined ? { weight: input.weight } : {}),
-        ...(input.gauge !== undefined ? { gauge: input.gauge } : {}),
-        ...(input.needleSize !== undefined ? { needleSize: input.needleSize } : {}),
-        ...(input.careInstructions !== undefined ? { careInstructions: input.careInstructions } : {}),
-        ...(input.store !== undefined ? { store: input.store } : {}),
-        ...(input.notes !== undefined ? { notes: input.notes } : {}),
-      }
-
-      const updated = await ctx.db.item.update({
-        where: { id: input.id },
-        data: {
-          ...(input.name !== undefined ? { name: input.name } : {}),
-          ...(input.locationId !== undefined ? { locationId: input.locationId } : {}),
-          ...(input.imageUrl !== undefined ? { imageUrl: input.imageUrl } : {}),
-          categoryData: JSON.stringify(updatedCategoryData)
-        }
-      })
-
-      if (input.syncToBatches) {
-        try {
-          await syncMasterDataToBatches(ctx.db, input.id, ctx.user.id, {
-            producer: input.producer,
-            composition: input.composition,
-          })
-        } catch (e) {
-          // Ikke blokker oppdatering om sync feiler
-          console.warn('syncMasterDataToBatches feilet', e)
-        }
-      }
-
-      return updated
-    }),
-
-  // Slett garn master (blokker om batches finnes)
-  deleteMaster: protectedProcedure
-    .input(z.object({ id: z.string() }))
-    .mutation(async ({ ctx, input }) => {
-      const master = await ctx.db.item.findFirst({ where: { id: input.id, userId: ctx.user.id }, include: { category: true } })
-      if (!master || !isYarnMaster(master.category?.name)) {
-        throw new TRPCError({ code: 'NOT_FOUND', message: 'Garn Master ikke funnet' })
-      }
-      const batchCategory = await ctx.db.category.findFirst({ where: { name: 'Garn Batch' } })
-      if (batchCategory) {
-        const hasBatches = await ctx.db.item.count({
-          where: {
-            userId: ctx.user.id,
-            categoryId: batchCategory.id,
-            OR: [
-              { relatedItems: { some: { id: input.id } } },
-              { relatedTo: { some: { id: input.id } } }
-            ]
-          }
-        })
-        if (hasBatches > 0) {
-          throw new TRPCError({ code: 'BAD_REQUEST', message: 'Kan ikke slette master med tilknyttede batches' })
-        }
-      }
-      await ctx.db.item.delete({ where: { id: input.id } })
-      return { success: true }
-    }),
-
   // Opprett ny batch for eksisterende master
   createBatch: protectedProcedure
     .input(z.object({
@@ -872,49 +678,9 @@ export const yarnRouter = createTRPCRouter({
         throw new TRPCError({ code: 'NOT_FOUND', message: 'Garn Master ikke funnet' })
       }
 
-<<<<<<< Current (Your changes)
-      // Duplikatsjekk: Finn eksisterende batch for samme master + (farge) + batchNumber
-      const batchCategory = await ctx.db.category.findFirst({ where: { name: 'Garn Batch' } })
-      if (batchCategory) {
-        const possible = await ctx.db.item.findMany({
-          where: {
-            userId: ctx.user.id,
-            categoryId: batchCategory.id,
-            OR: [
-              { relatedItems: { some: { id: input.masterId } } },
-              { relatedTo: { some: { id: input.masterId } } }
-            ]
-          },
-          include: { relatedItems: { include: { category: true } }, relatedTo: { include: { category: true } } }
-        })
-        const normalizedBatch = input.batchNumber.trim().toLowerCase()
-        const normalizedColor = (input.color || '').trim().toLowerCase()
-        const conflict = possible.find((b) => {
-          const data = b.categoryData ? (() => { try { return JSON.parse(b.categoryData) } catch { return {} } })() : {}
-          const bn = (data.batchNumber || '').trim().toLowerCase()
-          const bcolor = (data.color || '').trim().toLowerCase()
-          const hasSameBatch = bn === normalizedBatch
-          if (!hasSameBatch) return false
-          // Match farge via relasjon (colorId) eller navn/kode i data
-          if (input.colorId) {
-            const allRels = [...(b.relatedItems || []), ...(b.relatedTo || [])]
-            const colorRel = allRels.find((r) => r.category?.name === 'Garn Farge')
-            return colorRel?.id === input.colorId
-          }
-          // Ingen colorId → sammenlikn på navn/kode
-          return bcolor === normalizedColor
-        })
-        if (conflict) {
-          throw new TRPCError({ code: 'CONFLICT', message: 'Batch med samme farge og partinummer finnes allerede' })
-        }
-      }
-
-      const batch = await createBatchForMaster(ctx.db, input.masterId, {
-=======
       const service = new YarnService(ctx.db, ctx.user.id)
       const batch = await service.createBatch({
         masterId: input.masterId,
->>>>>>> Incoming (Background Agent changes)
         name: input.name,
         locationId: input.locationId,
         imageUrl: input.imageUrl,
@@ -929,15 +695,9 @@ export const yarnRouter = createTRPCRouter({
           condition: input.condition,
           notes: input.notes,
           masterItemId: input.masterId,
-        }
+        },
+        colorId: input.colorId,
       })
-
-      if (input.colorId) {
-        await ctx.db.item.update({
-          where: { id: batch.id },
-          data: { relatedItems: { connect: { id: input.colorId } } }
-        })
-      }
 
       return batch
     }),
@@ -1005,57 +765,6 @@ export const yarnRouter = createTRPCRouter({
       return updated
     }),
 
-  // Slett batch
-  deleteBatch: protectedProcedure
-    .input(z.object({ batchId: z.string() }))
-    .mutation(async ({ ctx, input }) => {
-      const batch = await ctx.db.item.findFirst({ where: { id: input.batchId, userId: ctx.user.id }, include: { category: true } })
-      if (!batch || !isYarnBatch(batch.category?.name)) {
-        throw new TRPCError({ code: 'NOT_FOUND', message: 'Batch ikke funnet' })
-      }
-      await ctx.db.item.delete({ where: { id: input.batchId } })
-      return { success: true }
-    }),
-
-  // Juster antall på batch (audit i categoryData)
-  adjustBatchQuantity: protectedProcedure
-    .input(z.object({
-      batchId: z.string(),
-      delta: z.number(),
-      reason: z.enum(['COUNT', 'PURCHASE', 'CONSUME', 'CORRECTION', 'OTHER']).optional(),
-      note: z.string().optional(),
-    }))
-    .mutation(async ({ ctx, input }) => {
-      const batch = await ctx.db.item.findFirst({ where: { id: input.batchId, userId: ctx.user.id }, include: { category: true } })
-      if (!batch || !isYarnBatch(batch.category?.name)) {
-        throw new TRPCError({ code: 'NOT_FOUND', message: 'Batch ikke funnet' })
-      }
-      const current = batch.categoryData ? JSON.parse(batch.categoryData) : {}
-      const history = Array.isArray(current.quantityAdjustments) ? current.quantityAdjustments : []
-      history.push({
-        at: new Date().toISOString(),
-        delta: input.delta,
-        reason: input.reason || 'OTHER',
-        note: input.note,
-        prevTotal: batch.totalQuantity,
-        prevAvailable: batch.availableQuantity,
-      })
-      const newTotal = Math.max(0, (batch.totalQuantity || 0) + Math.round(input.delta))
-      const newAvailable = Math.max(0, (batch.availableQuantity || 0) + Math.round(input.delta))
-      const updated = await ctx.db.item.update({
-        where: { id: input.batchId },
-        data: {
-          totalQuantity: newTotal,
-          availableQuantity: newAvailable,
-          categoryData: JSON.stringify({
-            ...current,
-            quantityAdjustments: history,
-          })
-        }
-      })
-      return updated
-    }),
-
   // Hent alle batches for en master
   getBatchesForMaster: protectedProcedure
     .input(z.object({
@@ -1097,7 +806,7 @@ export const yarnRouter = createTRPCRouter({
       imageUrl: z.string().optional()
     }))
     .mutation(async ({ ctx, input }) => {
-      // Try to find existing color for this master by name (case-insensitive) and colorCode
+      // Forsøk å finne eksisterende farge for denne masteren basert på navn (case-insensitivt) og colorCode
       const colorCategoryExisting = await ctx.db.category.findFirst({ where: { name: 'Garn Farge' } })
       if (colorCategoryExisting) {
         const existingColors = await ctx.db.item.findMany({
@@ -1119,43 +828,13 @@ export const yarnRouter = createTRPCRouter({
         })
         if (match) return match
       }
-      // Finn/lag kategori "Garn Farge"
-      let colorCategory = await ctx.db.category.findFirst({ where: { name: 'Garn Farge' } })
-      if (!colorCategory) {
-        colorCategory = await ctx.db.category.create({
-          data: {
-            name: 'Garn Farge',
-            description: 'Fargenivå mellom master og batch',
-            fieldSchema: JSON.stringify({
-              type: 'object',
-              properties: {
-                colorCode: { type: 'string', label: 'Fargekode' },
-                masterItemId: { type: 'string', label: 'Master', hidden: true }
-              }
-            })
-          }
-        })
-      }
 
-      const color = await ctx.db.item.create({
-        data: {
-          name: input.name,
-          description: undefined,
-          userId: ctx.user.id,
-          categoryId: colorCategory.id,
-          locationId: (await ctx.db.item.findUnique({ where: { id: input.masterId } }))!.locationId,
-          totalQuantity: 0,
-          availableQuantity: 0,
-          unit: 'nøste',
-          imageUrl: input.imageUrl,
-          categoryData: JSON.stringify({
-            colorCode: input.colorCode,
-            masterItemId: input.masterId
-          }),
-          relatedItems: {
-            connect: { id: input.masterId }
-          }
-        }
+      const service = new YarnService(ctx.db, ctx.user.id)
+      const color = await service.createColor({
+        masterId: input.masterId,
+        name: input.name,
+        colorCode: input.colorCode,
+        imageUrl: input.imageUrl
       })
 
       return color
@@ -1170,52 +849,76 @@ export const yarnRouter = createTRPCRouter({
         if (!masterId) {
           return []
         }
-        const [colorCategory, batchCategory] = await Promise.all([
-          ctx.db.category.findFirst({ where: { name: 'Garn Farge' } }),
-          ctx.db.category.findFirst({ where: { name: 'Garn Batch' } })
-        ])
 
-        if (!colorCategory) return []
-
-        const colors = await ctx.db.item.findMany({
-          where: {
-            userId: ctx.user.id,
-            categoryId: colorCategory.id,
-            OR: [
-              { relatedItems: { some: { id: masterId } } },
-              { relatedTo: { some: { id: masterId } } }
-            ]
-          }
+        // Typed: finn farger via ItemRelation COLOR_OF (from master -> to color)
+        const typedLinks = await ctx.db.itemRelation.findMany({
+          where: { userId: ctx.user.id, relationType: 'COLOR_OF', fromItemId: masterId },
+          select: { toItemId: true }
         })
+        let colorIds = typedLinks.map(l => l.toItemId)
 
-        if (!batchCategory) {
-          return colors.map(c => ({
-            id: c.id,
-            name: c.name,
-            colorCode: safeParseColorCode(c.categoryData),
-            batchCount: 0,
-            skeinCount: 0
-          }))
-        }
+        if (colorIds.length === 0) {
+          // Legacy fallback via kategori og relatedItems
+          const colorCategory = await ctx.db.category.findFirst({ where: { name: 'Garn Farge' } })
+          if (!colorCategory) return []
 
-        const results = [] as Array<{ id: string, name: string, colorCode?: string, batchCount: number, skeinCount: number }>
-        for (const color of colors) {
-          const batches = await ctx.db.item.findMany({
+          const legacyColors = await ctx.db.item.findMany({
             where: {
               userId: ctx.user.id,
-              categoryId: batchCategory.id,
+              categoryId: colorCategory.id,
               OR: [
-                { relatedItems: { some: { id: color.id } } },
-                { relatedTo: { some: { id: color.id } } }
+                { relatedItems: { some: { id: masterId } } },
+                { relatedTo: { some: { id: masterId } } }
               ]
-            }
+            },
+            select: { id: true }
           })
-          const skeins = batches.reduce((sum, b) => sum + (b.availableQuantity || 0), 0)
+          colorIds = legacyColors.map(c => c.id)
+        }
+
+        if (colorIds.length === 0) return []
+
+        const colors = await ctx.db.item.findMany({ where: { id: { in: colorIds } } })
+
+        // Hent batches for hver farge (typed: BATCH_OF fra color -> to batch)
+        const batchCategory = await ctx.db.category.findFirst({ where: { name: 'Garn Batch' } })
+        const results: Array<{ id: string, name: string, colorCode?: string, batchCount: number, skeinCount: number }> = []
+
+        for (const color of colors) {
+          // Typed batches knyttet til fargen
+          const typedBatchLinks = await ctx.db.itemRelation.findMany({
+            where: { userId: ctx.user.id, relationType: 'BATCH_OF', fromItemId: color.id },
+            select: { toItemId: true }
+          })
+          let batchIds = typedBatchLinks.map(l => l.toItemId)
+
+          if (batchIds.length === 0 && batchCategory) {
+            // Fallback: via legacy relatedItems
+            const legacyBatches = await ctx.db.item.findMany({
+              where: {
+                userId: ctx.user.id,
+                categoryId: batchCategory.id,
+                OR: [
+                  { relatedItems: { some: { id: color.id } } },
+                  { relatedTo: { some: { id: color.id } } }
+                ]
+              },
+              select: { id: true, availableQuantity: true, categoryData: true }
+            })
+            batchIds = legacyBatches.map(b => b.id)
+          }
+
+          let skeins = 0
+          if (batchIds.length > 0) {
+            const batches = await ctx.db.item.findMany({ where: { id: { in: batchIds } }, select: { availableQuantity: true, categoryData: true } })
+            skeins = batches.reduce((sum, b) => sum + (b.availableQuantity || 0), 0)
+          }
+
           results.push({
             id: color.id,
             name: color.name,
             colorCode: safeParseColorCode(color.categoryData),
-            batchCount: batches.length,
+            batchCount: batchIds.length,
             skeinCount: Math.round(skeins)
           })
         }
@@ -1227,105 +930,36 @@ export const yarnRouter = createTRPCRouter({
       }
     }),
 
-  // Hent alle farger på tvers av alle garn-typer for brukeren
-  getAllColors: protectedProcedure
-    .input(z.object({ search: z.string().optional() }).optional())
-    .query(async ({ ctx, input }) => {
-      try {
-        const [colorCategory, batchCategory] = await Promise.all([
-          ctx.db.category.findFirst({ where: { name: 'Garn Farge' } }),
-          ctx.db.category.findFirst({ where: { name: 'Garn Batch' } })
-        ])
-
-        if (!colorCategory) return []
-
-        const where: any = {
-          userId: ctx.user.id,
-          categoryId: colorCategory.id,
-        }
-
-        if (input?.search) {
-          where.OR = [
-            { name: { contains: input.search, mode: 'insensitive' as const } },
-            { categoryData: { contains: input.search } },
-          ]
-        }
-
-        const colors = await ctx.db.item.findMany({ where })
-
-        if (!batchCategory) {
-          return colors.map(c => {
-            let colorCode: string | undefined
-            try {
-              const data = c.categoryData ? JSON.parse(c.categoryData) : {}
-              colorCode = data.colorCode
-            } catch {}
-            return {
-              id: c.id,
-              name: c.name,
-              colorCode,
-              batchCount: 0,
-              skeinCount: 0,
-            }
-          })
-        }
-
-        const results: Array<{ id: string; name: string; colorCode?: string; batchCount: number; skeinCount: number }> = []
-        for (const color of colors) {
-          const batches = await ctx.db.item.findMany({
-            where: {
-              userId: ctx.user.id,
-              categoryId: batchCategory.id,
-              OR: [
-                { relatedItems: { some: { id: color.id } } },
-                { relatedTo: { some: { id: color.id } } }
-              ]
-            }
-          })
-
-          const skeins = batches.reduce((sum, b) => sum + (b.availableQuantity || 0), 0)
-          let colorCode: string | undefined
-          try {
-            const data = color.categoryData ? JSON.parse(color.categoryData) : {}
-            colorCode = data.colorCode
-          } catch {}
-
-          results.push({
-            id: color.id,
-            name: color.name,
-            colorCode,
-            batchCount: batches.length,
-            skeinCount: Math.round(skeins)
-          })
-        }
-
-        // Return kun farger som faktisk har minst én batch knyttet
-        return results
-          .filter(r => r.batchCount > 0)
-          .sort((a, b) => a.name.localeCompare(b.name))
-      } catch (e) {
-        console.error('getAllColors failed', e)
-        return []
-      }
-    }),
-
   // Hent alle batches for en farge
   getBatchesForColor: protectedProcedure
     .input(z.object({ colorId: z.string() }))
     .query(async ({ ctx, input }) => {
-      const batchCategory = await ctx.db.category.findFirst({ where: { name: 'Garn Batch' } })
-      if (!batchCategory) return []
-      const batches = await ctx.db.item.findMany({
-        where: {
-          userId: ctx.user.id,
-          categoryId: batchCategory.id,
-          OR: [
-            { relatedItems: { some: { id: input.colorId } } },
-            { relatedTo: { some: { id: input.colorId } } }
-          ]
-        },
-        include: { location: true }
+      // Typed: finn batches via BATCH_OF (from color -> to batch)
+      const typedLinks = await ctx.db.itemRelation.findMany({
+        where: { userId: ctx.user.id, relationType: 'BATCH_OF', fromItemId: input.colorId },
+        select: { toItemId: true }
       })
+      let batchIds = typedLinks.map(l => l.toItemId)
+
+      if (batchIds.length === 0) {
+        const batchCategory = await ctx.db.category.findFirst({ where: { name: 'Garn Batch' } })
+        if (!batchCategory) return []
+        const legacy = await ctx.db.item.findMany({
+          where: {
+            userId: ctx.user.id,
+            categoryId: batchCategory.id,
+            OR: [
+              { relatedItems: { some: { id: input.colorId } } },
+              { relatedTo: { some: { id: input.colorId } } }
+            ]
+          },
+          select: { id: true }
+        })
+        batchIds = legacy.map(b => b.id)
+      }
+
+      if (batchIds.length === 0) return []
+      const batches = await ctx.db.item.findMany({ where: { id: { in: batchIds } }, include: { location: true } })
       return batches
     }),
 
@@ -1406,7 +1040,7 @@ export const yarnRouter = createTRPCRouter({
         // Ranges & status
         quantityRange: z.tuple([z.number(), z.number()]).optional(),
         priceRange: z.tuple([z.number(), z.number()]).optional(),
-        availabilityStatus: z.string().optional(), // all|available|low|empty|full
+        availabilityStatus: z.string().optional(), // all|available|low|empty|full (best effort)
         // Dates
         purchaseDateFrom: z.date().optional(),
         purchaseDateTo: z.date().optional(),
@@ -1426,34 +1060,130 @@ export const yarnRouter = createTRPCRouter({
         return { masters: [], total: 0 }
       }
 
-      const where: any = {
+      // Base master-level where
+      const masterWhere: any = {
         userId: ctx.user.id,
         categoryId: masterCategory.id,
         ...(input.search && {
           OR: [
             { name: { contains: input.search, mode: 'insensitive' as const } },
-            { description: { contains: input.search, mode: 'insensitive' as const } }
+            { description: { contains: input.search, mode: 'insensitive' as const } },
+            // Enkel JSON-tekst-søk i categoryData
+            { categoryData: { contains: input.search, mode: 'insensitive' as const } }
           ]
         })
       }
 
+      const f = input.filters
+      if (f) {
+        const andClauses: any[] = []
+
+        // Master-level filters via categoryData substring match (begrensning i SQLite JSON)
+        if (f.producer && f.producer !== 'all') {
+          andClauses.push({ categoryData: { contains: f.producer, mode: 'insensitive' as const } })
+        }
+        if (f.composition && f.composition !== 'all') {
+          andClauses.push({ categoryData: { contains: f.composition, mode: 'insensitive' as const } })
+        }
+        if (f.needleSize && f.needleSize !== 'all') {
+          andClauses.push({ categoryData: { contains: f.needleSize, mode: 'insensitive' as const } })
+        }
+        if (f.yarnWeight && f.yarnWeight !== 'all') {
+          andClauses.push({ categoryData: { contains: f.yarnWeight, mode: 'insensitive' as const } })
+        }
+        if (f.store && f.store !== 'all') {
+          andClauses.push({ categoryData: { contains: f.store, mode: 'insensitive' as const } })
+        }
+        if (f.hasNotes) {
+          andClauses.push({ categoryData: { contains: 'notes', mode: 'insensitive' as const } })
+        }
+        if (f.recentlyAdded) {
+          const days30 = new Date()
+          days30.setDate(days30.getDate() - 30)
+          andClauses.push({ createdAt: { gte: days30 } })
+        }
+
+        // Batch-level filters via typed relations: master (this) -> ItemRelation(MASTER_OF) -> toItem (batch)
+        const toItemFilter: any = {}
+        const toItemAnd: any[] = []
+
+        if (f.color) {
+          toItemAnd.push({ categoryData: { contains: f.color, mode: 'insensitive' as const } })
+        }
+        if (f.condition && f.condition !== 'all') {
+          toItemAnd.push({ categoryData: { contains: f.condition, mode: 'insensitive' as const } })
+        }
+        if (f.batchNumber) {
+          toItemAnd.push({ categoryData: { contains: f.batchNumber, mode: 'insensitive' as const } })
+        }
+        if (f.priceRange) {
+          toItemAnd.push({ price: { gte: f.priceRange[0], lte: f.priceRange[1] } })
+        }
+        if (f.quantityRange) {
+          toItemAnd.push({ totalQuantity: { gte: Math.floor(f.quantityRange[0]), lte: Math.floor(f.quantityRange[1]) } })
+        }
+        if (f.purchaseDateFrom || f.purchaseDateTo) {
+          toItemAnd.push({
+            purchaseDate: {
+              ...(f.purchaseDateFrom ? { gte: f.purchaseDateFrom } : {}),
+              ...(f.purchaseDateTo ? { lte: f.purchaseDateTo } : {})
+            }
+          })
+        }
+        if (f.lowStock) {
+          // Best effort: minst én batch med lav beholdning (<=2 og >0)
+          toItemAnd.push({ availableQuantity: { lte: 2 } })
+          toItemAnd.push({ availableQuantity: { gt: 0 } })
+        }
+        if (f.hasProjects) {
+          toItemAnd.push({ projectUsage: { some: {} } })
+        }
+        if (f.availabilityStatus && f.availabilityStatus !== 'all') {
+          if (f.availabilityStatus === 'available') {
+            toItemAnd.push({ availableQuantity: { gt: 0 } })
+          } else if (f.availabilityStatus === 'low') {
+            toItemAnd.push({ availableQuantity: { gt: 0 } })
+            toItemAnd.push({ availableQuantity: { lte: 2 } })
+          } else if (f.availabilityStatus === 'empty') {
+            toItemAnd.push({ availableQuantity: 0 as any })
+          } else if (f.availabilityStatus === 'full') {
+            // full: availableQuantity == totalQuantity
+            toItemAnd.push({ availableQuantity: { equals: { $fields: ['totalQuantity'] } } as any })
+          }
+        }
+
+        if (toItemAnd.length > 0) {
+          toItemFilter.AND = (toItemFilter.AND || []).concat(toItemAnd)
+        }
+
+        if (Object.keys(toItemFilter).length > 0) {
+          andClauses.push({
+            itemRelationsFrom: {
+              some: {
+                relationType: 'MASTER_OF',
+                toItem: toItemFilter
+              }
+            }
+          })
+        }
+
+        if (andClauses.length > 0) {
+          masterWhere.AND = (masterWhere.AND || []).concat(andClauses)
+        }
+      }
+
       const [masters, total] = await Promise.all([
         ctx.db.item.findMany({
-          where,
+          where: masterWhere,
           include: {
             location: true,
             category: true,
-            relatedTo: {
-              include: {
-                category: true
-              }
-            }
           },
           orderBy: { createdAt: 'desc' },
           take: input.limit,
           skip: input.offset
         }),
-        ctx.db.item.count({ where })
+        ctx.db.item.count({ where: masterWhere })
       ])
 
       // Beregn totals for hver master
@@ -1462,87 +1192,165 @@ export const yarnRouter = createTRPCRouter({
           const totals = await calculateMasterTotals(ctx.db, master.id, ctx.user.id)
           return {
             ...master,
+            relatedTo: [],
             totals
           }
         })
       )
 
-      // Avansert filtrering (post-prosessering for enkelhet)
+      return { masters: mastersWithTotals, total }
+    }),
+
+  // Inde ksbasert søk etter masters (kombinerer Meilisearch + Prisma)
+  searchMasters: protectedProcedure
+    .input(z.object({
+      limit: z.number().min(1).max(100).default(50),
+      offset: z.number().min(0).default(0),
+      search: z.string().optional(),
+      filters: z.object({
+        // Master-level
+        producer: z.string().optional(),
+        composition: z.string().optional(),
+        needleSize: z.string().optional(),
+        yarnWeight: z.string().optional(),
+        store: z.string().optional(),
+        // Batch-level
+        color: z.string().optional(),
+        condition: z.string().optional(),
+        batchNumber: z.string().optional(),
+        // Ranges & status
+        quantityRange: z.tuple([z.number(), z.number()]).optional(),
+        priceRange: z.tuple([z.number(), z.number()]).optional(),
+        availabilityStatus: z.string().optional(),
+        // Dates
+        purchaseDateFrom: z.date().optional(),
+        purchaseDateTo: z.date().optional(),
+        // Special
+        hasProjects: z.boolean().optional(),
+        hasNotes: z.boolean().optional(),
+        lowStock: z.boolean().optional(),
+        recentlyAdded: z.boolean().optional()
+      }).optional()
+    }))
+    .query(async ({ ctx, input }) => {
+      const masterCategory = await ctx.db.category.findFirst({ where: { name: 'Garn Master' } })
+      const batchCategory = await ctx.db.category.findFirst({ where: { name: 'Garn Batch' } })
+      if (!masterCategory) return { masters: [], total: 0 }
+
       const f = input.filters
-      let filtered = mastersWithTotals
-      if (f) {
-        const within = (value: number, range?: [number, number]) => {
-          if (!range) return true
-          return value >= range[0] && value <= range[1]
-        }
-        const textMatch = (val: string | undefined, query?: string, mode: 'equals' | 'contains' = 'contains') => {
-          if (!query) return true
-          const v = (val || '').toLowerCase()
-          const q = query.toLowerCase()
-          return mode === 'equals' ? v === q : v.includes(q)
-        }
-        filtered = filtered.filter(master => {
-          const mData = master.categoryData ? JSON.parse(master.categoryData) : {}
-          // Master-level checks
-          if (!textMatch(mData.producer, f.producer && f.producer !== 'all' ? f.producer : undefined, f.producer && f.producer !== 'all' ? 'contains' : 'contains')) return false
-          if (!textMatch(mData.composition, f.composition && f.composition !== 'all' ? f.composition : undefined, f.composition && f.composition !== 'all' ? 'contains' : 'contains')) return false
-          if (!textMatch(mData.needleSize, f.needleSize && f.needleSize !== 'all' ? f.needleSize : undefined, 'equals')) return false
-          if (!textMatch(mData.yarnWeight, f.yarnWeight, 'equals')) return false
-          if (!textMatch(mData.store, f.store, 'contains')) return false
 
-          // Special flags on master
-          if (f.recentlyAdded) {
-            const days30 = 1000 * 60 * 60 * 24 * 30
-            if (Date.now() - new Date(master.createdAt).getTime() > days30) return false
+      // 1) Hent kandidat masterIds via Meilisearch når batch-filtre eller søk foreligger
+      let candidateMasterIds: string[] | null = null
+      if ((f && (f.color || f.batchNumber)) || (input.search && input.search.trim().length > 0)) {
+        // Primært: søk i batches for å finne masterId
+        if (batchCategory) {
+          const msFilters: Record<string, any> = { isYarnBatch: true }
+          if (f?.color) msFilters.batchColor = f.color
+          if (f?.batchNumber) msFilters.batchNumber = f.batchNumber
+          const ms = await meilisearchService.search(input.search?.trim() || '', {
+            userId: ctx.user.id,
+            type: 'item',
+            filters: msFilters,
+            limit: 500,
+            offset: 0,
+          })
+          const masterIdSet = new Set<string>()
+          for (const hit of ms.hits as any[]) {
+            if (hit.masterId) masterIdSet.add(hit.masterId)
           }
-          if (f.hasNotes) {
-            const mNotes = (mData.notes || '').toString().trim().length > 0
-            const batchNotes = master.relatedTo.some(b => {
-              const bd = b.categoryData ? JSON.parse(b.categoryData) : {}
-              return (bd.notes || '').toString().trim().length > 0
+          candidateMasterIds = Array.from(masterIdSet)
+          // Hvis ingen via batches og kun search er gitt, forsøk masters direkte for produsent/komposisjon/navn
+          if (candidateMasterIds.length === 0 && input.search) {
+            const msMasters = await meilisearchService.search(input.search.trim(), {
+              userId: ctx.user.id,
+              type: 'item',
+              filters: { isYarnMaster: true },
+              limit: 500,
+              offset: 0,
             })
-            if (!mNotes && !batchNotes) return false
+            const ids = new Set<string>()
+            for (const hit of msMasters.hits as any[]) {
+              // master-dokumenter har ikke masterId; id er item_*
+              const rawId = String(hit.id || '')
+              if (rawId.startsWith('item_')) ids.add(rawId.replace('item_', ''))
+            }
+            candidateMasterIds = Array.from(ids)
           }
-          if (f.lowStock) {
-            const anyLow = master.relatedTo.some(b => (b.availableQuantity || 0) <= 2 && (b.availableQuantity || 0) > 0)
-            if (!anyLow) return false
-          }
-          // hasProjects not implemented here (would require join). Optional to skip.
-
-          // Batch-level checks: at least one batch must match if any batch filter specified
-          const hasBatchFilters = !!(f.color || (f.condition && f.condition !== 'all') || f.batchNumber || f.quantityRange || f.priceRange || (f.availabilityStatus && f.availabilityStatus !== 'all') || f.purchaseDateFrom || f.purchaseDateTo)
-          if (hasBatchFilters) {
-            const matchesAnyBatch = master.relatedTo.some(b => {
-              const bd = b.categoryData ? JSON.parse(b.categoryData) : {}
-              const colorOk = textMatch(bd.color, f.color, 'contains')
-              const condOk = textMatch(bd.condition, f.condition && f.condition !== 'all' ? f.condition : undefined, 'equals')
-              const lotOk = textMatch(bd.batchNumber, f.batchNumber, 'contains')
-              const qtyOk = within(b.totalQuantity || 0, f.quantityRange)
-              const price = typeof bd.pricePerSkein === 'number' ? bd.pricePerSkein : (typeof b.price === 'number' ? b.price : 0)
-              const priceOk = within(price, f.priceRange)
-              let availOk = true
-              if (f.availabilityStatus && f.availabilityStatus !== 'all') {
-                const avail = b.availableQuantity || 0
-                const total = b.totalQuantity || 0
-                if (f.availabilityStatus === 'available') availOk = avail > 0
-                if (f.availabilityStatus === 'low') availOk = avail <= 2 && avail > 0
-                if (f.availabilityStatus === 'empty') availOk = avail === 0
-                if (f.availabilityStatus === 'full') availOk = total > 0 && avail === total
-              }
-              let dateOk = true
-              if (f.purchaseDateFrom) dateOk = dateOk && (!!b.purchaseDate && new Date(b.purchaseDate) >= f.purchaseDateFrom)
-              if (f.purchaseDateTo) dateOk = dateOk && (!!b.purchaseDate && new Date(b.purchaseDate) <= f.purchaseDateTo)
-
-              return colorOk && condOk && lotOk && qtyOk && priceOk && availOk && dateOk
-            })
-            if (!matchesAnyBatch) return false
-          }
-
-          return true
-        })
+        }
       }
 
-      return { masters: filtered, total: filtered.length }
+      // 2) Bygg Prisma where med master- og batch-nivåfiltre
+      const masterWhere: any = {
+        userId: ctx.user.id,
+        categoryId: masterCategory.id,
+        ...(candidateMasterIds ? { id: { in: candidateMasterIds.length ? candidateMasterIds : ['__none__'] } } : {}),
+        ...(input.search && !candidateMasterIds ? {
+          OR: [
+            { name: { contains: input.search, mode: 'insensitive' as const } },
+            { description: { contains: input.search, mode: 'insensitive' as const } },
+            { categoryData: { contains: input.search, mode: 'insensitive' as const } }
+          ]
+        } : {})
+      }
+
+      if (f) {
+        const andClauses: any[] = []
+        if (f.producer && f.producer !== 'all') andClauses.push({ categoryData: { contains: f.producer, mode: 'insensitive' as const } })
+        if (f.composition && f.composition !== 'all') andClauses.push({ categoryData: { contains: f.composition, mode: 'insensitive' as const } })
+        if (f.needleSize && f.needleSize !== 'all') andClauses.push({ categoryData: { contains: f.needleSize, mode: 'insensitive' as const } })
+        if (f.yarnWeight && f.yarnWeight !== 'all') andClauses.push({ categoryData: { contains: f.yarnWeight, mode: 'insensitive' as const } })
+        if (f.store && f.store !== 'all') andClauses.push({ categoryData: { contains: f.store, mode: 'insensitive' as const } })
+        if (f.hasNotes) andClauses.push({ categoryData: { contains: 'notes', mode: 'insensitive' as const } })
+        if (f.recentlyAdded) {
+          const days30 = new Date(); days30.setDate(days30.getDate() - 30)
+          andClauses.push({ createdAt: { gte: days30 } })
+        }
+        // Batch-nivå via typed relasjoner
+        const toItemAnd: any[] = []
+        if (f.color) toItemAnd.push({ categoryData: { contains: f.color, mode: 'insensitive' as const } })
+        if (f.condition && f.condition !== 'all') toItemAnd.push({ categoryData: { contains: f.condition, mode: 'insensitive' as const } })
+        if (f.batchNumber) toItemAnd.push({ categoryData: { contains: f.batchNumber, mode: 'insensitive' as const } })
+        if (f.priceRange) toItemAnd.push({ price: { gte: f.priceRange[0], lte: f.priceRange[1] } })
+        if (f.quantityRange) toItemAnd.push({ totalQuantity: { gte: Math.floor(f.quantityRange[0]), lte: Math.floor(f.quantityRange[1]) } })
+        if (f.purchaseDateFrom || f.purchaseDateTo) toItemAnd.push({ purchaseDate: { ...(f.purchaseDateFrom ? { gte: f.purchaseDateFrom } : {}), ...(f.purchaseDateTo ? { lte: f.purchaseDateTo } : {}) } })
+        if (f.lowStock) { toItemAnd.push({ availableQuantity: { lte: 2 } }); toItemAnd.push({ availableQuantity: { gt: 0 } }) }
+        if (f.hasProjects) toItemAnd.push({ projectUsage: { some: {} } })
+        if (f.availabilityStatus && f.availabilityStatus !== 'all') {
+          if (f.availabilityStatus === 'available') toItemAnd.push({ availableQuantity: { gt: 0 } })
+          if (f.availabilityStatus === 'low') { toItemAnd.push({ availableQuantity: { gt: 0 } }); toItemAnd.push({ availableQuantity: { lte: 2 } }) }
+          if (f.availabilityStatus === 'empty') toItemAnd.push({ availableQuantity: 0 as any })
+        }
+        if (toItemAnd.length > 0) {
+          andClauses.push({
+            itemRelationsFrom: {
+              some: {
+                relationType: 'MASTER_OF',
+                toItem: { AND: toItemAnd }
+              }
+            }
+          })
+        }
+        if (andClauses.length > 0) masterWhere.AND = (masterWhere.AND || []).concat(andClauses)
+      }
+
+      const [masters, total] = await Promise.all([
+        ctx.db.item.findMany({
+          where: masterWhere,
+          include: { location: true, category: true },
+          orderBy: { createdAt: 'desc' },
+          take: input.limit,
+          skip: input.offset
+        }),
+        ctx.db.item.count({ where: masterWhere })
+      ])
+
+      const mastersWithTotals = await Promise.all(masters.map(async (m) => ({
+        ...m,
+        relatedTo: [],
+        totals: await calculateMasterTotals(ctx.db, m.id, ctx.user.id)
+      })))
+
+      return { masters: mastersWithTotals, total }
     }),
 
   // PROJECT INTEGRATION ENDPOINTS
@@ -1794,35 +1602,54 @@ export const yarnRouter = createTRPCRouter({
           userId: ctx.user.id,
           categoryId: masterCategory.id
         },
-        include: {
-          relatedTo: {
-            where: {
-              categoryId: batchCategory.id
-            },
-            include: {
-              category: true
-            }
-          }
-        }
+        select: { id: true, name: true, categoryData: true }
       })
 
-      // Get all yarn batches for this user
-      const batches = await ctx.db.item.findMany({
-        where: {
-          userId: ctx.user.id,
-          categoryId: batchCategory.id
-        }
+      // Preload typed MASTER_OF relations for all masters
+      const masterLinks = await ctx.db.itemRelation.findMany({
+        where: { userId: ctx.user.id, relationType: 'MASTER_OF', fromItemId: { in: masters.map(m => m.id) } },
+        select: { fromItemId: true, toItemId: true }
       })
+      const batchIdsByMaster = new Map<string, string[]>()
+      for (const ml of masterLinks) {
+        const arr = batchIdsByMaster.get(ml.fromItemId) || []
+        arr.push(ml.toItemId)
+        batchIdsByMaster.set(ml.fromItemId, arr)
+      }
+
+      // Fallback: for master uten typed batches, hent legacy batches
+      const mastersNeedingLegacy = masters.filter(m => !(batchIdsByMaster.get(m.id)?.length))
+      if (mastersNeedingLegacy.length > 0) {
+        const legacyBatches = await ctx.db.item.findMany({
+          where: {
+            userId: ctx.user.id,
+            categoryId: batchCategory.id,
+            relatedItems: { some: { id: { in: mastersNeedingLegacy.map(m => m.id) } } }
+          },
+          select: { id: true, availableQuantity: true, categoryData: true, relatedItems: { select: { id: true } } }
+        })
+        // fordel per master
+        for (const m of mastersNeedingLegacy) {
+          const ids = legacyBatches
+            .filter(b => b.relatedItems.some(r => r.id === m.id))
+            .map(b => b.id)
+          if (ids.length > 0) batchIdsByMaster.set(m.id, ids)
+        }
+      }
+
+      const allBatchIds = Array.from(new Set(Array.from(batchIdsByMaster.values()).flat()))
+      const batchItems = allBatchIds.length > 0 ? await ctx.db.item.findMany({ where: { id: { in: allBatchIds } } }) : []
+      const batchMap = new Map(batchItems.map(b => [b.id, b]))
 
       // Calculate analytics
-      const producerStats = new Map()
-      const colorStats = new Map()
-      const uniqueColors = new Set()
+      const producerStats = new Map<string, { name: string, masterCount: number, totalSkeins: number, totalValue: number }>()
+      const colorStats = new Map<string, { name: string, colorCode?: string, batchCount: number, totalSkeins: number, totalValue: number }>()
+      const uniqueColors = new Set<string>()
 
       masters.forEach(master => {
         const masterData = master.categoryData ? JSON.parse(master.categoryData) : {}
         const producer = masterData.producer || 'Ukjent'
-        
+
         if (!producerStats.has(producer)) {
           producerStats.set(producer, {
             name: producer,
@@ -1832,33 +1659,30 @@ export const yarnRouter = createTRPCRouter({
           })
         }
 
-        const stats = producerStats.get(producer)
+        const stats = producerStats.get(producer)!
         stats.masterCount += 1
 
-        // Add batch data
-        master.relatedTo.forEach(batch => {
+        const batchIds = batchIdsByMaster.get(master.id) || []
+        batchIds.forEach(bid => {
+          const batch = batchMap.get(bid)
+          if (!batch) return
           const batchData = batch.categoryData ? JSON.parse(batch.categoryData) : {}
-          stats.totalSkeins += batchData.quantity || 0
-          stats.totalValue += (batchData.quantity || 0) * (batchData.pricePerSkein || 0)
+          const quantity = Number(batchData.quantity) || 0
+          const pricePerSkein = Number(batchData.pricePerSkein) || 0
+          stats.totalSkeins += quantity
+          stats.totalValue += quantity * pricePerSkein
 
-          // Track colors
           if (batchData.color) {
-            uniqueColors.add(batchData.color.toLowerCase())
-            
-            if (!colorStats.has(batchData.color)) {
-              colorStats.set(batchData.color, {
-                name: batchData.color,
-                colorCode: batchData.colorCode,
-                batchCount: 0,
-                totalSkeins: 0,
-                totalValue: 0
-              })
+            const colorName = String(batchData.color)
+            uniqueColors.add(colorName.toLowerCase())
+            const key = colorName
+            if (!colorStats.has(key)) {
+              colorStats.set(key, { name: colorName, colorCode: batchData.colorCode, batchCount: 0, totalSkeins: 0, totalValue: 0 })
             }
-
-            const colorStat = colorStats.get(batchData.color)
-            colorStat.batchCount += 1
-            colorStat.totalSkeins += batchData.quantity || 0
-            colorStat.totalValue += (batchData.quantity || 0) * (batchData.pricePerSkein || 0)
+            const cs = colorStats.get(key)!
+            cs.batchCount += 1
+            cs.totalSkeins += quantity
+            cs.totalValue += quantity * pricePerSkein
           }
         })
       })
@@ -2229,6 +2053,129 @@ export const yarnRouter = createTRPCRouter({
       })
 
       return { moved: items.length }
+    }),
+
+  // Hent alle farger på tvers av alle mastere (kompakt oversikt)
+  getAllMasterColors: protectedProcedure
+    .input(z.object({}).optional())
+    .query(async ({ ctx }) => {
+      // Finn alle typed relasjoner master -> color
+      const colorLinks = await ctx.db.itemRelation.findMany({
+        where: { userId: ctx.user.id, relationType: 'COLOR_OF' },
+        select: { fromItemId: true, toItemId: true }
+      })
+
+      if (colorLinks.length === 0) {
+        // Fallback: ingen typed farger registrert ennå
+        const masterCategory = await ctx.db.category.findFirst({ where: { name: 'Garn Master' } })
+        const colorCategory = await ctx.db.category.findFirst({ where: { name: 'Garn Farge' } })
+        if (!masterCategory || !colorCategory) return []
+
+        const colors = await ctx.db.item.findMany({
+          where: { userId: ctx.user.id, categoryId: colorCategory.id },
+          select: { id: true, name: true, imageUrl: true, categoryData: true, relatedItems: { select: { id: true, name: true, categoryId: true } } }
+        })
+
+        const masters = await ctx.db.item.findMany({ where: { userId: ctx.user.id, categoryId: masterCategory.id }, select: { id: true, name: true } })
+        const masterMap = new Map(masters.map(m => [m.id, m]))
+
+        const batchCategory = await ctx.db.category.findFirst({ where: { name: 'Garn Batch' } })
+
+        const results: Array<{ masterId: string, masterName: string, colorId?: string, colorName: string, colorCode?: string, imageUrl?: string, batchCount: number, skeinCount: number }> = []
+        for (const c of colors) {
+          const relMaster = c.relatedItems.find(r => r.categoryId === masterCategory.id)
+          if (!relMaster) continue
+
+          // Finn batches koblet til fargen (legacy)
+          let batchCount = 0
+          let skeinCount = 0
+          if (batchCategory) {
+            const relBatches = await ctx.db.item.findMany({
+              where: {
+                userId: ctx.user.id,
+                categoryId: batchCategory.id,
+                OR: [
+                  { relatedItems: { some: { id: c.id } } },
+                  { relatedTo: { some: { id: c.id } } }
+                ]
+              },
+              select: { id: true, availableQuantity: true }
+            })
+            batchCount = relBatches.length
+            skeinCount = relBatches.reduce((sum, b) => sum + (b.availableQuantity || 0), 0)
+          }
+
+          const colorData = c.categoryData ? JSON.parse(c.categoryData) : {}
+          const masterName = masterMap.get(relMaster.id)?.name || 'Ukjent'
+
+          results.push({
+            masterId: relMaster.id,
+            masterName,
+            colorId: c.id,
+            colorName: c.name,
+            colorCode: colorData.colorCode,
+            imageUrl: c.imageUrl || undefined,
+            batchCount,
+            skeinCount: Math.round(skeinCount)
+          })
+        }
+
+        return results
+      }
+
+      // Slå opp mastere og farger for typed koblinger
+      const masterIds = Array.from(new Set(colorLinks.map(l => l.fromItemId)))
+      const colorIds = Array.from(new Set(colorLinks.map(l => l.toItemId)))
+
+      const [masters, colors] = await Promise.all([
+        ctx.db.item.findMany({ where: { id: { in: masterIds } }, select: { id: true, name: true } }),
+        ctx.db.item.findMany({ where: { id: { in: colorIds } }, select: { id: true, name: true, imageUrl: true, categoryData: true } })
+      ])
+      const masterMap = new Map(masters.map(m => [m.id, m]))
+      const colorMap = new Map(colors.map(c => [c.id, c]))
+
+      // Hent alle typed BATCH_OF relasjoner for disse fargene
+      const batchLinks = await ctx.db.itemRelation.findMany({
+        where: { userId: ctx.user.id, relationType: 'BATCH_OF', fromItemId: { in: colorIds } },
+        select: { fromItemId: true, toItemId: true }
+      })
+      const batchesByColor = new Map<string, string[]>()
+      for (const bl of batchLinks) {
+        const arr = batchesByColor.get(bl.fromItemId) || []
+        arr.push(bl.toItemId)
+        batchesByColor.set(bl.fromItemId, arr)
+      }
+
+      // Slå opp batches for å summere tilgjengelige nøster
+      const allBatchIds = Array.from(new Set(batchLinks.map(b => b.toItemId)))
+      const batchItems = allBatchIds.length > 0
+        ? await ctx.db.item.findMany({ where: { id: { in: allBatchIds } }, select: { id: true, availableQuantity: true } })
+        : []
+      const batchMap = new Map(batchItems.map(b => [b.id, b]))
+
+      const results: Array<{ masterId: string, masterName: string, colorId?: string, colorName: string, colorCode?: string, imageUrl?: string, batchCount: number, skeinCount: number }> = []
+      for (const link of colorLinks) {
+        const master = masterMap.get(link.fromItemId)
+        const color = colorMap.get(link.toItemId)
+        if (!master || !color) continue
+
+        const batchIds = batchesByColor.get(color.id) || []
+        const skeins = batchIds.reduce((sum, id) => sum + (batchMap.get(id)?.availableQuantity || 0), 0)
+        const colorData = color.categoryData ? JSON.parse(color.categoryData) : {}
+
+        results.push({
+          masterId: master.id,
+          masterName: master.name,
+          colorId: color.id,
+          colorName: color.name,
+          colorCode: colorData.colorCode,
+          imageUrl: color.imageUrl || undefined,
+          batchCount: batchIds.length,
+          skeinCount: Math.round(skeins)
+        })
+      }
+
+      return results
     }),
 
 })
