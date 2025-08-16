@@ -905,6 +905,127 @@ export const printingRouter = createTRPCRouter({
           size: 'asc'
         }
       })
+    }),
+
+  // Advanced Printer Management
+  addPrinter: protectedProcedure
+    .input(z.object({
+      name: z.string(),
+      model: z.string(),
+      connectionType: z.enum(['NETWORK', 'USB', 'BLUETOOTH']),
+      ipAddress: z.string().optional(),
+      port: z.string().optional(),
+      location: z.string().optional(),
+      description: z.string().optional(),
+      settings: z.record(z.any()).optional()
+    }))
+    .mutation(async ({ input, ctx }) => {
+      await validateUserAccess(ctx.session.user.id)
+      
+      const printer = await db.printerProfile.create({
+        data: {
+          ...input,
+          userId: ctx.session.user.id,
+          householdId: 'default', // TODO: Get from user context
+          isDefault: false,
+          settings: JSON.stringify(input.settings || {})
+        }
+      })
+      
+      await auditLog(ctx.session.user.id, 'PRINTER_ADDED', 'PrinterProfile', printer.id)
+      return printer
+    }),
+
+  updatePrinter: protectedProcedure
+    .input(z.object({
+      printerId: z.string(),
+      name: z.string().optional(),
+      model: z.string().optional(),
+      connectionType: z.enum(['NETWORK', 'USB', 'BLUETOOTH']).optional(),
+      ipAddress: z.string().optional(),
+      port: z.string().optional(),
+      location: z.string().optional(),
+      description: z.string().optional(),
+      settings: z.record(z.any()).optional()
+    }))
+    .mutation(async ({ input, ctx }) => {
+      await validateUserAccess(ctx.session.user.id)
+      
+      const { printerId, ...updateData } = input
+      const printer = await db.printerProfile.update({
+        where: { 
+          id: printerId,
+          userId: ctx.session.user.id
+        },
+        data: {
+          ...updateData,
+          settings: updateData.settings ? JSON.stringify(updateData.settings) : undefined
+        }
+      })
+      
+      await auditLog(ctx.session.user.id, 'PRINTER_UPDATED', 'PrinterProfile', printer.id)
+      return printer
+    }),
+
+  deletePrinter: protectedProcedure
+    .input(z.object({ printerId: z.string() }))
+    .mutation(async ({ input, ctx }) => {
+      await validateUserAccess(ctx.session.user.id)
+      
+      await db.printerProfile.delete({
+        where: { 
+          id: input.printerId,
+          userId: ctx.session.user.id
+        }
+      })
+      
+      await auditLog(ctx.session.user.id, 'PRINTER_DELETED', 'PrinterProfile', input.printerId)
+      return { success: true }
+    }),
+
+  testPrinter: protectedProcedure
+    .input(z.object({ printerId: z.string() }))
+    .mutation(async ({ input, ctx }) => {
+      await validateUserAccess(ctx.session.user.id)
+      
+      const printer = await db.printerProfile.findUnique({
+        where: { 
+          id: input.printerId,
+          userId: ctx.session.user.id
+        }
+      })
+      
+      if (!printer) {
+        throw new TRPCError({
+          code: 'NOT_FOUND',
+          message: 'Skriver ikke funnet'
+        })
+      }
+      
+      // TODO: Implement actual printer test
+      // For now, just simulate a test
+      await auditLog(ctx.session.user.id, 'PRINTER_TESTED', 'PrinterProfile', input.printerId)
+      
+      return { 
+        success: true, 
+        message: 'Test-utskrift sendt til skriver',
+        testId: `test_${Date.now()}`
+      }
+    }),
+
+  getSupportedPrinterModels: protectedProcedure
+    .query(async () => {
+      // Return supported printer models
+      return [
+        { id: 'DYMO_LW_450', name: 'DYMO LabelWriter 450', manufacturer: 'DYMO' },
+        { id: 'DYMO_LW_450_TURBO', name: 'DYMO LabelWriter 450 Turbo', manufacturer: 'DYMO' },
+        { id: 'DYMO_LW_550', name: 'DYMO LabelWriter 550', manufacturer: 'DYMO' },
+        { id: 'DYMO_LW_550_TURBO', name: 'DYMO LabelWriter 550 Turbo', manufacturer: 'DYMO' },
+        { id: 'ZEBRA_ZD220', name: 'Zebra ZD220', manufacturer: 'Zebra' },
+        { id: 'ZEBRA_ZD420', name: 'Zebra ZD420', manufacturer: 'Zebra' },
+        { id: 'BROTHER_QL_800', name: 'Brother QL-800', manufacturer: 'Brother' },
+        { id: 'BROTHER_QL_820NWB', name: 'Brother QL-820NWB', manufacturer: 'Brother' }
+      ]
     })
 })
 

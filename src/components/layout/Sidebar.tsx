@@ -29,7 +29,8 @@ import {
   Database,
   Menu,
   X,
-  Palette
+  Palette,
+  Printer
 } from 'lucide-react'
 import {
   DropdownMenu,
@@ -54,6 +55,7 @@ export function Sidebar({ isOpen, onToggle, isMobile = false }: SidebarProps) {
     { name: 'Garn', href: '/garn', icon: Palette },
     { name: 'Lokasjoner', href: '/locations', icon: MapPin },
     { name: 'Kategorier', href: '/categories', icon: Grid3x3 },
+    { name: 'Printing', href: '/printing', icon: Printer },
     { name: 'Husholdninger', href: '/households', icon: Users },
     { name: 'Samarbeid', href: '/collaboration', icon: Activity },
     { name: 'AI-Funksjoner', href: '/ai', icon: Brain },
@@ -146,6 +148,12 @@ export function Sidebar({ isOpen, onToggle, isMobile = false }: SidebarProps) {
                   <Link href="/scan" onClick={onToggle}>
                     <QrCode className="h-4 w-4 mr-2" />
                     Skann QR-kode
+                  </Link>
+                </Button>
+                <Button size="sm" variant="secondary" className="w-full justify-start" asChild>
+                  <Link href="/printing/wizard" onClick={onToggle}>
+                    <Printer className="h-4 w-4 mr-2" />
+                    Print Wizard
                   </Link>
                 </Button>
               </div>
@@ -280,6 +288,12 @@ export function Sidebar({ isOpen, onToggle, isMobile = false }: SidebarProps) {
                 <Link href="/scan">
                   <QrCode className="h-4 w-4 mr-2" />
                   Skann QR-kode
+                </Link>
+              </Button>
+              <Button size="sm" variant="secondary" className="w-full justify-start" asChild>
+                <Link href="/printing/wizard">
+                  <Printer className="h-4 w-4 mr-2" />
+                  Print Wizard
                 </Link>
               </Button>
             </div>
