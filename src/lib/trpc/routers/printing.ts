@@ -1299,6 +1299,85 @@ export const printingRouter = createTRPCRouter({
           message: error instanceof Error ? error.message : 'Template generation failed'
         })
       }
+    }),
+
+  // Bulk print location QR codes
+  bulkPrintLocationQR: protectedProcedure
+    .input(z.object({
+      locationIds: z.array(z.string()),
+      printerId: z.string(),
+      settings: z.object({
+        copies: z.number().default(1),
+        labelSize: z.enum(['small', 'standard', 'large']).default('standard'),
+        includeHierarchy: z.boolean().default(true),
+        includeAutoNumber: z.boolean().default(true),
+        includeColorCode: z.boolean().default(false),
+        includeTags: z.boolean().default(false)
+      }).optional()
+    }))
+    .mutation(async ({ input, ctx }) => {
+      await validateUserAccess(ctx.session.user.id)
+      
+      try {
+        // Fetch locations
+        const locations = await ctx.db.location.findMany({
+          where: {
+            id: { in: input.locationIds },
+            userId: ctx.session.user.id
+          },
+          include: {
+            parent: true
+          }
+        })
+
+        if (locations.length === 0) {
+          throw new TRPCError({
+            code: 'NOT_FOUND',
+            message: 'No locations found'
+          })
+        }
+
+        // Create print jobs for each location
+        const printJobs = []
+        
+        for (const location of locations) {
+          const labelData = {
+            locationName: location.displayName || location.name,
+            locationType: location.type,
+            autoNumber: location.autoNumber || '',
+            qrCode: location.qrCode,
+            parentName: location.parent?.name || '',
+            tags: location.tags ? JSON.parse(location.tags) : [],
+            colorCode: location.colorCode || '',
+            level: location.level || 0
+          }
+
+          // TODO: Integrate with actual printing service
+          console.log('Creating print job for location:', labelData)
+          
+          printJobs.push({
+            locationId: location.id,
+            locationName: location.name,
+            status: 'queued'
+          })
+        }
+
+        return {
+          success: true,
+          jobCount: printJobs.length,
+          jobs: printJobs
+        }
+
+      } catch (error) {
+        console.error('Bulk print error:', error)
+        if (error instanceof TRPCError) {
+          throw error
+        }
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: error instanceof Error ? error.message : 'Bulk print failed'
+        })
+      }
     })
 })
 

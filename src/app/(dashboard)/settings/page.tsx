@@ -1,6 +1,7 @@
 "use client"
 
 import { NotificationSettings } from '@/components/notifications/NotificationSettings'
+import { WizardSettings } from '@/components/settings/WizardSettings'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -369,6 +370,9 @@ export default function SettingsPage() {
             </div>
           </CardContent>
         </Card>
+
+        {/* Wizard Settings */}
+        <WizardSettings />
 
         {/* Data Management */}
         <Card>

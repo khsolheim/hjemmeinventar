@@ -6,6 +6,8 @@ import { WizardWelcome } from './WizardWelcome'
 import { LocationTypeSelector } from './LocationTypeSelector'
 import { HierarchyBuilder } from './HierarchyBuilder'
 import { LocationForm, LocationFormData } from './LocationForm'
+import { QRCodeModal } from './QRCodeModal'
+import { PrivacySettingsModal, PrivacySettings } from './PrivacySettingsModal'
 import { trpc } from '@/lib/trpc/client'
 import { toast } from 'sonner'
 import { LocationType } from '@prisma/client'
@@ -31,6 +33,7 @@ export function LocationWizard() {
   const [suggestedAutoNumber, setSuggestedAutoNumber] = useState<string>('')
   const [showQRCode, setShowQRCode] = useState<WizardLocation | null>(null)
   const [editingLocation, setEditingLocation] = useState<WizardLocation | null>(null)
+  const [showPrivacyModal, setShowPrivacyModal] = useState<WizardLocation | null>(null)
 
   // tRPC queries and mutations
   const { data: locations = [], isLoading: locationsLoading, refetch } = trpc.locations.getAll.useQuery()
@@ -143,6 +146,23 @@ export function LocationWizard() {
     setShowQRCode(location)
   }
 
+  // Handle privacy settings
+  const handleEditPrivacy = (location: WizardLocation) => {
+    setShowPrivacyModal(location)
+  }
+
+  // Handle privacy settings save
+  const handleSavePrivacy = async (privacySettings: PrivacySettings) => {
+    // TODO: Implement privacy update mutation
+    console.log('Saving privacy settings:', privacySettings)
+    toast.success('Privacy innstillinger lagret')
+    // Update local state
+    updateLocation(showPrivacyModal!.id, {
+      isPrivate: privacySettings.isPrivate,
+      allowedUsers: privacySettings.allowedUsers
+    })
+  }
+
   // Render current step
   const renderCurrentStep = () => {
     switch (state.step) {
@@ -178,6 +198,7 @@ export function LocationWizard() {
             onEditLocation={handleEditLocation}
             onDeleteLocation={handleDeleteLocation}
             onShowQR={handleShowQR}
+            onEditPrivacy={handleEditPrivacy}
             onBack={state.showWelcome ? goToWelcome : undefined}
             isLoading={state.isLoading}
           />
@@ -223,26 +244,28 @@ export function LocationWizard() {
     <div className="min-h-screen">
       {renderCurrentStep()}
       
-      {/* QR Code Modal - TODO: Implement */}
+      {/* QR Code Modal */}
       {showQRCode && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white p-6 rounded-lg max-w-md w-full mx-4">
-            <h3 className="text-lg font-semibold mb-4">QR-kode for {showQRCode.name}</h3>
-            <div className="text-center">
-              <div className="bg-gray-100 p-8 rounded-lg mb-4">
-                <p className="text-gray-500">QR-kode kommer her</p>
-                <p className="text-xs text-gray-400 mt-2">{showQRCode.qrCode}</p>
-              </div>
-              <button
-                onClick={() => setShowQRCode(null)}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-              >
-                Lukk
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
-  )
-}
+        <QRCodeModal
+          location={showQRCode}
+          isOpen={!!showQRCode}
+          onClose={() => setShowQRCode(null)}
+          onPrint={(location) => {
+            // TODO: Integrate with DYMO printing
+            toast.info('DYMO printing kommer snart')
+                     }}
+         />
+       )}
+
+       {/* Privacy Settings Modal */}
+       {showPrivacyModal && (
+         <PrivacySettingsModal
+           location={showPrivacyModal}
+           isOpen={!!showPrivacyModal}
+           onClose={() => setShowPrivacyModal(null)}
+           onSave={handleSavePrivacy}
+         />
+       )}
+     </div>
+   )
+ }

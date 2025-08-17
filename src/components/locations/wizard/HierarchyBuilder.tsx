@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { LocationType } from '@prisma/client'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -31,6 +31,8 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { AutoNamingService } from '@/lib/services/auto-naming-service'
+import { LocationPrintDialog } from './LocationPrintDialog'
+import { toast } from 'sonner'
 
 interface Location {
   id: string
@@ -52,6 +54,7 @@ interface HierarchyBuilderProps {
   onEditLocation: (location: Location) => void
   onDeleteLocation: (locationId: string) => void
   onShowQR: (location: Location) => void
+  onEditPrivacy?: (location: Location) => void
   onBack?: () => void
   isLoading?: boolean
 }
@@ -93,8 +96,12 @@ interface TreeNodeProps {
   onEdit: (location: Location) => void
   onDelete: (locationId: string) => void
   onShowQR: (location: Location) => void
+  onEditPrivacy?: (location: Location) => void
   expandedNodes: Set<string>
   setExpandedNodes: (nodes: Set<string>) => void
+  isPrintMode?: boolean
+  isSelected?: boolean
+  onToggleSelection?: (locationId: string) => void
 }
 
 function TreeNode({ 
@@ -106,8 +113,12 @@ function TreeNode({
   onEdit, 
   onDelete, 
   onShowQR,
+  onEditPrivacy,
   expandedNodes,
-  setExpandedNodes
+  setExpandedNodes,
+  isPrintMode = false,
+  isSelected = false,
+  onToggleSelection
 }: TreeNodeProps) {
   const Icon = locationTypeIcons[location.type]
   const hasChildren = location.children && location.children.length > 0
@@ -121,10 +132,13 @@ function TreeNode({
     <div className="select-none">
       {/* Node Header */}
       <div className={`flex items-center space-x-2 p-3 rounded-lg border-2 transition-all duration-200 hover:shadow-md ${
-        location.isPrivate 
+        isPrintMode && isSelected
+          ? 'border-blue-500 bg-blue-50'
+          : location.isPrivate 
           ? 'border-red-200 bg-red-50' 
           : 'border-gray-200 bg-white hover:border-blue-300'
-      }`}>
+      } ${isPrintMode ? 'cursor-pointer' : ''}`}
+      onClick={isPrintMode ? () => onToggleSelection?.(location.id) : undefined}>
         
         {/* Expand/Collapse Button */}
         {hasChildren && (
@@ -231,6 +245,16 @@ function TreeNode({
               <QrCode className="h-4 w-4 mr-2" />
               Vis QR-kode
             </DropdownMenuItem>
+            {onEditPrivacy && (
+              <DropdownMenuItem onClick={() => onEditPrivacy(location)}>
+                {location.isPrivate ? (
+                  <Lock className="h-4 w-4 mr-2" />
+                ) : (
+                  <Unlock className="h-4 w-4 mr-2" />
+                )}
+                Privacy innstillinger
+              </DropdownMenuItem>
+            )}
             <DropdownMenuItem 
               onClick={() => onDelete(location.id)}
               className="text-red-600"
@@ -264,8 +288,12 @@ function TreeNode({
               onEdit={onEdit}
               onDelete={onDelete}
               onShowQR={onShowQR}
+              onEditPrivacy={onEditPrivacy}
               expandedNodes={expandedNodes}
               setExpandedNodes={setExpandedNodes}
+              isPrintMode={isPrintMode}
+              isSelected={false} // Child selection handled by parent
+              onToggleSelection={onToggleSelection}
             />
           ))}
         </div>
@@ -280,16 +308,55 @@ export function HierarchyBuilder({
   onEditLocation, 
   onDeleteLocation, 
   onShowQR, 
+  onEditPrivacy,
   onBack,
   isLoading = false
 }: HierarchyBuilderProps) {
   const [expandedNodes, setExpandedNodes] = useState<Set<string>>(new Set())
+  const [showPrintDialog, setShowPrintDialog] = useState(false)
+  const [selectedForPrint, setSelectedForPrint] = useState<Set<string>>(new Set())
+  const [isPrintMode, setIsPrintMode] = useState(false)
 
   // Ekspander alle root nodes som standard
-  useState(() => {
-    const rootNodes = locations.filter(loc => !loc.children?.length).map(loc => loc.id)
+  useEffect(() => {
+    const rootNodes = locations.map(loc => loc.id)
     setExpandedNodes(new Set(rootNodes))
-  })
+  }, [locations])
+
+  // Flatten locations for printing
+  const flattenLocations = (locs: Location[]): Location[] => {
+    const flattened: Location[] = []
+    const addLocation = (loc: Location) => {
+      flattened.push(loc)
+      if (loc.children) {
+        loc.children.forEach(addLocation)
+      }
+    }
+    locs.forEach(addLocation)
+    return flattened
+  }
+
+  const allFlatLocations = flattenLocations(locations)
+  const selectedLocations = allFlatLocations.filter(loc => selectedForPrint.has(loc.id))
+
+  const toggleLocationSelection = (locationId: string) => {
+    const newSelected = new Set(selectedForPrint)
+    if (newSelected.has(locationId)) {
+      newSelected.delete(locationId)
+    } else {
+      newSelected.add(locationId)
+    }
+    setSelectedForPrint(newSelected)
+  }
+
+  const selectAllLocations = () => {
+    setSelectedForPrint(new Set(allFlatLocations.map(loc => loc.id)))
+  }
+
+  const clearSelection = () => {
+    setSelectedForPrint(new Set())
+    setIsPrintMode(false)
+  }
 
   if (isLoading) {
     return (
@@ -326,15 +393,79 @@ export function HierarchyBuilder({
             </div>
           </div>
           
-          {/* Quick Add Buttons */}
+          {/* Action Buttons */}
           <div className="flex items-center space-x-2">
-            <Button
-              onClick={() => onAddLocation(undefined, LocationType.ROOM)}
-              className="bg-blue-600 hover:bg-blue-700"
-            >
-              <Plus className="h-4 w-4 mr-2" />
-              Nytt rom
-            </Button>
+            {isPrintMode ? (
+              <>
+                <div className="text-sm text-gray-600">
+                  {selectedForPrint.size} valgt
+                </div>
+                <Button
+                  variant="outline"
+                  onClick={selectAllLocations}
+                  disabled={selectedForPrint.size === allFlatLocations.length}
+                >
+                  Velg alle
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => setShowPrintDialog(true)}
+                  disabled={selectedForPrint.size === 0}
+                >
+                  <Printer className="h-4 w-4 mr-2" />
+                  Skriv ut ({selectedForPrint.size})
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={clearSelection}
+                >
+                  Avbryt
+                </Button>
+              </>
+            ) : (
+              <>
+                <Button
+                  variant="outline"
+                  onClick={() => setIsPrintMode(true)}
+                  disabled={allFlatLocations.length === 0}
+                >
+                  <Printer className="h-4 w-4 mr-2" />
+                  Bulk utskrift
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={async () => {
+                    try {
+                      const response = await fetch('/api/demo/wizard', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ action: 'create' })
+                      })
+                      const result = await response.json()
+                      if (result.success) {
+                        toast.success('Demo data opprettet!')
+                        window.location.reload()
+                      } else {
+                        toast.error('Kunne ikke opprette demo data')
+                      }
+                    } catch (error) {
+                      toast.error('Feil ved oppretting av demo data')
+                    }
+                  }}
+                  className="text-purple-600 border-purple-300"
+                >
+                  <Sparkles className="h-4 w-4 mr-2" />
+                  Last demo data
+                </Button>
+                <Button
+                  onClick={() => onAddLocation(undefined, LocationType.ROOM)}
+                  className="bg-blue-600 hover:bg-blue-700"
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  Nytt rom
+                </Button>
+              </>
+            )}
           </div>
         </div>
 
@@ -381,8 +512,12 @@ export function HierarchyBuilder({
                 onEdit={onEditLocation}
                 onDelete={onDeleteLocation}
                 onShowQR={onShowQR}
+                onEditPrivacy={onEditPrivacy}
                 expandedNodes={expandedNodes}
                 setExpandedNodes={setExpandedNodes}
+                isPrintMode={isPrintMode}
+                isSelected={selectedForPrint.has(location.id)}
+                onToggleSelection={toggleLocationSelection}
               />
             ))}
           </div>
@@ -422,6 +557,16 @@ export function HierarchyBuilder({
             </CardContent>
           </Card>
         )}
+
+        {/* Print Dialog */}
+        <LocationPrintDialog
+          locations={selectedLocations}
+          isOpen={showPrintDialog}
+          onClose={() => {
+            setShowPrintDialog(false)
+            clearSelection()
+          }}
+        />
       </div>
     </div>
   )
