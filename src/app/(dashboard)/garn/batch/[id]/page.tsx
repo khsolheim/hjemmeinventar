@@ -175,7 +175,7 @@ export default function BatchDetailPage() {
                     </DialogHeader>
                     <InlineBuilderForm 
                       tree={(locationTree as any) || []}
-                       hierarchyMatrix={hierarchyMatrixQuery.data?.matrix}
+                      {...(hierarchyMatrixQuery.data?.matrix && { hierarchyMatrix: hierarchyMatrixQuery.data.matrix })}
                       onCreateContainer={async (parentId, type, name) => {
                         const created = await createLocation.mutateAsync({ name, type, parentId })
                         return created.id
@@ -198,7 +198,7 @@ export default function BatchDetailPage() {
                     </DialogHeader>
                     <LocationWizard 
                       tree={(locationTree as any) || []}
-                      hierarchyMatrix={hierarchyMatrixQuery.data?.matrix}
+                      {...(hierarchyMatrixQuery.data?.matrix && { hierarchyMatrix: hierarchyMatrixQuery.data.matrix })}
                       onCreateLocation={async (parentId, type, name) => {
                         const created = await createLocation.mutateAsync({ name, type, parentId })
                         return created.id
@@ -421,11 +421,8 @@ export default function BatchDetailPage() {
                                 await dymoService.printQRLabel({
                                   itemName: batch.name,
                                   locationName: d.location?.name || 'Lokasjon',
-                                  qrCode: d.qrCode,
-                                  dateAdded: new Date().toLocaleDateString('nb-NO'),
-                                  extraLine1: profile?.extraLine1,
-                                  extraLine2: profile?.extraLine2
-                                }, { copies, labelSize: size })
+                                  qrCode: d.qrCode
+                                }, { copies })
                               } catch (e) {
                                 console.error(e)
                               }
@@ -478,7 +475,7 @@ export default function BatchDetailPage() {
                           distribution={d}
                           locations={locations || []}
                           tree={(locationTree as any) || []}
-                          hierarchyMatrix={hierarchyMatrixQuery.data?.matrix}
+                          {...(hierarchyMatrixQuery.data?.matrix && { hierarchyMatrix: hierarchyMatrixQuery.data.matrix })}
                           onCreateLocation={async (parentId, type, name) => {
                             const created = await createLocation.mutateAsync({ name, type, parentId })
                             return created.id
@@ -627,6 +624,7 @@ function InlineBuilderForm({ tree, hierarchyMatrix, onCreateContainer, onSubmit,
 
       <div className="flex justify-end">
         <Button disabled={!leafLocationId || qty <= 0 || (containerType !== '' && !packagingAllowed[containerType])} onClick={async () => {
+          if (!leafLocationId) return
           let targetId = leafLocationId
           if (containerType) {
             const name = containerName.trim() || (containerType === 'BAG' ? 'Pose' : 'Boks')
@@ -736,6 +734,7 @@ function LocationWizard({ tree, hierarchyMatrix, onCreateLocation, onFinish }: {
           <div className="flex justify-between">
             <Button variant="outline" onClick={() => setStep('pick-children')}>Tilbake</Button>
             <Button disabled={!leafLocationId || qty <= 0 || (packType !== '' && !packagingAllowedWizard[packType])} onClick={async () => {
+              if (!leafLocationId) return
               let targetId = leafLocationId
               if (packType) {
                 const createdId = await onCreateLocation(leafLocationId, packType, packName.trim() || (packType === 'BAG' ? 'Pose' : 'Boks'))

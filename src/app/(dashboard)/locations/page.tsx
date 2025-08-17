@@ -539,7 +539,7 @@ export default function LocationsPage() {
                 <div>
                   <h4 className="text-sm font-medium mb-2">Underlokasjoner ({location.children.length}):</h4>
                   <div className="space-y-2">
-                    {location.children.map((child) => (
+                    {location.children.map((child: any) => (
                       <div key={child.id} className="flex items-center justify-between p-2 bg-muted rounded">
                         <div className="flex items-center gap-2">
                           <LocationIcon type={child.type} />

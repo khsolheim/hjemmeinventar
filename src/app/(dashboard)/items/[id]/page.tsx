@@ -262,10 +262,7 @@ export default function ItemDetailPage() {
             </CardHeader>
             <CardContent>
               <div className="text-xl font-semibold">
-                {item.location.parent 
-                  ? `${item.location.parent.name} > ${item.location.name}`
-                  : item.location.name
-                }
+                {item.location.name}
               </div>
               {item.location.description && (
                 <div className="text-sm text-muted-foreground mt-1">
@@ -691,10 +688,10 @@ export default function ItemDetailPage() {
                       {item.loan.status === 'OUT' ? 'Utlånt' : 'Returnert'}
                     </Badge>
                   </div>
-                  {item.loan.borrowerName && (
+                  {item.loan.loanedTo && (
                     <div className="flex justify-between">
                       <span>Låntaker:</span>
-                      <span>{item.loan.borrowerName}</span>
+                      <span>{item.loan.loanedTo}</span>
                     </div>
                   )}
                   {item.loan.loanDate && (

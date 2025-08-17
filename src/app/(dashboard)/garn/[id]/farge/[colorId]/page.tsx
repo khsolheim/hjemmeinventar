@@ -16,7 +16,7 @@ export default function YarnColorPage() {
   const utils = trpc.useUtils()
   const { data: colors } = trpc.yarn.getColorsForMaster.useQuery({ masterId }, { enabled: !!masterId })
   const color = colors?.find(c => c.id === colorId)
-  const { data: batches } = trpc.yarn.getBatchesForColor.useQuery({ colorId }, { enabled: !!colorId })
+  const { data: batches } = trpc.yarn.getBatchesForColor.useQuery({ colorId: colorId! }, { enabled: !!colorId })
   const updateColor = trpc.yarn.updateColor.useMutation({ onSuccess: () => utils.yarn.getColorsForMaster.invalidate({ masterId }) })
   const deleteColor = trpc.yarn.deleteColor.useMutation({ onSuccess: () => utils.yarn.getColorsForMaster.invalidate({ masterId }) })
 
@@ -40,12 +40,12 @@ export default function YarnColorPage() {
           <Button size="sm" variant="outline" onClick={() => {
             const name = prompt('Nytt navn på farge', color?.name || '')
             const code = prompt('Ny fargekode (valgfritt, f.eks. #FFB6C1)', color?.colorCode || '')
-            if (name) updateColor.mutate({ colorId, name, colorCode: code || undefined })
+            if (name && colorId) updateColor.mutate({ id: colorId, name, colorCode: code || undefined })
           }}>
             <Pencil className="h-3 w-3 mr-1"/> Rediger
           </Button>
           <Button size="sm" variant="destructive" onClick={() => {
-            if (confirm('Slette denne fargen? (Kun mulig hvis ingen batches er knyttet)')) deleteColor.mutate({ colorId })
+            if (confirm('Slette denne fargen? (Kun mulig hvis ingen batches er knyttet)') && colorId) deleteColor.mutate({ id: colorId })
           }}>
             <Trash2 className="h-3 w-3 mr-1"/> Slett
           </Button>
@@ -71,7 +71,15 @@ export default function YarnColorPage() {
             <DialogHeader>
               <DialogTitle>Ny batch for {color?.name}</DialogTitle>
             </DialogHeader>
-            <YarnWizard onComplete={() => utils.yarn.getBatchesForColor.invalidate({ colorId })} preset={{ masterId, batch: { color: color?.name, colorCode: color?.colorCode } }} />
+            {masterId && (
+              <YarnWizard 
+                onComplete={() => colorId && utils.yarn.getBatchesForColor.invalidate({ colorId })} 
+                preset={{ 
+                  masterId, 
+                  ...(color?.name && { batch: { color: color.name, colorCode: color.colorCode } })
+                }} 
+              />
+            )}
           </DialogContent>
         </Dialog>
       </div>

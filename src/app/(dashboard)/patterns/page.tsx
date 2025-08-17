@@ -68,7 +68,7 @@ export default function PatternsPage() {
   const filteredPatterns = patterns.filter(pattern => {
     const matchesSearch = pattern.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
                          pattern.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         pattern.tags.some(tag => tag.toLowerCase().includes(searchQuery.toLowerCase()))
+                         pattern.tags.some((tag: any) => tag.toLowerCase().includes(searchQuery.toLowerCase()))
     
     const matchesCategory = selectedCategory === 'all' || pattern.category === selectedCategory
     const matchesDifficulty = selectedDifficulty === 'all' || pattern.difficulty === selectedDifficulty
@@ -256,7 +256,7 @@ export default function PatternsPage() {
               {/* Tags */}
               {pattern.tags.length > 0 && (
                 <div className="flex flex-wrap gap-1">
-                  {pattern.tags.map((tag, index) => (
+                  {pattern.tags.map((tag: any, index: number) => (
                     <Badge key={index} variant="secondary" className="text-xs">
                       {tag}
                     </Badge>

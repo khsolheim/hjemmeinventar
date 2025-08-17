@@ -51,27 +51,34 @@ export default function AnalyticsPage() {
   const [reportType, setReportType] = useState('summary')
 
   // tRPC queries
-  const { 
-    data: analytics, 
-    isLoading, 
-    refetch: refetchAnalytics 
-  } = trpc.printing.getAnalytics.useQuery({
-    timeRange,
-    includeDetails: true
-  })
+  // TODO: Implement getAnalytics and exportAnalytics in printing router
+  const analytics = null
+  const isLoading = false
+  const refetchAnalytics = () => {}
+  
+  // const { 
+  //   data: analytics, 
+  //   isLoading, 
+  //   refetch: refetchAnalytics 
+  // } = trpc.printing.getAnalytics.useQuery({
+  //   timeRange,
+  //   includeDetails: true
+  // })
 
-  const exportAnalyticsMutation = trpc.printing.exportAnalytics.useMutation()
+  // const exportAnalyticsMutation = trpc.printing.exportAnalytics.useMutation()
 
   const handleExportReport = async () => {
-    try {
-      await exportAnalyticsMutation.mutateAsync({
-        format: 'PDF',
-        timeRange,
-        sections: ['overview', 'trends', 'performance', 'costs']
-      })
-    } catch (error) {
-      console.error('Feil ved eksport:', error)
-    }
+    // TODO: Implement export functionality
+    console.log('Export not implemented yet')
+    // try {
+    //   await exportAnalyticsMutation.mutateAsync({
+    //     format: 'PDF',
+    //     timeRange,
+    //     sections: ['overview', 'trends', 'performance', 'costs']
+    //   })
+    // } catch (error) {
+    //   console.error('Feil ved eksport:', error)
+    // }
   }
 
   // Mock data for demonstration
@@ -276,9 +283,9 @@ export default function AnalyticsPage() {
             Oppdater
           </Button>
           
-          <Button onClick={handleExportReport} disabled={exportAnalyticsMutation.isLoading}>
+          <Button onClick={handleExportReport} disabled={false}>
             <Download className="h-4 w-4 mr-2" />
-            {exportAnalyticsMutation.isLoading ? 'Eksporterer...' : 'Eksporter rapport'}
+            Eksporter rapport
           </Button>
         </div>
       </div>

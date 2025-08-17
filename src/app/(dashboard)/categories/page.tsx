@@ -1,6 +1,7 @@
 import { auth } from '@/auth'
 import { db } from '@/lib/db'
 import { CategoriesPageClient } from '@/components/categories/CategoriesPageClient'
+import { Badge } from '@/components/ui/badge'
 
 // Category Field Schema Viewer Component
 function FieldSchemaViewer({ schema, categoryName }: { schema: any; categoryName: string }) {
@@ -41,5 +42,5 @@ export default async function CategoriesPage() {
       }
     })
   }
-  return <CategoriesPageClient initialCategories={initialCategories} />
+  return <CategoriesPageClient {...(initialCategories && { initialCategories })} />
 }

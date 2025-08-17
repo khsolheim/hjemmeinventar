@@ -2,7 +2,7 @@
 // PRINTING SYSTEM - Seed Data (V3.1)
 // ============================================================================
 
-import { PrismaClient } from '@prisma/client'
+import { PrismaClient, LabelSize } from '@prisma/client'
 
 const prisma = new PrismaClient()
 
@@ -93,7 +93,7 @@ export async function seedPrintingSystem() {
         code: '30334',
         dymoId: 'MultiPurpose',
         paperName: '30334 Multi-Purpose',
-        size: 'SMALL',
+        size: LabelSize.SMALL,
         widthMm: 19,
         heightMm: 51,
         isActive: true,
@@ -105,7 +105,7 @@ export async function seedPrintingSystem() {
         code: '30252',
         dymoId: 'Address',
         paperName: '30252 Address',
-        size: 'STANDARD',
+        size: LabelSize.STANDARD,
         widthMm: 28,
         heightMm: 89,
         isActive: true,
@@ -117,7 +117,7 @@ export async function seedPrintingSystem() {
         code: '30323',
         dymoId: 'Shipping',
         paperName: '30323 Shipping',
-        size: 'LARGE',
+        size: LabelSize.LARGE,
         widthMm: 54,
         heightMm: 101,
         isActive: true,
@@ -129,7 +129,7 @@ export async function seedPrintingSystem() {
         code: '99012',
         dymoId: 'Custom',
         paperName: '99012 Custom Size',
-        size: 'CUSTOM',
+        size: LabelSize.CUSTOM,
         widthMm: null,
         heightMm: null,
         isActive: true,
