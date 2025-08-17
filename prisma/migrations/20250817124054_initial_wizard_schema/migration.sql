@@ -54,12 +54,26 @@ CREATE TABLE "Location" (
     "id" TEXT NOT NULL PRIMARY KEY,
     "name" TEXT NOT NULL,
     "description" TEXT,
+    "displayName" TEXT,
     "type" TEXT NOT NULL,
     "qrCode" TEXT NOT NULL,
     "parentId" TEXT,
+    "autoNumber" TEXT,
+    "level" INTEGER NOT NULL DEFAULT 0,
+    "isWizardCreated" BOOLEAN NOT NULL DEFAULT false,
+    "wizardOrder" INTEGER,
+    "images" TEXT,
+    "primaryImage" TEXT,
+    "isPrivate" BOOLEAN NOT NULL DEFAULT false,
+    "allowedUsers" TEXT,
+    "colorCode" TEXT,
+    "tags" TEXT,
+    "householdId" TEXT,
     "userId" TEXT NOT NULL,
+    "isActive" BOOLEAN NOT NULL DEFAULT true,
     "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" DATETIME NOT NULL,
+    CONSTRAINT "Location_householdId_fkey" FOREIGN KEY ("householdId") REFERENCES "Household" ("id") ON DELETE SET NULL ON UPDATE CASCADE,
     CONSTRAINT "Location_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User" ("id") ON DELETE CASCADE ON UPDATE CASCADE,
     CONSTRAINT "Location_parentId_fkey" FOREIGN KEY ("parentId") REFERENCES "Location" ("id") ON DELETE SET NULL ON UPDATE CASCADE
 );
@@ -956,6 +970,18 @@ CREATE INDEX "Location_parentId_idx" ON "Location"("parentId");
 
 -- CreateIndex
 CREATE INDEX "Location_qrCode_idx" ON "Location"("qrCode");
+
+-- CreateIndex
+CREATE INDEX "Location_householdId_idx" ON "Location"("householdId");
+
+-- CreateIndex
+CREATE INDEX "Location_level_idx" ON "Location"("level");
+
+-- CreateIndex
+CREATE INDEX "Location_isWizardCreated_idx" ON "Location"("isWizardCreated");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "Location_parentId_autoNumber_userId_key" ON "Location"("parentId", "autoNumber", "userId");
 
 -- CreateIndex
 CREATE INDEX "Item_userId_idx" ON "Item"("userId");

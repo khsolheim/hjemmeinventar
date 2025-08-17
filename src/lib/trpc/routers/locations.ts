@@ -2,6 +2,7 @@
 import { z } from 'zod'
 import { createTRPCRouter, protectedProcedure } from '../server'
 import { TRPCError } from '@trpc/server'
+import { LocationType } from '@prisma/client'
 import { generateUniqueQRCode, logActivity } from '../../db'
 
 // Helper: Validate placement using household-specific hierarchy rules
@@ -502,5 +503,125 @@ export const locationsRouter = createTRPCRouter({
       })
       
       return updatedLocation
+    }),
+
+  // Wizard-specific mutations
+  createWithWizard: protectedProcedure
+    .input(z.object({
+      name: z.string().min(1),
+      displayName: z.string().optional(),
+      description: z.string().optional(),
+      type: z.nativeEnum(LocationType),
+      parentId: z.string().optional(),
+      autoNumber: z.string().optional(),
+      level: z.number(),
+      isPrivate: z.boolean().default(false),
+      colorCode: z.string().optional(),
+      tags: z.array(z.string()).default([]),
+      wizardOrder: z.number().optional()
+    }))
+    .mutation(async ({ ctx, input }) => {
+      // Generate unique QR code
+      const qrCode = await generateUniqueQRCode()
+      
+      // Verify parent exists if specified
+      if (input.parentId) {
+        const parent = await ctx.db.location.findFirst({
+          where: { 
+            id: input.parentId,
+            userId: ctx.user.id 
+          }
+        })
+        
+        if (!parent) {
+          throw new TRPCError({
+            code: 'NOT_FOUND',
+            message: 'Parent lokasjon ikke funnet'
+          })
+        }
+      }
+
+      const location = await ctx.db.location.create({
+        data: {
+          name: input.name,
+          displayName: input.displayName,
+          description: input.description,
+          type: input.type,
+          qrCode,
+          parentId: input.parentId,
+          autoNumber: input.autoNumber,
+          level: input.level,
+          isWizardCreated: true,
+          wizardOrder: input.wizardOrder,
+          isPrivate: input.isPrivate,
+          colorCode: input.colorCode,
+          tags: input.tags.length > 0 ? JSON.stringify(input.tags) : null,
+          allowedUsers: null,
+          images: null,
+          primaryImage: null,
+          householdId: null, // TODO: Set based on user's household
+          isActive: true,
+          userId: ctx.user.id
+        },
+        include: {
+          parent: true,
+          _count: { select: { items: true } }
+        }
+      })
+
+      // Log wizard activity
+      await logActivity({
+        type: 'WIZARD_LOCATION_CREATED',
+        description: `Opprettet ${input.type.toLowerCase()} "${input.name}" via wizard`,
+        userId: ctx.user.id,
+        locationId: location.id,
+        metadata: JSON.stringify({
+          autoNumber: input.autoNumber,
+          level: input.level,
+          parentId: input.parentId
+        })
+      })
+
+      return {
+        ...location,
+        tags: location.tags ? JSON.parse(location.tags) : [],
+        allowedUsers: location.allowedUsers ? JSON.parse(location.allowedUsers) : [],
+        images: location.images ? JSON.parse(location.images) : []
+      }
+    }),
+
+  generateAutoName: protectedProcedure
+    .input(z.object({
+      type: z.nativeEnum(LocationType),
+      parentId: z.string().optional()
+    }))
+    .query(async ({ ctx, input }) => {
+      const { AutoNamingService } = await import('@/lib/services/auto-naming-service')
+      
+      const result = await AutoNamingService.generateName({
+        type: input.type,
+        parentId: input.parentId,
+        userId: ctx.user.id
+      })
+      
+      return result
+    }),
+
+  getAllowedChildTypes: protectedProcedure
+    .input(z.object({
+      parentType: z.nativeEnum(LocationType).optional()
+    }))
+    .query(async ({ ctx, input }) => {
+      const { AutoNamingService } = await import('@/lib/services/auto-naming-service')
+      
+      return AutoNamingService.getAllowedChildTypes(input.parentType)
+    }),
+
+  getLocationPath: protectedProcedure
+    .input(z.string())
+    .query(async ({ ctx, input }) => {
+      const { AutoNamingService } = await import('@/lib/services/auto-naming-service')
+      
+      return await AutoNamingService.getLocationPath(input)
     })
 })
