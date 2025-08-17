@@ -199,13 +199,13 @@ export default function LoansPage() {
     staleTime: 30000,
     refetchOnWindowFocus: false,
     refetchOnMount: false,
-    keepPreviousData: true,
+    placeholderData: (prev) => prev,
   })
   const { data: stats, isLoading: statsLoading } = trpc.loans.getStats.useQuery(undefined, {
     staleTime: 30000,
     refetchOnWindowFocus: false,
     refetchOnMount: false,
-    keepPreviousData: true,
+    placeholderData: (prev) => prev,
   })
 
   const returnLoan = trpc.loans.return.useMutation({

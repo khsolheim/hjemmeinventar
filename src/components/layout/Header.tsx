@@ -322,7 +322,7 @@ export function Header({ onToggleSidebar }: HeaderProps) {
                   extraLine1: profile?.extraLine1,
                   extraLine2: profile?.extraLine2
                 }))
-                await dymoService.printBulkLabels(labels, 'qr', { copies, labelSize: size })
+                await dymoService.printBulkLabels(labels, 'qr', { copies, labelSize: size as any })
                 toast.success(`Skrev ut ${queued.length} etiketter`)
                 printQueue.clear(); refreshQueue(); setIsQueueOpen(false)
               } catch (e) {

@@ -50,14 +50,14 @@ export default function MobileDemoPage() {
     staleTime: 30000,
     refetchOnWindowFocus: false,
     refetchOnMount: false,
-    keepPreviousData: true
+    placeholderData: (prev) => prev
   })
   const sampleItems = sampleItemsData?.items || []
   const { data: sampleLocations = [] } = trpc.locations.getAll.useQuery(undefined, {
     staleTime: 30000,
     refetchOnWindowFocus: false,
     refetchOnMount: false,
-    keepPreviousData: true
+    placeholderData: (prev) => prev
   })
 
   useEffect(() => {

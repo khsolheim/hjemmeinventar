@@ -33,7 +33,7 @@ import {
   Eye,
   Copy
 } from 'lucide-react'
-import { dymoService, type LabelData, type PrintOptions } from '@/lib/printing/dymo-service'
+import dymoService, { type LabelData, type PrintOptions } from '@/lib/printing/dymo-service'
 import { trpc } from '@/lib/trpc/client'
 import { toast } from 'sonner'
 
@@ -135,12 +135,21 @@ export function DymoPrintCenter() {
 
       try {
         if (job.type === 'qr') {
-          await dymoService.printQRLabel(job.data, { 
+          await dymoService.printQRLabel({
+            qrCode: job.data.qrCode || '',
+            itemName: job.data.itemName || '',
+            locationName: job.data.locationName || '',
+            categoryName: job.data.categoryName || ''
+          }, { 
             ...printOptions, 
             printerName: selectedPrinter 
           })
         } else {
-          await dymoService.printBarcodeLabel(job.data, { 
+          await dymoService.printBarcodeLabel({
+            barcode: job.data.barcode || '',
+            itemName: job.data.itemName || '',
+            locationName: job.data.locationName || ''
+          }, { 
             ...printOptions, 
             printerName: selectedPrinter 
           })
@@ -185,7 +194,7 @@ export function DymoPrintCenter() {
 
     try {
       const base64Image = await dymoService.previewLabel(previewData, previewType)
-      setPreviewImage(`data:image/png;base64,${base64Image}`)
+      setPreviewImage(base64Image.startsWith('data:') ? base64Image : `data:image/png;base64,${base64Image}`)
       toast.success('Forhåndsvisning generert')
     } catch (error) {
       toast.error('Kunne ikke generere forhåndsvisning')
@@ -318,11 +327,11 @@ export function DymoPrintCenter() {
                       placeholder="Navn på gjenstanden"
                       value={previewData?.itemName || ''}
                       onChange={(e) => setPreviewData(prev => ({ 
-                        ...prev, 
+                        ...(prev || {} as any), 
                         itemName: e.target.value,
                         qrCode: `item:${e.target.value}`,
-                        locationName: prev?.locationName || '',
-                        barcode: prev?.barcode
+                        locationName: (prev?.locationName || '') as string,
+                        barcode: (prev?.barcode || '') as string
                       }))}
                     />
                   </div>
@@ -332,11 +341,11 @@ export function DymoPrintCenter() {
                     <Select 
                       value={previewData?.locationName || ''} 
                       onValueChange={(value) => setPreviewData(prev => ({ 
-                        ...prev, 
+                        ...(prev || {} as any), 
                         locationName: value,
-                        itemName: prev?.itemName || '',
+                        itemName: (prev?.itemName || '') as string,
                         qrCode: `item:${prev?.itemName || ''}`,
-                        barcode: prev?.barcode
+                        barcode: (prev?.barcode || '') as string
                       }))}
                     >
                       <SelectTrigger>
@@ -359,10 +368,10 @@ export function DymoPrintCenter() {
                       placeholder="f.eks. 1234567890123"
                       value={previewData?.barcode || ''}
                       onChange={(e) => setPreviewData(prev => ({ 
-                        ...prev, 
+                        ...(prev || {} as any), 
                         barcode: e.target.value,
-                        itemName: prev?.itemName || '',
-                        locationName: prev?.locationName || '',
+                        itemName: (prev?.itemName || '') as string,
+                        locationName: (prev?.locationName || '') as string,
                         qrCode: `item:${prev?.itemName || ''}`
                       }))}
                     />

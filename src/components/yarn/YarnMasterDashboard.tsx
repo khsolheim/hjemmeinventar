@@ -48,7 +48,7 @@ export function YarnMasterDashboard({ initialMasters, initialTotal }: { initialM
     refetchOnWindowFocus: false,
     refetchOnMount: false,
     staleTime: 30000,
-    keepPreviousData: true,
+    placeholderData: (prev) => prev,
     enabled: !useSearchApi,
     initialData: initialMasters ? { masters: initialMasters, total: initialTotal ?? initialMasters.length } : undefined
   })
@@ -63,7 +63,7 @@ export function YarnMasterDashboard({ initialMasters, initialTotal }: { initialM
     refetchOnWindowFocus: false,
     refetchOnMount: true,
     staleTime: 0,
-    keepPreviousData: false,
+    placeholderData: (prev) => prev, gcTime: 0,
   })
 
   const handleAdvancedSearch = (filters: any) => {
