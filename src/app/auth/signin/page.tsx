@@ -86,7 +86,7 @@ export default function SignInPage() {
       <div className="max-w-md w-full space-y-8">
         <div className="text-center">
           <h1 className="text-3xl font-bold text-gray-900">
-            🏠 Hjemmeinventar
+            🏠 HMS
           </h1>
           <p className="mt-2 text-sm text-gray-600">
             Logg inn for å administrere inventaret ditt
@@ -97,7 +97,7 @@ export default function SignInPage() {
           <CardHeader>
             <CardTitle>Logg inn</CardTitle>
             <CardDescription>
-              Logg inn på ditt hjemmeinventar
+              Logg inn på ditt Home Management System
             </CardDescription>
           </CardHeader>
           <CardContent>

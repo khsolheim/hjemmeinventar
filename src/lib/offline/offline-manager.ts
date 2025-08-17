@@ -1,7 +1,7 @@
 import { openDB, IDBPDatabase } from 'idb'
 
 // IndexedDB Database Configuration
-const DB_NAME = 'hjemmeinventar-offline'
+const DB_NAME = 'hms-offline'
 const DB_VERSION = 1
 
 // Object Store Names

@@ -52,7 +52,7 @@ export default function OnboardingPage() {
               <Home className="w-12 h-12 text-blue-600" />
             </div>
             <h1 className="text-4xl font-bold mb-4">
-              Velkommen til Hjemmeinventar! 🏠
+              Velkommen til HMS! 🏠
             </h1>
             <p className="text-xl text-muted-foreground mb-8 max-w-2xl mx-auto">
               La oss hjelpe deg å komme i gang med ditt personlige inventarsystem. 

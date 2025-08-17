@@ -457,7 +457,7 @@ export default function SettingsPage() {
             <div className="text-sm text-gray-600 space-y-1">
               <div>Versjon: 1.0.0</div>
               <div>Sist oppdatert: {new Date().toLocaleDateString('nb-NO')}</div>
-              <div>© 2024 Hjemmeinventar</div>
+              <div>© 2024 HMS - Home Management System</div>
             </div>
           </CardContent>
         </Card>

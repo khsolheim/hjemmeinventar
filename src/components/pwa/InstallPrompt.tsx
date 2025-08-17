@@ -87,7 +87,7 @@ export function InstallPrompt() {
           </div>
           
           <div className="flex-1 min-w-0">
-            <h3 className="font-semibold text-gray-900">Installer Hjemmeinventar</h3>
+            <h3 className="font-semibold text-gray-900">Installer HMS</h3>
             <p className="text-sm text-gray-600 mt-1">
               Få rask tilgang direkte fra hjemskjermen din. Fungerer uten internett!
             </p>

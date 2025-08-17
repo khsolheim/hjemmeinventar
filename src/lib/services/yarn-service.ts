@@ -16,18 +16,27 @@ export class YarnService {
 		imageUrl?: string
 		categoryData: unknown
 	}) {
+		// 1. Validate input data
 		const parsed = GarnMasterSchema.safeParse(input.categoryData)
 		if (!parsed.success) {
-			throw new Error(parsed.error.errors.map(e => e.message).join(', '))
+			throw new Error(`Ugyldig garn data: ${parsed.error.errors.map(e => e.message).join(', ')}`)
 		}
 
-		const masterCategory = await this.db.category.findFirst({ where: { name: 'Garn Master' } })
-		if (!masterCategory) throw new Error('Garn Master kategori ikke funnet')
+		// 2. Ensure category exists with auto-creation
+		let masterCategory = await this.db.category.findFirst({ where: { name: 'Garn Master' } })
+		if (!masterCategory) {
+			console.warn('⚠️  Garn Master kategori mangler - oppretter automatisk')
+			masterCategory = await this.createGarnMasterCategory()
+		}
 
+		// 3. Ensure location exists with auto-creation  
 		let locationId = input.locationId
 		if (!locationId) {
-			const firstLocation = await this.db.location.findFirst({ where: { userId: this.userId }, orderBy: { name: 'asc' } })
-			if (!firstLocation) throw new Error('Ingen lokasjoner tilgjengelige')
+			let firstLocation = await this.db.location.findFirst({ where: { userId: this.userId }, orderBy: { name: 'asc' } })
+			if (!firstLocation) {
+				console.warn('⚠️  Ingen lokasjoner funnet - oppretter standard lokasjon')
+				firstLocation = await this.createDefaultLocation()
+			}
 			locationId = firstLocation.id
 		}
 
@@ -173,5 +182,43 @@ export class YarnService {
 		} catch (e) {}
 
 		return color
+	}
+
+	// **AUTO-CREATION HELPERS** 🛡️
+	private async createGarnMasterCategory() {
+		return await this.db.category.create({
+			data: {
+				name: 'Garn Master',
+				description: 'Master-kategori for garntyper (auto-opprettet)',
+				icon: '🧶',
+				fieldSchema: JSON.stringify({
+					type: 'object',
+					properties: {
+						fiberContent: { type: 'string', title: 'Fiberinnhold' },
+						weight: { type: 'string', title: 'Garntykkelse' },
+						yardage: { type: 'number', title: 'Lengde (meter)' },
+						gauge: { type: 'string', title: 'Strikkefasthet' },
+						needleSize: { type: 'string', title: 'Pinner størrelse' },
+						careInstructions: { type: 'string', title: 'Vaskeinstruksjoner' },
+						brand: { type: 'string', title: 'Merke' },
+						colorway: { type: 'string', title: 'Fargenavn' },
+						lotNumber: { type: 'string', title: 'Partinummer' }
+					},
+					required: ['fiberContent', 'weight']
+				})
+			}
+		})
+	}
+
+	private async createDefaultLocation() {
+		return await this.db.location.create({
+			data: {
+				name: 'Hovedlager',
+				description: 'Standard oppbevaringslokasjon (auto-opprettet)',
+				type: 'ROOM',
+				qrCode: `location-${this.userId}-main-${Date.now()}`,
+				userId: this.userId
+			}
+		})
 	}
 }

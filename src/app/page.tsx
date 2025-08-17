@@ -9,9 +9,12 @@ export default function Home() {
       {/* Hero Section */}
       <section className="text-center py-16 cq" style={{"--card-min":"360px"} as any}>
         <h1 className="text-4xl font-bold mb-4">
-          🏠 Hjemmeinventar
+          🏠 HMS
         </h1>
-        <p className="text-xl text-muted-foreground mb-8 max-w-2xl mx-auto">
+        <p className="text-xl text-muted-foreground mb-2 max-w-2xl mx-auto font-semibold">
+          Home Management System
+        </p>
+        <p className="text-lg text-muted-foreground mb-8 max-w-2xl mx-auto">
           Den enkle måten å holde oversikt over alle dine eiendeler med QR-koder og smart organisering
         </p>
         <div className="flex gap-4 justify-center flex-wrap">
@@ -141,7 +144,7 @@ export default function Home() {
             <AccessibleButton 
               asChild
               size="lg"
-              aria-label="Registrer deg og start med hjemmeinventar"
+              aria-label="Registrer deg og start med HMS"
               className="cta-button"
             >
               <Link href="/auth/signup">Registrer deg gratis</Link>

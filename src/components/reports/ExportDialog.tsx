@@ -126,7 +126,7 @@ export function ExportDialog({ isOpen, onClose }: ExportDialogProps) {
       <html>
       <head>
         <meta charset="UTF-8">
-        <title>Hjemmeinventar Rapport</title>
+        <title>HMS Rapport</title>
         <style>
           body { font-family: Arial, sans-serif; margin: 20px; }
           h1 { color: #333; border-bottom: 2px solid #ccc; }
@@ -139,7 +139,7 @@ export function ExportDialog({ isOpen, onClose }: ExportDialogProps) {
         </style>
       </head>
       <body>
-        <h1>📦 Hjemmeinventar Rapport</h1>
+        <h1>📦 HMS Rapport</h1>
         <div class="summary">
           <h2>Sammendrag</h2>
           <p><strong>Rapport generert:</strong> ${timestamp}</p>
@@ -164,7 +164,7 @@ export function ExportDialog({ isOpen, onClose }: ExportDialogProps) {
         </table>
         
         <div class="footer">
-          <p>Generert av Hjemmeinventar applikasjonen - ${timestamp}</p>
+          <p>Generert av HMS (Home Management System) - ${timestamp}</p>
           <p>Dette dokumentet inneholder en oversikt over registrerte gjenstander og er ikke juridisk bindende.</p>
         </div>
       </body>
@@ -181,7 +181,7 @@ export function ExportDialog({ isOpen, onClose }: ExportDialogProps) {
       <html>
       <head>
         <meta charset="UTF-8">
-        <title>Forsikringsrapport - Hjemmeinventar</title>
+        <title>Forsikringsrapport - HMS</title>
         <style>
           body { font-family: Arial, sans-serif; margin: 20px; line-height: 1.6; }
           .header { text-align: center; margin-bottom: 40px; }
@@ -199,7 +199,7 @@ export function ExportDialog({ isOpen, onClose }: ExportDialogProps) {
       <body>
         <div class="header">
           <h1>🛡️ FORSIKRINGSRAPPORT</h1>
-          <h2>Hjemmeinventar Dokumentasjon</h2>
+          <h2>HMS Dokumentasjon</h2>
           <p><strong>Rapportdato:</strong> ${timestamp}</p>
         </div>
         
@@ -279,7 +279,7 @@ export function ExportDialog({ isOpen, onClose }: ExportDialogProps) {
         </div>
         
         <div class="footer">
-          <p><strong>Rapportgenerator:</strong> Hjemmeinventar - Digital inventarsystem</p>
+          <p><strong>Rapportgenerator:</strong> HMS - Home Management System</p>
           <p><strong>Kontaktinformasjon:</strong> Dette dokumentet er generert automatisk basert på registrerte data.</p>
           <p><strong>Versjon:</strong> 1.0 - ${timestamp}</p>
           <hr>

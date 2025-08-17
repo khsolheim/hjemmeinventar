@@ -78,9 +78,9 @@ export class MeilisearchService {
 
     try {
       // Create main search index
-      await this.client.createIndex('hjemmeinventar', { primaryKey: 'id' })
+      await this.client.createIndex('hms', { primaryKey: 'id' })
       
-      const index = this.client.index('hjemmeinventar')
+      const index = this.client.index('hms')
 
       // Configure searchable attributes
       await index.updateSearchableAttributes([
@@ -176,7 +176,7 @@ export class MeilisearchService {
     if (!this.client) return
 
     try {
-      const index = this.client.index('hjemmeinventar')
+      const index = this.client.index('hms')
       
       // Enhance document with searchable text
       const enhancedDocument = {
@@ -195,7 +195,7 @@ export class MeilisearchService {
     if (!this.client || documents.length === 0) return
 
     try {
-      const index = this.client.index('hjemmeinventar')
+      const index = this.client.index('hms')
       
       const enhancedDocuments = documents.map(doc => ({
         ...doc,
@@ -213,7 +213,7 @@ export class MeilisearchService {
     if (!this.client) return
 
     try {
-      const index = this.client.index('hjemmeinventar')
+      const index = this.client.index('hms')
       await index.deleteDocument(id)
       console.log(`Deleted document: ${id}`)
     } catch (error) {
@@ -235,7 +235,7 @@ export class MeilisearchService {
     }
 
     try {
-      const index = this.client.index('hjemmeinventar')
+      const index = this.client.index('hms')
       
       // Build filter string
       let filter = `userId = "${options.userId}"`
@@ -293,7 +293,7 @@ export class MeilisearchService {
     if (!this.client) return {}
 
     try {
-      const index = this.client.index('hjemmeinventar')
+      const index = this.client.index('hms')
       
       const results = await index.search('', {
         filter: `userId = "${userId}"`,
@@ -317,7 +317,7 @@ export class MeilisearchService {
 
     try {
       // Delete existing documents for user
-      const index = this.client.index('hjemmeinventar')
+      const index = this.client.index('hms')
       await index.deleteDocuments({ filter: `userId = "${userId}"` })
 
       // Prepare documents for indexing
@@ -420,7 +420,7 @@ export class MeilisearchService {
     if (!this.client) return null
 
     try {
-      const index = this.client.index('hjemmeinventar')
+      const index = this.client.index('hms')
       return await index.getStats()
     } catch (error) {
       console.error('Error getting index stats:', error)

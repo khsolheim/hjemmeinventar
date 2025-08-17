@@ -2,6 +2,17 @@
 import { z } from 'zod'
 import { createTRPCRouter, protectedProcedure } from '../server'
 import { TRPCError } from '@trpc/server'
+
+// Helper function to safely parse color code from categoryData
+function safeParseColorCode(categoryData: string | null): string | null {
+  if (!categoryData) return null
+  try {
+    const data = JSON.parse(categoryData)
+    return data.colorCode || null
+  } catch {
+    return null
+  }
+}
 import {
   isYarnMaster,
   isYarnBatch,
@@ -785,6 +796,93 @@ export const yarnRouter = createTRPCRouter({
       return master
     }),
 
+  // Hent master og farge for en batch
+  getBatchDetails: protectedProcedure
+    .input(z.object({
+      batchId: z.string()
+    }))
+    .query(async ({ ctx, input }) => {
+      const { db, user } = ctx
+      const { batchId } = input
+
+      // Hent master via typed relasjon
+      const masterRelation = await db.itemRelation.findFirst({
+        where: { 
+          userId: user.id, 
+          relationType: 'MASTER_OF', 
+          toItemId: batchId 
+        },
+        select: { fromItemId: true }
+      })
+
+      let master = null
+      if (masterRelation) {
+        master = await db.item.findFirst({ 
+          where: { id: masterRelation.fromItemId, userId: user.id } 
+        })
+      }
+
+      // Hent farge via typed relasjon BATCH_OF (color -> batch)
+      const colorRelation = await db.itemRelation.findFirst({
+        where: { 
+          userId: user.id, 
+          relationType: 'BATCH_OF', 
+          toItemId: batchId 
+        },
+        select: { fromItemId: true }
+      })
+
+      let color = null
+      if (colorRelation) {
+        color = await db.item.findFirst({ 
+          where: { id: colorRelation.fromItemId, userId: user.id },
+          select: {
+            id: true,
+            name: true,
+            imageUrl: true,
+            categoryData: true
+          }
+        })
+      }
+
+      // Fallback: søk via legacy relatedItems hvis ingen typed relasjoner
+      if (!color && !master) {
+        const batch = await db.item.findFirst({
+          where: { id: batchId, userId: user.id },
+          include: { 
+            relatedItems: { 
+              include: { category: true },
+              where: { userId: user.id }
+            } 
+          }
+        })
+
+        if (batch?.relatedItems) {
+          for (const item of batch.relatedItems) {
+            if (item.category?.name === 'Garn Master' && !master) {
+              master = item
+            }
+            if (item.category?.name === 'Garn Farge' && !color) {
+              color = {
+                id: item.id,
+                name: item.name,
+                imageUrl: item.imageUrl,
+                categoryData: item.categoryData
+              }
+            }
+          }
+        }
+      }
+
+      return {
+        master,
+        color: color ? {
+          ...color,
+          colorCode: safeParseColorCode(color.categoryData)
+        } : null
+      }
+    }),
+
   // Hent aggregerte data for en master
   getMasterTotals: protectedProcedure
     .input(z.object({
@@ -882,7 +980,7 @@ export const yarnRouter = createTRPCRouter({
 
         // Hent batches for hver farge (typed: BATCH_OF fra color -> to batch)
         const batchCategory = await ctx.db.category.findFirst({ where: { name: 'Garn Batch' } })
-        const results: Array<{ id: string, name: string, colorCode?: string, batchCount: number, skeinCount: number }> = []
+        const results: Array<{ id: string, name: string, colorCode?: string, imageUrl?: string, batchCount: number, skeinCount: number }> = []
 
         for (const color of colors) {
           // Typed batches knyttet til fargen
@@ -918,10 +1016,33 @@ export const yarnRouter = createTRPCRouter({
             id: color.id,
             name: color.name,
             colorCode: safeParseColorCode(color.categoryData),
+            imageUrl: color.imageUrl,
             batchCount: batchIds.length,
             skeinCount: Math.round(skeins)
           })
         }
+
+        // Sort colors by color code (numerically if possible, then alphabetically)
+        results.sort((a, b) => {
+          const aCode = a.colorCode || ''
+          const bCode = b.colorCode || ''
+          
+          // Try to parse as numbers first
+          const aNum = parseInt(aCode.replace(/[^\d]/g, ''), 10)
+          const bNum = parseInt(bCode.replace(/[^\d]/g, ''), 10)
+          
+          // If both have numeric parts, sort numerically
+          if (!isNaN(aNum) && !isNaN(bNum)) {
+            return aNum - bNum
+          }
+          
+          // If only one has numeric part, prioritize it
+          if (!isNaN(aNum) && isNaN(bNum)) return -1
+          if (isNaN(aNum) && !isNaN(bNum)) return 1
+          
+          // Otherwise, sort alphabetically by color code
+          return aCode.localeCompare(bCode, 'nb', { numeric: true, sensitivity: 'base' })
+        })
 
         return results
       } catch (e) {
@@ -2176,6 +2297,481 @@ export const yarnRouter = createTRPCRouter({
       }
 
       return results
+    }),
+
+  // Update a yarn master
+  updateMaster: protectedProcedure
+    .input(z.object({
+      id: z.string(),
+      name: z.string().optional(),
+      imageUrl: z.string().optional(),
+      categoryData: z.object({
+        producer: z.string().optional(),
+        composition: z.string().optional(),
+        weight: z.string().optional(),
+        yardage: z.number().optional(),
+        gauge: z.string().optional(),
+        needleSize: z.string().optional(),
+        careInstructions: z.string().optional(),
+        brand: z.string().optional(),
+        colorway: z.string().optional(),
+        lotNumber: z.string().optional()
+      }).optional()
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const { db, user } = ctx
+      const { id, name, imageUrl, categoryData } = input
+      
+      // Verify the master exists and belongs to the user
+      const existingMaster = await db.item.findFirst({
+        where: {
+          id,
+          userId: user.id
+        }
+      })
+      
+      if (!existingMaster) {
+        throw new TRPCError({
+          code: 'NOT_FOUND',
+          message: 'Garn-type ikke funnet'
+        })
+      }
+      
+      // Get existing category data
+      let updatedCategoryData = existingMaster.categoryData
+      if (categoryData) {
+        const existingData = existingMaster.categoryData ? JSON.parse(existingMaster.categoryData) : {}
+        updatedCategoryData = JSON.stringify({
+          ...existingData,
+          ...categoryData
+        })
+      }
+      
+      // Update the master
+      const updatedMaster = await db.item.update({
+        where: { id },
+        data: {
+          ...(name && { name }),
+          ...(imageUrl !== undefined && { imageUrl }),
+          ...(categoryData && { categoryData: updatedCategoryData })
+        }
+      })
+      
+      // Update search index if available
+      try {
+        await meilisearchService.updateDocument('items', {
+          id: updatedMaster.id,
+          name: updatedMaster.name,
+          description: updatedMaster.description,
+          categoryData: updatedMaster.categoryData,
+          imageUrl: updatedMaster.imageUrl
+        })
+      } catch (searchError) {
+        console.warn('Failed to update search index:', searchError)
+      }
+      
+      return updatedMaster
+    }),
+
+  // Update a color
+  updateColor: protectedProcedure
+    .input(z.object({
+      id: z.string(),
+      name: z.string().optional(),
+      colorCode: z.string().optional(),
+      imageUrl: z.string().optional()
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const { db, user } = ctx
+      const { id, name, colorCode, imageUrl } = input
+      
+      // Verify the color exists and belongs to the user
+      const existingColor = await db.item.findFirst({
+        where: {
+          id,
+          userId: user.id
+        }
+      })
+      
+      if (!existingColor) {
+        throw new TRPCError({
+          code: 'NOT_FOUND',
+          message: 'Farge ikke funnet'
+        })
+      }
+      
+      // Get existing category data
+      let updatedCategoryData = existingColor.categoryData
+      if (colorCode !== undefined) {
+        const existingData = existingColor.categoryData ? JSON.parse(existingColor.categoryData) : {}
+        updatedCategoryData = JSON.stringify({
+          ...existingData,
+          colorCode
+        })
+      }
+      
+      // Update the color
+      const updatedColor = await db.item.update({
+        where: { id },
+        data: {
+          ...(name && { name }),
+          ...(imageUrl !== undefined && { imageUrl }),
+          ...(colorCode !== undefined && { categoryData: updatedCategoryData })
+        }
+      })
+      
+      // Update search index if available
+      try {
+        await meilisearchService.updateDocument('items', {
+          id: updatedColor.id,
+          name: updatedColor.name,
+          description: updatedColor.description,
+          categoryData: updatedColor.categoryData,
+          imageUrl: updatedColor.imageUrl
+        })
+      } catch (searchError) {
+        console.warn('Failed to update search index:', searchError)
+      }
+      
+      return updatedColor
+    }),
+
+  // Delete a color and all related batches
+  deleteColor: protectedProcedure
+    .input(z.object({
+      id: z.string()
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const { db, user } = ctx
+      const { id } = input
+      
+      // First verify the color exists and belongs to the user
+      const color = await db.item.findFirst({
+        where: {
+          id,
+          userId: user.id
+        }
+      })
+      
+      if (!color) {
+        throw new TRPCError({
+          code: 'NOT_FOUND',
+          message: 'Farge ikke funnet'
+        })
+      }
+      
+      // Get categories for garn system
+      const garnColorCategory = await db.category.findFirst({ where: { name: 'Garn Farge' } })
+      const garnBatchCategory = await db.category.findFirst({ where: { name: 'Garn Batch' } })
+      
+      if (!garnColorCategory) {
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Garn Farge kategori ikke funnet'
+        })
+      }
+      
+      // Verify this is actually a yarn color
+      if (color.categoryId !== garnColorCategory.id) {
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: 'Dette er ikke en garn-farge'
+        })
+      }
+      
+      // Track deleted items for search index cleanup
+      let deletedBatchIds: string[] = []
+      
+      try {
+        // Start transaction to delete color and related batches
+        await db.$transaction(async (tx) => {
+          // 1. Find all batches related to this color
+          const batchIds: string[] = []
+          if (garnBatchCategory) {
+            const colorBatches = await tx.itemRelation.findMany({
+              where: {
+                fromItemId: id,
+                userId: user.id
+              }
+            })
+            
+            // Filter to only get batches by checking the category of the related items
+            for (const relation of colorBatches) {
+              const relatedItem = await tx.item.findUnique({
+                where: { id: relation.toItemId },
+                select: { categoryId: true }
+              })
+              if (relatedItem && relatedItem.categoryId === garnBatchCategory.id) {
+                batchIds.push(relation.toItemId)
+              }
+            }
+          }
+          
+          // Store for search index cleanup
+          deletedBatchIds = [...batchIds]
+          
+          // 2. Delete all item relations involving this color and batches
+          await tx.itemRelation.deleteMany({
+            where: {
+              OR: [
+                { fromItemId: { in: [id, ...batchIds] } },
+                { toItemId: { in: [id, ...batchIds] } }
+              ],
+              userId: user.id
+            }
+          })
+          
+          // 3. Delete all item distributions for these items
+          await tx.itemDistribution.deleteMany({
+            where: {
+              itemId: { in: [id, ...batchIds] }
+            }
+          })
+          
+          // 4. Delete all loans for these items
+          await tx.loan.deleteMany({
+            where: {
+              itemId: { in: [id, ...batchIds] },
+              userId: user.id
+            }
+          })
+          
+          // 5. Delete all attachments for these items
+          await tx.attachment.deleteMany({
+            where: {
+              itemId: { in: [id, ...batchIds] }
+            }
+          })
+          
+          // 6. Remove items from any tag relationships (skip for now due to schema issues)
+          
+          // 7. Finally delete all the batches, then the color
+          if (batchIds.length > 0) {
+            await tx.item.deleteMany({
+              where: {
+                id: { in: batchIds },
+                userId: user.id
+              }
+            })
+          }
+          
+          await tx.item.delete({
+            where: {
+              id,
+              userId: user.id
+            }
+          })
+        })
+        
+        // Update search index if available
+        try {
+          await meilisearchService.deleteDocument('items', id)
+          for (const batchId of deletedBatchIds) {
+            await meilisearchService.deleteDocument('items', batchId)
+          }
+        } catch (searchError) {
+          console.warn('Failed to update search index after delete:', searchError)
+        }
+        
+        return { success: true }
+        
+      } catch (error) {
+        console.error('Error deleting yarn color:', error)
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Kunne ikke slette farge og tilknyttede batches'
+        })
+      }
+    }),
+
+  // Delete a yarn master and all related items
+  deleteMaster: protectedProcedure
+    .input(z.object({
+      id: z.string()
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const { db, user } = ctx
+      const { id } = input
+      
+      // First verify the master exists and belongs to the user
+      const master = await db.item.findFirst({
+        where: {
+          id,
+          userId: user.id
+        }
+      })
+      
+      if (!master) {
+        throw new TRPCError({
+          code: 'NOT_FOUND',
+          message: 'Garn-type ikke funnet'
+        })
+      }
+      
+      // Get categories for garn system
+      const garnMasterCategory = await db.category.findFirst({ where: { name: 'Garn Master' } })
+      const garnBatchCategory = await db.category.findFirst({ where: { name: 'Garn Batch' } })
+      const garnColorCategory = await db.category.findFirst({ where: { name: 'Garn Farge' } })
+      
+      if (!garnMasterCategory) {
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Garn Master kategori ikke funnet'
+        })
+      }
+      
+      // Verify this is actually a yarn master
+      if (master.categoryId !== garnMasterCategory.id) {
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: 'Dette er ikke en garn-type'
+        })
+      }
+      
+      // Track deleted items for search index cleanup
+      let deletedColorIds: string[] = []
+      let deletedBatchIds: string[] = []
+      
+      try {
+        // Start transaction to delete everything related to this master
+        await db.$transaction(async (tx) => {
+          // 1. Find all colors related to this master
+          const colorIds: string[] = []
+          if (garnColorCategory) {
+            const colors = await tx.itemRelation.findMany({
+              where: {
+                fromItemId: id,
+                userId: user.id
+              },
+              include: {
+                toItem: {
+                  where: {
+                    categoryId: garnColorCategory.id
+                  }
+                }
+              }
+            })
+            colorIds.push(...colors.map(r => r.toItemId))
+          }
+          
+          // 2. Find all batches related to this master (either directly or via colors)
+          const batchIds: string[] = []
+          if (garnBatchCategory) {
+            // Batches linked directly to master
+            const directBatches = await tx.itemRelation.findMany({
+              where: {
+                fromItemId: id,
+                userId: user.id
+              },
+              include: {
+                toItem: {
+                  where: {
+                    categoryId: garnBatchCategory.id
+                  }
+                }
+              }
+            })
+            batchIds.push(...directBatches.map(r => r.toItemId))
+            
+            // Batches linked to colors
+            for (const colorId of colorIds) {
+              const colorBatches = await tx.itemRelation.findMany({
+                where: {
+                  fromItemId: colorId,
+                  userId: user.id
+                }
+              })
+              
+              // Filter to only get batches by checking the category of the related items
+              for (const relation of colorBatches) {
+                const relatedItem = await tx.item.findUnique({
+                  where: { id: relation.toItemId },
+                  select: { categoryId: true }
+                })
+                if (relatedItem && relatedItem.categoryId === garnBatchCategory.id) {
+                  batchIds.push(relation.toItemId)
+                }
+              }
+            }
+          }
+          
+          // Store for search index cleanup
+          deletedColorIds = [...colorIds]
+          deletedBatchIds = [...batchIds]
+          
+          // Create unique list of related IDs
+          const allRelatedIds = Array.from(new Set([...colorIds, ...batchIds]))
+          
+          // 3. Delete all item relations involving these items
+          await tx.itemRelation.deleteMany({
+            where: {
+              OR: [
+                { fromItemId: { in: [id, ...allRelatedIds] } },
+                { toItemId: { in: [id, ...allRelatedIds] } }
+              ],
+              userId: user.id
+            }
+          })
+          
+          // 4. Delete all item distributions for these items
+          await tx.itemDistribution.deleteMany({
+            where: {
+              itemId: { in: [id, ...allRelatedIds] }
+            }
+          })
+          
+          // 5. Delete all loans for these items
+          await tx.loan.deleteMany({
+            where: {
+              itemId: { in: [id, ...allRelatedIds] },
+              userId: user.id
+            }
+          })
+          
+          // 6. Delete all attachments for these items
+          await tx.attachment.deleteMany({
+            where: {
+              itemId: { in: [id, ...allRelatedIds] }
+            }
+          })
+          
+          // 7. Remove items from any tag relationships (skip for now due to schema issues)
+          
+          // 8. Finally delete all the items (batches, colors, then master)
+          await tx.item.deleteMany({
+            where: {
+              id: { in: allRelatedIds },
+              userId: user.id
+            }
+          })
+          
+          await tx.item.delete({
+            where: {
+              id,
+              userId: user.id
+            }
+          })
+        })
+        
+        // Update search index if available
+        try {
+          await meilisearchService.deleteDocument('items', id)
+          for (const relatedId of [...deletedColorIds, ...deletedBatchIds]) {
+            await meilisearchService.deleteDocument('items', relatedId)
+          }
+        } catch (searchError) {
+          console.warn('Failed to update search index after delete:', searchError)
+        }
+        
+        return { success: true }
+        
+      } catch (error) {
+        console.error('Error deleting yarn master:', error)
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Kunne ikke slette garn-type og tilknyttede elementer'
+        })
+      }
     }),
 
 })

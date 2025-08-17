@@ -24,8 +24,10 @@ export default function BatchDetailPage() {
   const id = Array.isArray(params?.id) ? params.id[0] : (params?.id as string)
   const { data: session, status } = useSession()
 
-  const { data: batch, refetch } = trpc.items.getById.useQuery(id!, { enabled: !!id })
-  const { data: master } = trpc.yarn.getMasterForBatch.useQuery({ batchId: id! }, { enabled: !!id })
+  const { data: batch, refetch } = trpc.items.getById.useQuery(id!, { enabled: !!id && status === 'authenticated' })
+  const { data: batchDetails } = trpc.yarn.getBatchDetails.useQuery({ batchId: id! }, { enabled: !!id && status === 'authenticated' })
+  const master = batchDetails?.master
+  const color = batchDetails?.color
   const { data: locations } = trpc.locations.getAllFlat.useQuery(undefined, { enabled: status === 'authenticated', retry: 0, refetchOnWindowFocus: false, refetchOnMount: false, staleTime: 5 * 60 * 1000 })
   const { data: locationTree } = trpc.locations.getAll.useQuery(undefined, { enabled: status === 'authenticated', retry: 0, refetchOnWindowFocus: false, refetchOnMount: false, staleTime: 5 * 60 * 1000 })
   const commonOpts = { enabled: status === 'authenticated', retry: 0, refetchOnWindowFocus: false, refetchOnMount: false, staleTime: 5 * 60 * 1000 } as const
@@ -73,7 +75,7 @@ export default function BatchDetailPage() {
   const qrValue = `${appOrigin}/garn/batch/${id}`
 
   return (
-    <div className="page container mx-auto px-4 py-8 cq space-y-4">
+    <div className="page w-full px-4 py-8 cq space-y-4">
       <div className="flex items-center justify-between">
         <Button asChild variant="outline">
           <Link href={`/garn/${master?.id || ''}`}>
@@ -83,10 +85,10 @@ export default function BatchDetailPage() {
         </Button>
       </div>
 
-      <Card className="responsive-dialog">
+      <Card className="w-full">
         <CardContent className="pt-4">
-          <div className="cq-grid batches-grid gap-4 items-start" style={{"--card-min":"240px"} as any}>
-            <div className="md:col-span-2 space-y-2">
+          <div className="grid grid-cols-1 lg:grid-cols-3 xl:grid-cols-4 gap-6 items-start">
+            <div className="lg:col-span-2 xl:col-span-3 space-y-2">
               <h1 className="text-2xl font-semibold leading-tight">{batch.name}</h1>
               <div className="text-sm text-muted-foreground">
                 {data.color || 'Ukjent farge'}{data.colorCode ? ` • ${data.colorCode}` : ''}{data.batchNumber ? ` • Batch: ${data.batchNumber}` : ''}
@@ -111,15 +113,31 @@ export default function BatchDetailPage() {
               </div>
             </div>
 
-            <div className="md:col-span-1">
-              <div className="aspect-square w-full overflow-hidden rounded-md bg-muted md:w-56 md:h-56 md:mx-auto">
-                {batch.imageUrl ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={batch.imageUrl} alt={batch.name} className="h-full w-full object-cover" />
-                ) : (
-                  <div className="h-full w-full flex items-center justify-center text-muted-foreground text-sm">Ingen bilde</div>
-                )}
+            <div className="lg:col-span-1 xl:col-span-1">
+              <div className="aspect-square w-full max-w-xs overflow-hidden rounded-md bg-muted mx-auto">
+                {(() => {
+                  // Prioriter farge-bilde, deretter batch-bilde
+                  const imageUrl = color?.imageUrl || batch.imageUrl
+                  const imageAlt = color?.imageUrl ? `${color.name} farge` : batch.name
+                  
+                  return imageUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={imageUrl} alt={imageAlt} className="h-full w-full object-cover" />
+                  ) : (
+                    <div className="h-full w-full flex items-center justify-center text-muted-foreground text-sm">
+                      Ingen bilde
+                    </div>
+                  )
+                })()}
               </div>
+              {/* Vis kilde for bildet */}
+              {(color?.imageUrl || batch.imageUrl) && (
+                <div className="mt-1 text-center">
+                  <span className="text-xs text-muted-foreground">
+                    {color?.imageUrl ? `Fra fargen: ${color.name}` : 'Fra batchen'}
+                  </span>
+                </div>
+              )}
               <div className="mt-2 grid grid-cols-2 gap-1.5 min-h-[36px]">
                 <Dialog>
                   <DialogTrigger asChild>

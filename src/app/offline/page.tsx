@@ -277,7 +277,7 @@ export default function OfflinePage() {
         </div>
 
         <div className="text-center text-xs text-muted-foreground min-h-10">
-          <p>Hjemmeinventar fungerer offline med intelligent caching</p>
+          <p>HMS fungerer offline med intelligent caching</p>
           <p className="mt-1">Dine endringer synkroniseres automatisk når tilkoblingen er tilbake</p>
         </div>
       </div>

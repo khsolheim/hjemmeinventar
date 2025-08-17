@@ -1,7 +1,7 @@
 {
-  "name": "Hjemmeinventar - Organiser alt du eier",
-  "short_name": "Hjemmeinventar",
-  "description": "Den enkle måten å holde oversikt over alle dine eiendeler med QR-koder og smart organisering",
+  "name": "HMS - Home Management System",
+  "short_name": "HMS",
+  "description": "Home Management System - Den enkle måten å holde oversikt over alle dine eiendeler med QR-koder og smart organisering",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#ffffff",

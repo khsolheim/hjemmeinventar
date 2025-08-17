@@ -1,11 +1,11 @@
-// Advanced Service Worker for Hjemmeinventar
+// Advanced Service Worker for HMS
 // Provides offline support, background sync, and intelligent caching
 
-const CACHE_NAME = 'hjemmeinventar-v2.0'
-const RUNTIME_CACHE = 'hjemmeinventar-runtime'
-const PRECACHE_NAME = 'hjemmeinventar-precache'
-const DATA_CACHE = 'hjemmeinventar-data'
-const IMAGE_CACHE = 'hjemmeinventar-images'
+const CACHE_NAME = 'hms-v2.0'
+const RUNTIME_CACHE = 'hms-runtime'
+const PRECACHE_NAME = 'hms-precache'
+const DATA_CACHE = 'hms-data'
+const IMAGE_CACHE = 'hms-images'
 
 // Files to precache for offline functionality
 const PRECACHE_URLS = [
@@ -57,7 +57,7 @@ self.addEventListener('activate', (event) => {
         return Promise.all(
           cacheNames
             .filter(cacheName => {
-              return cacheName.startsWith('hjemmeinventar-') && 
+              return cacheName.startsWith('hms-') && 
                      ![CACHE_NAME, PRECACHE_NAME, DATA_CACHE, IMAGE_CACHE, RUNTIME_CACHE].includes(cacheName)
             })
             .map(cacheName => {
@@ -255,7 +255,7 @@ async function handleNavigationRequest(request) {
       <!DOCTYPE html>
       <html>
         <head>
-          <title>Offline - Hjemmeinventar</title>
+          <title>Offline - HMS</title>
           <meta name="viewport" content="width=device-width, initial-scale=1">
           <style>
             body { font-family: Arial, sans-serif; text-align: center; padding: 40px; }
@@ -330,7 +330,7 @@ function isAllowedExternalOrigin(origin) {
   const allowedOrigins = [
     'https://fonts.googleapis.com',
     'https://fonts.gstatic.com',
-    'https://api.hjemmeinventar.no' // Your API domain if external
+    'https://api.hms.no' // Your API domain if external
   ]
   return allowedOrigins.includes(origin)
 }
@@ -372,7 +372,7 @@ async function queueBackgroundSync(request) {
     
     // Register for background sync
     if ('serviceWorker' in self && 'sync' in self.ServiceWorkerRegistration.prototype) {
-      await self.registration.sync.register('hjemmeinventar-sync')
+      await self.registration.sync.register('hms-sync')
     }
     
   } catch (error) {
@@ -384,7 +384,7 @@ async function queueBackgroundSync(request) {
 self.addEventListener('sync', (event) => {
   console.log('[SW] Background sync triggered:', event.tag)
   
-  if (event.tag === 'hjemmeinventar-sync') {
+  if (event.tag === 'hms-sync') {
     event.waitUntil(processSyncQueue())
   }
 })
@@ -428,7 +428,7 @@ async function processSyncQueue() {
 // IndexedDB helper
 function openIndexedDB() {
   return new Promise((resolve, reject) => {
-    const request = indexedDB.open('hjemmeinventar-sw', 1)
+    const request = indexedDB.open('hms-sw', 1)
     
     request.onerror = () => reject(request.error)
     request.onsuccess = () => resolve(request.result)
@@ -452,7 +452,7 @@ self.addEventListener('push', (event) => {
     body: data.body || 'Du har en ny varsling',
     icon: data.icon || '/icon-192x192.png',
     badge: data.badge || '/badge-72x72.png',
-    tag: data.tag || 'hjemmeinventar-notification',
+    tag: data.tag || 'hms-notification',
     data: data.data || {},
     vibrate: [200, 100, 200],
     requireInteraction: data.requireInteraction || false,
@@ -460,7 +460,7 @@ self.addEventListener('push', (event) => {
   }
 
   event.waitUntil(
-    self.registration.showNotification(data.title || 'Hjemmeinventar', options)
+    self.registration.showNotification(data.title || 'HMS', options)
   )
 })
 
@@ -497,7 +497,7 @@ self.addEventListener('notificationclick', (event) => {
 
 // Periodic Background Sync (if supported)
 self.addEventListener('periodicsync', (event) => {
-  if (event.tag === 'hjemmeinventar-periodic-sync') {
+  if (event.tag === 'hms-periodic-sync') {
     event.waitUntil(performPeriodicSync())
   }
 })

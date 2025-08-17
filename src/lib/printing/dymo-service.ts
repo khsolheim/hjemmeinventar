@@ -369,7 +369,7 @@ class DymoService {
   private buildPrintParameters(settings: Partial<DymoPrintSettings>): string {
     const defaults: DymoPrintSettings = {
       copies: 1,
-      jobTitle: 'Hjemmeinventar Print Job',
+      jobTitle: 'HMS Print Job',
       flowDirection: 'LeftToRight',
       alignment: 'Center',
       cutMode: 'AutoCut',

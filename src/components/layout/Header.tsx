@@ -109,7 +109,10 @@ export function Header({ onToggleSidebar }: HeaderProps) {
         {/* Mobile Logo */}
         <Link href="/dashboard" className="flex items-center space-x-2 md:hidden">
           <span className="text-2xl">🏠</span>
-          <span className="font-bold">Hjemmeinventar</span>
+          <div className="flex flex-col">
+            <span className="font-bold text-lg">HMS</span>
+            <span className="text-xs text-muted-foreground -mt-1">Home Management System</span>
+          </div>
         </Link>
 
         {/* Flexible spacer */}

@@ -656,7 +656,7 @@ export const itemsRouter = createTRPCRouter({
         if (!to) {
           // Create new distribution at target
           // Generate QR
-          async function generateDistributionCode(): Promise<string> {
+          const generateDistributionCode = async (): Promise<string> => {
             let unique = ''
             let exists = true
             while (exists) {

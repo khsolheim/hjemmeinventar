@@ -67,7 +67,7 @@ export async function POST(request: NextRequest) {
       body,
       icon: '/icon-192x192.png',
       badge: '/badge-72x72.png',
-      tag: `hjemmeinventar-${type}`,
+      tag: `hms-${type}`,
       requireInteraction,
       data: {
         type,

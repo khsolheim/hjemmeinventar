@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { Plus, Edit, Trash2, Package, MapPin, Calendar, DollarSign, Hash, QrCode } from 'lucide-react'
+import { Plus, Edit, Trash2, Package, MapPin, Calendar, DollarSign, Hash, QrCode, Grid, List } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -14,10 +14,21 @@ import { toast } from 'sonner'
 import { YarnWizard } from './YarnWizard'
 import { YarnProjectIntegration } from './YarnProjectIntegration'
 import { YarnBulkOperations } from './YarnBulkOperations'
+import { CompactBatchCard } from './CompactBatchCard'
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
 import { ChevronDown } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+
+// Helper function to parse batch category data
+function getBatchData(categoryData: string | null) {
+  if (!categoryData) return {}
+  try {
+    return JSON.parse(categoryData)
+  } catch {
+    return {}
+  }
+}
 
 interface BatchGridProps {
   masterId: string
@@ -28,6 +39,7 @@ interface BatchGridProps {
 
 export function BatchGrid({ masterId, hideMasterHeader = false, hideTotals = false, filterColorName }: BatchGridProps) {
   const [isAddBatchOpen, setIsAddBatchOpen] = useState(false)
+  const [isCompactView, setIsCompactView] = useState(false)
   const router = useRouter()
 
   // Fetch master data
@@ -40,6 +52,14 @@ export function BatchGrid({ masterId, hideMasterHeader = false, hideTotals = fal
   
   // Fetch batches for this master
   const { data: batches, isLoading, refetch: refetchBatches } = trpc.yarn.getBatchesForMaster.useQuery({ masterId }, {
+    staleTime: 30000,
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
+    keepPreviousData: true,
+  })
+
+  // Fetch colors for master to get color images
+  const { data: colors } = trpc.yarn.getColorsForMaster.useQuery({ masterId }, {
     staleTime: 30000,
     refetchOnWindowFocus: false,
     refetchOnMount: false,
@@ -96,15 +116,6 @@ export function BatchGrid({ masterId, hideMasterHeader = false, hideTotals = fal
     if (!master?.categoryData) return {}
     try {
       return JSON.parse(master.categoryData)
-    } catch {
-      return {}
-    }
-  }
-
-  const getBatchData = (categoryData: string | null) => {
-    if (!categoryData) return {}
-    try {
-      return JSON.parse(categoryData)
     } catch {
       return {}
     }
@@ -279,7 +290,35 @@ export function BatchGrid({ masterId, hideMasterHeader = false, hideTotals = fal
             </CardContent>
           </Card>
         ) : (
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2">
+          <div className="space-y-4">
+            {/* View Toggle */}
+            <div className="flex justify-end">
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-muted-foreground">Visning:</span>
+                <Button
+                  variant={!isCompactView ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setIsCompactView(false)}
+                >
+                  <Grid className="h-4 w-4 mr-1" />
+                  Normal
+                </Button>
+                <Button
+                  variant={isCompactView ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setIsCompactView(true)}
+                >
+                  <List className="h-4 w-4 mr-1" />
+                  Kompakt
+                </Button>
+              </div>
+            </div>
+            
+            {/* Batch Display */}
+            {isCompactView ? (
+              <CompactBatchView batches={batches} colors={colors} filterColorName={filterColorName} />
+            ) : (
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2">
             {batches.map((batch) => {
               const batchData = getBatchData(batch.categoryData)
               if (filterColorName && (batchData.color || '').toLowerCase() !== filterColorName.toLowerCase()) {
@@ -470,6 +509,8 @@ export function BatchGrid({ masterId, hideMasterHeader = false, hideTotals = fal
                 </Card>
               )
             })}
+              </div>
+            )}
           </div>
         )}
       </div>
@@ -477,6 +518,73 @@ export function BatchGrid({ masterId, hideMasterHeader = false, hideTotals = fal
       {/* Bulk Operations section removed here (moved to master detail actions) */}
 
       {/* Project Integration section removed */}
+    </div>
+  )
+}
+
+// Kompakt visning som grupperer batches etter farge
+function CompactBatchView({ batches, colors, filterColorName }: { 
+  batches: any[], 
+  colors?: any[],
+  filterColorName?: string 
+}) {
+  // Helper function to find color image by color name/code
+  const getColorImage = (colorName: string, colorCode?: string) => {
+    if (!colors) return undefined
+    
+    return colors.find(c => 
+      c.name.toLowerCase() === colorName.toLowerCase() ||
+      (colorCode && c.colorCode === colorCode)
+    )?.imageUrl
+  }
+
+  // Gruppper batches etter farge
+  const colorGroups = batches.reduce((groups, batch) => {
+    const batchData = getBatchData(batch.categoryData)
+    const color = batchData.color || 'Ukjent farge'
+    const colorCode = batchData.colorCode
+    
+    // Filtrer hvis et spesifikt fargenavn er satt
+    if (filterColorName && color.toLowerCase() !== filterColorName.toLowerCase()) {
+      return groups
+    }
+    
+    const key = `${color}-${colorCode || 'no-code'}`
+    
+    if (!groups[key]) {
+      groups[key] = {
+        color,
+        colorCode,
+        colorImage: getColorImage(color, colorCode),
+        batches: []
+      }
+    }
+    
+    groups[key].batches.push(batch)
+    return groups
+  }, {} as Record<string, { color: string, colorCode?: string, colorImage?: string, batches: any[] }>)
+
+  const colorEntries = Object.values(colorGroups)
+
+  if (colorEntries.length === 0) {
+    return (
+      <div className="text-center py-8 text-muted-foreground">
+        Ingen batches å vise
+      </div>
+    )
+  }
+
+  return (
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+      {colorEntries.map((group, index) => (
+        <CompactBatchCard
+          key={`${group.color}-${group.colorCode || 'no-code'}-${index}`}
+          color={group.color}
+          colorCode={group.colorCode}
+          batches={group.batches}
+          colorImage={group.colorImage}
+        />
+      ))}
     </div>
   )
 }

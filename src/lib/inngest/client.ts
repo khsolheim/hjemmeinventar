@@ -2,8 +2,8 @@ import { Inngest } from 'inngest'
 
 // Create the main Inngest client
 export const inngest = new Inngest({ 
-  id: 'hjemmeinventar',
-  name: 'Hjemmeinventar Background Jobs',
+  id: 'hms',
+  name: 'HMS Background Jobs',
   retries: 3,
   eventKey: process.env.INNGEST_EVENT_KEY,
   isDev: process.env.NODE_ENV === 'development'

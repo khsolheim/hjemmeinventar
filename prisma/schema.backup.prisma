@@ -1,4 +1,4 @@
-// Hjemmeinventar - Komplett Database Schema
+// HMS - Home Management System - Komplett Database Schema
 // Bygget for Next.js 15 + Prisma ORM + PostgreSQL
 
 generator client {

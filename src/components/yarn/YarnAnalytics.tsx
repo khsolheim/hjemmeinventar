@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { BarChart3, TrendingUp, TrendingDown, DollarSign, Package, Palette, Clock, Eye, Download } from 'lucide-react'
+import { BarChart3, TrendingUp, TrendingDown, DollarSign, Package, Palette, Clock, Eye, Download, Package2, Hash } from 'lucide-react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -11,9 +11,15 @@ import { trpc } from '@/lib/trpc/client'
 
 interface YarnAnalyticsProps {
   className?: string
+  overallStats?: {
+    totalMasters: number
+    totalSkeins: number
+    totalValue: number
+    totalBatches: number
+  }
 }
 
-export function YarnAnalytics({ className }: YarnAnalyticsProps) {
+export function YarnAnalytics({ className, overallStats }: YarnAnalyticsProps) {
   const [timeRange, setTimeRange] = useState('30') // days
   const [groupBy, setGroupBy] = useState('producer') // producer, color, store, etc.
 
@@ -48,6 +54,62 @@ export function YarnAnalytics({ className }: YarnAnalyticsProps) {
 
   return (
     <div className={`space-y-6 ${className}`}>
+      {/* Overall Statistics - moved from main page */}
+      {overallStats && (
+        <div className="cq-grid yarn-grid gap-1" style={{"--card-min":"220px"} as any}>
+          <Card className="py-3">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 py-1 px-3">
+              <CardTitle className="text-xs font-medium">Garn-typer</CardTitle>
+              <Package2 className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent className="py-1 px-3 min-h-[56px]">
+              <div className="text-lg font-bold leading-none">{overallStats.totalMasters}</div>
+              <p className="text-[10px] text-muted-foreground mt-1">
+                Forskjellige garntyper
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card className="py-3">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 py-1 px-3">
+              <CardTitle className="text-xs font-medium">Totalt Nøster</CardTitle>
+              <Hash className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent className="py-1 px-3 min-h-[56px]">
+              <div className="text-lg font-bold leading-none">{overallStats.totalSkeins}</div>
+              <p className="text-[10px] text-muted-foreground mt-1">
+                På tvers av alle typer
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card className="py-3">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 py-1 px-3">
+              <CardTitle className="text-xs font-medium">Total Verdi</CardTitle>
+              <DollarSign className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent className="py-1 px-3 min-h-[56px]">
+              <div className="text-lg font-bold leading-none">{overallStats.totalValue.toFixed(0)} kr</div>
+              <p className="text-[10px] text-muted-foreground mt-1">
+                Estimert beholdningsverdi
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card className="py-3">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 py-1 px-3">
+              <CardTitle className="text-xs font-medium">Batches</CardTitle>
+              <Palette className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent className="py-1 px-3 min-h-[56px]">
+              <div className="text-lg font-bold leading-none">{overallStats.totalBatches}</div>
+              <p className="text-[10px] text-muted-foreground mt-1">
+                Unike farge-batches
+              </p>
+            </CardContent>
+          </Card>
+        </div>
+      )}
       {/* Header Controls */}
       <div className="flex justify-between items-center">
         <div>

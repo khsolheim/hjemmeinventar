@@ -87,7 +87,7 @@ export function OnboardingWizard({ onComplete, onSkip, className = '' }: Onboard
   const steps: OnboardingStep[] = [
     {
       id: 'welcome',
-      title: 'Velkommen til Hjemmeinventar! 🎉',
+      title: 'Velkommen til HMS! 🎉',
       description: 'La oss sette opp ditt personlige inventarsystem på noen minutter',
       icon: Sparkles,
       content: (
@@ -99,7 +99,7 @@ export function OnboardingWizard({ onComplete, onSkip, className = '' }: Onboard
           <div className="space-y-4">
             <h2 className="text-2xl font-bold">Få full kontroll over tingene dine</h2>
             <p className="text-muted-foreground max-w-md mx-auto">
-              Med Hjemmeinventar kan du enkelt holde oversikt over alt du eier, 
+              Med HMS (Home Management System) kan du enkelt holde oversikt over alt du eier, 
               fra mat i kjøleskapet til hobbyutstyr i bod.
             </p>
           </div>

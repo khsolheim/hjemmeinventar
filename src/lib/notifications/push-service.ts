@@ -158,7 +158,7 @@ export class PushNotificationService {
       body: data.body,
       icon: '/icon-192x192.png',
       badge: '/badge-72x72.png',
-      tag: `hjemmeinventar-${data.type}`,
+      tag: `hms-${data.type}`,
       data: {
         type: data.type,
         url: data.url,

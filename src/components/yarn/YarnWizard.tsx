@@ -229,8 +229,29 @@ export function YarnWizard({ onComplete, existingMasterId, preset }: YarnWizardP
       setCurrentStep('batch-details')
       toast.success('Garn-type opprettet!')
     } catch (error) {
-      toast.error('Feil ved opprettelse av garn-type')
-      console.error(error)
+      // Enhanced error handling with specific messages
+      let errorMessage = 'Feil ved opprettelse av garn-type'
+      
+      if (error instanceof Error) {
+        if (error.message.includes('kategori ikke funnet')) {
+          errorMessage = 'Systemfeil: Manglende kategorier. Prøv igjen - systemet vil auto-reparere.'
+        } else if (error.message.includes('lokasjon')) {
+          errorMessage = 'Ingen lokasjoner funnet. Opprett en lokasjon først eller prøv igjen for auto-opprettelse.'
+        } else if (error.message.includes('Ugyldig garn data')) {
+          errorMessage = `Ugyldig data: ${error.message}`
+        } else if (error.message.includes('UNAUTHORIZED')) {
+          errorMessage = 'Du må være logget inn. Refresh siden og logg inn igjen.'
+        } else {
+          errorMessage = `Feil: ${error.message}`
+        }
+      }
+      
+      toast.error(errorMessage)
+      console.error('YarnWizard Master Creation Error:', {
+        error,
+        data,
+        timestamp: new Date().toISOString()
+      })
     }
   }
 
@@ -822,7 +843,7 @@ export function YarnWizard({ onComplete, existingMasterId, preset }: YarnWizardP
 
               <Form {...batchForm}>
                 <form onSubmit={batchForm.handleSubmit(handleBatchSubmit)} className="space-y-3">
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                     <FormField
                       control={batchForm.control}
                       name="batchNumber"
@@ -840,33 +861,52 @@ export function YarnWizard({ onComplete, existingMasterId, preset }: YarnWizardP
                       )}
                     />
 
-                    <FormField
-                      control={batchForm.control}
-                      name="color"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Farge *</FormLabel>
-                          <FormControl>
-                            <Input placeholder="f.eks. Light Pink" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
+                    {/* Only show color fields if no color is selected yet */}
+                    {!selectedColorId && (
+                      <>
+                        <FormField
+                          control={batchForm.control}
+                          name="color"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Farge *</FormLabel>
+                              <FormControl>
+                                <Input placeholder="f.eks. Light Pink" {...field} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
 
-                    <FormField
-                      control={batchForm.control}
-                      name="colorCode"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Farge Kode</FormLabel>
-                          <FormControl>
-                            <Input placeholder="f.eks. #FFB6C1 eller navn" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
+                        <FormField
+                          control={batchForm.control}
+                          name="colorCode"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Farge Kode</FormLabel>
+                              <FormControl>
+                                <Input placeholder="f.eks. #FFB6C1 eller navn" {...field} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </>
+                    )}
+
+                    {/* Show selected color info if a color is selected */}
+                    {selectedColorId && (
+                      <div className="col-span-2 p-4 bg-green-50 rounded-lg border border-green-200">
+                        <div className="flex items-center space-x-2">
+                          <div className="text-sm text-green-800">
+                            <strong>Valgt farge:</strong> {(() => {
+                              const selectedColor = colorsData?.find(c => c.id === selectedColorId)
+                              return selectedColor ? `${selectedColor.name}${selectedColor.colorCode ? ` (${selectedColor.colorCode})` : ''}` : 'Ukjent farge'
+                            })()}
+                          </div>
+                        </div>
+                      </div>
+                    )}
 
                     <FormField
                       control={batchForm.control}

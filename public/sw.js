@@ -1,6 +1,6 @@
 // Service Worker for push notifications og offline caching
 
-const CACHE_NAME = 'hjemmeinventar-v1'
+const CACHE_NAME = 'hms-v1'
 const OFFLINE_URL = '/offline'
 
 // Install event - cache essential files
@@ -27,14 +27,14 @@ self.addEventListener('push', (event) => {
     body: data.body || 'Du har en ny varsling',
     icon: data.icon || '/icon-192x192.png',
     badge: data.badge || '/badge-72x72.png',
-    tag: data.tag || 'hjemmeinventar-notification',
+    tag: data.tag || 'hms-notification',
     data: data.data || {},
     vibrate: [200, 100, 200],
     requireInteraction: data.requireInteraction || false
   }
 
   event.waitUntil(
-    self.registration.showNotification(data.title || 'Hjemmeinventar', options)
+    self.registration.showNotification(data.title || 'HMS', options)
   )
 })
 

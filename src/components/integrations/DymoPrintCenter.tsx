@@ -57,7 +57,7 @@ export function DymoPrintCenter() {
   // Print settings
   const [printOptions, setPrintOptions] = useState<PrintOptions>({
     copies: 1,
-    jobTitle: 'Hjemmeinventar Label',
+    jobTitle: 'HMS Label',
     flowDirection: 'LeftToRight',
     alignment: 'Center'
   })

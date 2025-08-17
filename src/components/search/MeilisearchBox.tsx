@@ -103,7 +103,7 @@ export function MeilisearchBox({
 
   // Load recent searches from localStorage
   useEffect(() => {
-    const saved = localStorage.getItem('hjemmeinventar-recent-searches')
+    const saved = localStorage.getItem('hms-recent-searches')
     if (saved) {
       try {
         setRecentSearches(JSON.parse(saved))
@@ -123,7 +123,7 @@ export function MeilisearchBox({
     ].slice(0, 5)
     
     setRecentSearches(updated)
-    localStorage.setItem('hjemmeinventar-recent-searches', JSON.stringify(updated))
+    localStorage.setItem('hms-recent-searches', JSON.stringify(updated))
   }, [recentSearches])
 
   // Perform search
@@ -210,7 +210,7 @@ export function MeilisearchBox({
 
   const clearRecentSearches = () => {
     setRecentSearches([])
-    localStorage.removeItem('hjemmeinventar-recent-searches')
+    localStorage.removeItem('hms-recent-searches')
   }
 
   const getTypeIcon = (type: string) => {

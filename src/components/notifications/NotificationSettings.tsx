@@ -161,7 +161,7 @@ export function NotificationSettings() {
             Push Notifications
           </CardTitle>
           <CardDescription>
-            Administrer varsler og påminnelser for hjemmeinventar
+            Administrer varsler og påminnelser for HMS
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">

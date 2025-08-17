@@ -14,24 +14,24 @@ const inter = Inter({
 })
 
 export const metadata: Metadata = {
-  title: "Hjemmeinventar - Organiser alt du eier",
-  description: "Den enkle måten å holde oversikt over alle dine eiendeler med QR-koder og smart organisering",
-  keywords: ["inventar", "organisering", "hjemme", "QR-kode", "garn", "hobby"],
-  authors: [{ name: "Hjemmeinventar Team" }],
+  title: "HMS - Home Management System",
+  description: "Home Management System - Den enkle måten å holde oversikt over alle dine eiendeler med QR-koder og smart organisering",
+  keywords: ["inventar", "organisering", "hjemme", "QR-kode", "garn", "hobby", "home management"],
+  authors: [{ name: "HMS Team" }],
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
-    title: "Hjemmeinventar",
+    title: "HMS",
   },
   formatDetection: {
     telephone: false,
   },
   openGraph: {
     type: "website",
-    siteName: "Hjemmeinventar",
-    title: "Hjemmeinventar - Organiser alt du eier",
-    description: "Den enkle måten å holde oversikt over alle dine eiendeler",
+    siteName: "HMS",
+    title: "HMS - Home Management System",
+    description: "Home Management System - Den enkle måten å holde oversikt over alle dine eiendeler",
   },
 }
 

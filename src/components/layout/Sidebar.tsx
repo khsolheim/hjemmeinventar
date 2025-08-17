@@ -89,7 +89,10 @@ export function Sidebar({ isOpen, onToggle, isMobile = false }: SidebarProps) {
           <div className="flex h-16 items-center justify-between px-4 border-b">
             <Link href="/dashboard" className="flex items-center space-x-2" onClick={onToggle}>
               <span className="text-2xl">🏠</span>
-              <span className="font-bold">Hjemmeinventar</span>
+              <div className="flex flex-col">
+                <span className="font-bold text-lg">HMS</span>
+                <span className="text-xs text-muted-foreground -mt-1">Home Management System</span>
+              </div>
             </Link>
             <Button variant="ghost" size="sm" onClick={onToggle}>
               <X className="h-4 w-4" />
@@ -215,7 +218,10 @@ export function Sidebar({ isOpen, onToggle, isMobile = false }: SidebarProps) {
         {isOpen ? (
           <Link href="/dashboard" className="flex items-center space-x-2">
             <span className="text-2xl">🏠</span>
-            <span className="font-bold">Hjemmeinventar</span>
+            <div className="flex flex-col">
+              <span className="font-bold text-lg">HMS</span>
+              <span className="text-xs text-muted-foreground -mt-1">Home Management System</span>
+            </div>
           </Link>
         ) : (
           <Link href="/dashboard" className="flex items-center justify-center w-full">
