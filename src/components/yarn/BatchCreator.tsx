@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import Image from 'next/image'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -152,9 +153,11 @@ export function BatchCreator({ masterId, onComplete }: BatchCreatorProps) {
                 return selectedColor && (
                   <>
                     {selectedColor.imageUrl && (
-                      <img 
+                      <Image 
                         src={selectedColor.imageUrl} 
                         alt={selectedColor.name}
+                        width={48}
+                        height={48}
                         className="w-12 h-12 rounded object-cover"
                       />
                     )}

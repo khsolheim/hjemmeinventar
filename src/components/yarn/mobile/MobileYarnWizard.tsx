@@ -114,7 +114,17 @@ export function MobileYarnWizard({ onComplete }: MobileYarnWizardProps) {
                   className={`p-4 border rounded-lg cursor-pointer transition-colors ${
                     mode === 'new' ? 'border-primary bg-primary/5' : 'border-border'
                   }`}
+                  role="radio"
+                  tabIndex={0}
+                  aria-checked={mode === 'new'}
                   onClick={() => setMode('new')}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault()
+                      setMode('new')
+                    }
+                  }}
+                  aria-label="Create new yarn master"
                 >
                   <div className="flex items-center gap-3">
                     <div className={`w-4 h-4 rounded-full border-2 ${
@@ -135,7 +145,17 @@ export function MobileYarnWizard({ onComplete }: MobileYarnWizardProps) {
                   className={`p-4 border rounded-lg cursor-pointer transition-colors ${
                     mode === 'existing' ? 'border-primary bg-primary/5' : 'border-border'
                   }`}
+                  role="radio"
+                  tabIndex={0}
+                  aria-checked={mode === 'existing'}
                   onClick={() => setMode('existing')}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault()
+                      setMode('existing')
+                    }
+                  }}
+                  aria-label="Add batch to existing yarn master"
                 >
                   <div className="flex items-center gap-3">
                     <div className={`w-4 h-4 rounded-full border-2 ${
