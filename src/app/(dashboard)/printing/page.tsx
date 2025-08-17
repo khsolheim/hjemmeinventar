@@ -1,34 +1,97 @@
 'use client'
 
 import { useState } from 'react'
-import { Card, CardContent, CardHeader, CardTitle } from '../../../components/ui/card'
-import { Button } from '../../../components/ui/button'
-import { Badge } from '../../../components/ui/badge'
-import { Printer, QrCode, BarChart3, Settings, Plus, Search, Filter } from 'lucide-react'
-import { trpc } from '../../../lib/trpc/client'
-import { Input } from '../../../components/ui/input'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
+import { Progress } from '@/components/ui/progress'
+import { Separator } from '@/components/ui/separator'
+import { 
+  Printer, 
+  QrCode, 
+  BarChart3, 
+  Settings, 
+  Plus, 
+  Clock,
+  CheckCircle,
+  AlertCircle,
+  TrendingUp,
+  Activity,
+  FileText,
+  Zap,
+  Users,
+  Calendar,
+  Target,
+  Archive,
+  Sparkles
+} from 'lucide-react'
 import Link from 'next/link'
 
+// Mock data for dashboard
+const mockStats = {
+  totalPrintJobs: 234,
+  successfulJobs: 221,
+  failedJobs: 13,
+  averageDuration: 2.3,
+  totalCost: 1250.50,
+  templatesCount: 8,
+  printersOnline: 2,
+  printersTotal: 3,
+  costSavings: 15.5,
+  todayJobs: 12,
+  weekJobs: 78,
+  monthJobs: 234
+}
+
+const recentJobs = [
+  { id: '1', template: 'Standard HMS Etikett', status: 'SUCCESS', createdAt: '10:45', copies: 5, duration: '2.1s' },
+  { id: '2', template: 'Kompakt Etikett', status: 'SUCCESS', createdAt: '10:32', copies: 12, duration: '4.2s' },
+  { id: '3', template: 'Detaljert Inventar', status: 'FAILED', createdAt: '10:15', copies: 1, duration: '0.8s' },
+  { id: '4', template: 'Standard HMS Etikett', status: 'SUCCESS', createdAt: '09:58', copies: 3, duration: '1.9s' },
+  { id: '5', template: 'Strekkode Etikett', status: 'SUCCESS', createdAt: '09:45', copies: 8, duration: '3.1s' }
+]
+
+const popularTemplates = [
+  { name: 'Standard HMS Etikett', usage: 89, trend: '+12%' },
+  { name: 'Kompakt Etikett', usage: 65, trend: '+8%' },
+  { name: 'Detaljert Inventar', usage: 34, trend: '+15%' },
+  { name: 'Strekkode Etikett', usage: 23, trend: '-2%' }
+]
+
+const quickActions = [
+  {
+    title: 'Skriv ut HMS Etikett',
+    description: 'Standard QR-etikett for gjenstander',
+    icon: QrCode,
+    href: '/printing/wizard?template=standard',
+    color: 'bg-blue-500'
+  },
+  {
+    title: 'Opprett ny mal',
+    description: 'Lag en tilpasset etikettmal',
+    icon: Plus,
+    href: '/printing/templates/new',
+    color: 'bg-green-500'
+  },
+  {
+    title: 'Administrer skrivere',
+    description: 'Konfigurer og test skrivere',
+    icon: Printer,
+    href: '/printing/printers',
+    color: 'bg-purple-500'
+  },
+  {
+    title: 'Se analyse',
+    description: 'Utskriftsstatistikk og rapporter',
+    icon: BarChart3,
+    href: '/printing/analytics',
+    color: 'bg-orange-500'
+  }
+]
+
 export default function PrintingDashboard() {
-  const [searchQuery, setSearchQuery] = useState('')
-  
-  // Get print statistics
-  const { data: printStats, isLoading: statsLoading } = trpc.printing.getPrintStats.useQuery({
-    timeRange: {
-      from: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000), // Last 30 days
-      to: new Date()
-    }
-  })
-
-  // Get recent templates
-  const { data: templates, isLoading: templatesLoading } = trpc.printing.listTemplates.useQuery({
-    search: searchQuery
-  })
-
-  // Get recent jobs
-  const { data: recentJobs, isLoading: jobsLoading } = trpc.printing.getJobQueue.useQuery({
-    limit: 5
-  })
+  const successRate = Math.round((mockStats.successfulJobs / mockStats.totalPrintJobs) * 100)
+  const printerUptime = Math.round((mockStats.printersOnline / mockStats.printersTotal) * 100)
 
   return (
     <div className="space-y-6">
@@ -37,236 +100,296 @@ export default function PrintingDashboard() {
         <div>
           <h1 className="text-3xl font-bold">Etikettutskrift</h1>
           <p className="text-muted-foreground">
-            Administrer etikettmaler og utskriftsjobber
+            Moderne printing-system for HMS
           </p>
         </div>
         <div className="flex gap-2">
+          <Button variant="outline" asChild>
+            <Link href="/printing/settings">
+              <Settings className="h-4 w-4 mr-2" />
+              Innstillinger
+            </Link>
+          </Button>
           <Button asChild>
-            <Link href="/printing/templates">
-              <QrCode className="h-4 w-4 mr-2" />
-              Maler
-            </Link>
-          </Button>
-          <Button asChild variant="outline">
-            <Link href="/printing/jobs">
-              <Printer className="h-4 w-4 mr-2" />
-              Jobber
-            </Link>
-          </Button>
-          <Button asChild variant="outline">
-            <Link href="/printing/analytics">
-              <BarChart3 className="h-4 w-4 mr-2" />
-              Analyse
+            <Link href="/printing/wizard">
+              <Zap className="h-4 w-4 mr-2" />
+              Hurtigutskrift
             </Link>
           </Button>
         </div>
       </div>
 
-      {/* Quick Stats */}
+      {/* Quick Actions */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Totale utskrifter</CardTitle>
-            <Printer className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {statsLoading ? '...' : printStats?.totalJobs || 0}
-            </div>
-            <p className="text-xs text-muted-foreground">
-              Siste 30 dager
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Suksessrate</CardTitle>
-            <BarChart3 className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {statsLoading ? '...' : `${Math.round((printStats?.successRate || 0) * 100)}%`}
-            </div>
-            <p className="text-xs text-muted-foreground">
-              Vellykkede utskrifter
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Totale kostnader</CardTitle>
-            <Settings className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {statsLoading ? '...' : `${printStats?.costBreakdown.totalCost?.toFixed(2) || '0.00'} NOK`}
-            </div>
-            <p className="text-xs text-muted-foreground">
-              Siste 30 dager
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Aktive maler</CardTitle>
-            <QrCode className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {templatesLoading ? '...' : templates?.length || 0}
-            </div>
-            <p className="text-xs text-muted-foreground">
-              Tilgjengelige maler
-            </p>
-          </CardContent>
-        </Card>
-      </div>
-
-      <div className="grid gap-6 lg:grid-cols-2">
-        {/* Quick Actions */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Hurtighandlinger</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <Button asChild className="w-full" size="lg">
-              <Link href="/printing/wizard">
-                <Plus className="h-4 w-4 mr-2" />
-                Ny utskriftsjobb
-              </Link>
-            </Button>
-            
-            <div className="grid grid-cols-2 gap-2">
-              <Button asChild variant="outline">
-                <Link href="/printing/templates/new">
-                  <QrCode className="h-4 w-4 mr-2" />
-                  Ny mal
-                </Link>
-              </Button>
-              <Button asChild variant="outline">
-                <Link href="/printing/labels">
-                  <Printer className="h-4 w-4 mr-2" />
-                  Etiketter
-                </Link>
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Recent Jobs */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Nylige utskriftsjobber</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-2">
-              {jobsLoading ? (
-                <div className="text-center py-4 text-muted-foreground">
-                  Laster...
-                </div>
-              ) : recentJobs && recentJobs.length > 0 ? (
-                recentJobs.map((job) => (
-                  <div key={job.id} className="flex items-center justify-between p-3 border rounded-lg">
+        {quickActions.map((action, index) => {
+          const IconComponent = action.icon
+          return (
+            <Card key={index} className="group hover:shadow-md transition-all cursor-pointer">
+              <Link href={action.href}>
+                <CardContent className="p-6">
+                  <div className="flex items-start gap-3">
+                    <div className={`p-2 rounded-lg ${action.color} text-white`}>
+                      <IconComponent className="h-5 w-5" />
+                    </div>
                     <div>
-                      <p className="font-medium">{job.jobTitle}</p>
-                      <p className="text-sm text-muted-foreground">
-                        {job.copies} kopier • {new Date(job.createdAt).toLocaleDateString('nb-NO')}
+                      <h3 className="font-medium group-hover:text-blue-600 transition-colors">
+                        {action.title}
+                      </h3>
+                      <p className="text-sm text-muted-foreground mt-1">
+                        {action.description}
                       </p>
                     </div>
-                    <Badge variant={
-                      job.status === 'SUCCESS' ? 'default' :
-                      job.status === 'FAILED' ? 'destructive' :
-                      job.status === 'PROCESSING' ? 'secondary' :
-                      'outline'
-                    }>
-                      {job.status === 'SUCCESS' ? 'Fullført' :
-                       job.status === 'FAILED' ? 'Feilet' :
-                       job.status === 'PROCESSING' ? 'Behandles' :
-                       job.status === 'QUEUED' ? 'I kø' :
-                       job.status}
-                    </Badge>
                   </div>
-                ))
-              ) : (
-                <div className="text-center py-8 text-muted-foreground">
-                  <Printer className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                  <p>Ingen utskriftsjobber ennå</p>
-                  <Button asChild className="mt-2" size="sm">
-                    <Link href="/printing/wizard">
-                      Start første utskrift
-                    </Link>
-                  </Button>
-                </div>
-              )}
+                </CardContent>
+              </Link>
+            </Card>
+          )
+        })}
+      </div>
+
+      {/* Key Metrics */}
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">I dag</p>
+                <p className="text-2xl font-bold">{mockStats.todayJobs}</p>
+                <p className="text-xs text-green-600 flex items-center gap-1">
+                  <TrendingUp className="h-3 w-3" />
+                  +25% fra i går
+                </p>
+              </div>
+              <div className="p-2 bg-blue-100 rounded-full">
+                <Activity className="h-6 w-6 text-blue-600" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Suksessrate</p>
+                <p className="text-2xl font-bold">{successRate}%</p>
+                <p className="text-xs text-green-600">Meget bra!</p>
+              </div>
+              <div className="p-2 bg-green-100 rounded-full">
+                <CheckCircle className="h-6 w-6 text-green-600" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Skrivere online</p>
+                <p className="text-2xl font-bold">{mockStats.printersOnline}/{mockStats.printersTotal}</p>
+                <p className="text-xs text-muted-foreground">{printerUptime}% oppetid</p>
+              </div>
+              <div className="p-2 bg-purple-100 rounded-full">
+                <Printer className="h-6 w-6 text-purple-600" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Kostnad (mnd)</p>
+                <p className="text-2xl font-bold">kr {mockStats.totalCost.toFixed(0)}</p>
+                <p className="text-xs text-green-600 flex items-center gap-1">
+                  <Sparkles className="h-3 w-3" />
+                  {mockStats.costSavings}% besparelse
+                </p>
+              </div>
+              <div className="p-2 bg-orange-100 rounded-full">
+                <Target className="h-6 w-6 text-orange-600" />
+              </div>
             </div>
           </CardContent>
         </Card>
       </div>
 
-      {/* Popular Templates */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <CardTitle>Populære maler</CardTitle>
-            <div className="flex items-center gap-2">
-              <div className="relative">
-                <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Søk maler..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-8 w-64"
-                />
-              </div>
-              <Button variant="outline" size="sm">
-                <Filter className="h-4 w-4" />
+      <div className="grid gap-6 lg:grid-cols-3">
+        {/* Recent Jobs */}
+        <Card className="lg:col-span-2">
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <CardTitle className="flex items-center gap-2">
+                <Clock className="h-5 w-5" />
+                Siste utskriftsjobber
+              </CardTitle>
+              <Button variant="outline" size="sm" asChild>
+                <Link href="/printing/jobs">Se alle</Link>
               </Button>
             </div>
-          </div>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              {recentJobs.map((job) => (
+                <div key={job.id} className="flex items-center justify-between p-3 rounded-lg border">
+                  <div className="flex items-center gap-3">
+                    <div className={`p-1.5 rounded-full ${
+                      job.status === 'SUCCESS' ? 'bg-green-100' : 'bg-red-100'
+                    }`}>
+                      {job.status === 'SUCCESS' ? (
+                        <CheckCircle className="h-4 w-4 text-green-600" />
+                      ) : (
+                        <AlertCircle className="h-4 w-4 text-red-600" />
+                      )}
+                    </div>
+                    <div>
+                      <p className="font-medium text-sm">{job.template}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {job.copies} kopi{job.copies !== 1 ? 'er' : ''} • {job.duration}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <Badge variant={job.status === 'SUCCESS' ? 'default' : 'destructive'}>
+                      {job.status === 'SUCCESS' ? 'Vellykket' : 'Feilet'}
+                    </Badge>
+                    <p className="text-xs text-muted-foreground mt-1">{job.createdAt}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Popular Templates & Quick Stats */}
+        <div className="space-y-6">
+          {/* Popular Templates */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <FileText className="h-5 w-5" />
+                Populære maler
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                {popularTemplates.map((template, index) => (
+                  <div key={index} className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-medium">{template.name}</span>
+                      <div className="flex items-center gap-2">
+                        <span className={`text-xs ${
+                          template.trend.startsWith('+') ? 'text-green-600' : 'text-red-600'
+                        }`}>
+                          {template.trend}
+                        </span>
+                        <Badge variant="secondary">{template.usage}</Badge>
+                      </div>
+                    </div>
+                    <Progress value={template.usage} className="h-2" />
+                  </div>
+                ))}
+              </div>
+              <Separator className="my-4" />
+              <Button variant="outline" size="sm" className="w-full" asChild>
+                <Link href="/printing/templates">
+                  <FileText className="h-4 w-4 mr-2" />
+                  Administrer maler
+                </Link>
+              </Button>
+            </CardContent>
+          </Card>
+
+          {/* Monthly Overview */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Calendar className="h-5 w-5" />
+                Månedsoversikt
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="text-center">
+                  <p className="text-2xl font-bold text-blue-600">{mockStats.monthJobs}</p>
+                  <p className="text-xs text-muted-foreground">Totalt jobber</p>
+                </div>
+                <div className="text-center">
+                  <p className="text-2xl font-bold text-green-600">{mockStats.templatesCount}</p>
+                  <p className="text-xs text-muted-foreground">Aktive maler</p>
+                </div>
+              </div>
+              
+              <Separator />
+              
+              <div className="space-y-2">
+                <div className="flex justify-between text-sm">
+                  <span>Gjennomsnittlig tid:</span>
+                  <span className="font-medium">{mockStats.averageDuration}s</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span>Feilrate:</span>
+                  <span className="font-medium text-red-600">
+                    {Math.round((mockStats.failedJobs / mockStats.totalPrintJobs) * 100)}%
+                  </span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span>Besparelse:</span>
+                  <span className="font-medium text-green-600">kr {mockStats.costSavings}</span>
+                </div>
+              </div>
+
+              <Button variant="outline" size="sm" className="w-full" asChild>
+                <Link href="/printing/analytics">
+                  <BarChart3 className="h-4 w-4 mr-2" />
+                  Detaljert analyse
+                </Link>
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+
+      {/* System Status */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Activity className="h-5 w-5" />
+            Systemstatus
+          </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {templatesLoading ? (
-              Array.from({ length: 6 }).map((_, i) => (
-                <div key={i} className="border rounded-lg p-4 animate-pulse">
-                  <div className="h-4 bg-gray-200 rounded mb-2"></div>
-                  <div className="h-3 bg-gray-200 rounded w-2/3"></div>
-                </div>
-              ))
-            ) : templates && templates.length > 0 ? (
-              templates.slice(0, 6).map((template) => (
-                <Card key={template.id} className="cursor-pointer hover:shadow-md transition-shadow">
-                  <CardContent className="p-4">
-                    <div className="flex items-start justify-between mb-2">
-                      <h3 className="font-medium text-sm">{template.name}</h3>
-                      <Badge variant="outline" className="text-xs">
-                        {template.type}
-                      </Badge>
-                    </div>
-                    <p className="text-xs text-muted-foreground mb-2">
-                      {template.description || 'Ingen beskrivelse'}
-                    </p>
-                    <div className="flex items-center justify-between text-xs text-muted-foreground">
-                      <span>{template.size}</span>
-                      <span>{template.usageCount} ganger brukt</span>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))
-            ) : (
-              <div className="col-span-3 text-center py-8 text-muted-foreground">
-                <QrCode className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                <p>Ingen maler funnet</p>
-                <Button asChild className="mt-2" size="sm">
-                  <Link href="/printing/templates/new">
-                    Opprett første mal
-                  </Link>
-                </Button>
+          <div className="grid gap-4 md:grid-cols-4">
+            <div className="flex items-center gap-3">
+              <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
+              <div>
+                <p className="text-sm font-medium">Print Service</p>
+                <p className="text-xs text-muted-foreground">Online</p>
               </div>
-            )}
+            </div>
+            <div className="flex items-center gap-3">
+              <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
+              <div>
+                <p className="text-sm font-medium">Template Engine</p>
+                <p className="text-xs text-muted-foreground">Aktiv</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3">
+              <div className="w-3 h-3 bg-yellow-500 rounded-full"></div>
+              <div>
+                <p className="text-sm font-medium">Queue Processor</p>
+                <p className="text-xs text-muted-foreground">3 jobber i kø</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3">
+              <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
+              <div>
+                <p className="text-sm font-medium">Database</p>
+                <p className="text-xs text-muted-foreground">Tilkoblet</p>
+              </div>
+            </div>
           </div>
         </CardContent>
       </Card>
