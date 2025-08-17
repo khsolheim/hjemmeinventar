@@ -81,9 +81,32 @@ model Location {
   id          String      @id @default(cuid())
   name        String
   description String?
+  displayName String?     // Valgfritt brukerdefinert navn
   type        LocationType
   qrCode      String      @unique
   parentId    String?
+  
+  // Wizard & Auto-naming fields
+  autoNumber  String?     // A, B, C eller A1, B2, etc.
+  level       Int         @default(0) // 0=Rom, 1=Skap, 2=Hylle, 3=Boks, 4=Pose
+  isWizardCreated Boolean @default(false)
+  wizardOrder    Int?     // Ordre for automatisk navngiving
+  
+  // QR & Image System
+  images      String[]    // Array av image URLs 
+  primaryImage String?    // Hovedbilde for lokasjon
+  
+  // Privacy & Sharing
+  isPrivate   Boolean     @default(false) // Privat kasse kun for eier
+  allowedUsers String[]   // Brukere som har tilgang (kun for delte)
+  
+  // Wizard metadata
+  colorCode   String?     // Hex farge for farge-koding
+  tags        String[]    // Etiketter som "Vinterklaer", "Elektronikk"
+  
+  // Household relation
+  householdId String?     // Referanse til husholdning
+  household   Household?  @relation("HouseholdLocations", fields: [householdId], references: [id])
   
   // Relations
   user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -97,24 +120,31 @@ model Location {
   
   activities  Activity[]
   
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  isActive    Boolean     @default(true)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
   
+  @@unique([parentId, autoNumber, userId])
   @@index([userId])
   @@index([parentId])
   @@index([qrCode])
+  @@index([householdId])
+  @@index([level])
+  @@index([isWizardCreated])
 }
 
 enum LocationType {
   ROOM
-  SHELF
-  BOX
-  CONTAINER
-  DRAWER
-  CABINET
-  SHELF_COMPARTMENT  // Hyller på reol
-  BAG               // Poser/bagger
-  SECTION           // Generisk avsnitt/seksjon
+  CABINET    // Skap
+  SHELF      // Hylle  
+  BOX        // Boks
+  BAG        // Pose
+  DRAWER     // Skuff
+  RACK       // Reol
+  WALL_SHELF // Vegghengt hylle
+  CONTAINER  // Beholder (legacy)
+  SHELF_COMPARTMENT  // Hyller på reol (legacy)
+  SECTION    // Generisk avsnitt/seksjon (legacy)
 }
 
 // Categories with dynamic fields
@@ -253,8 +283,13 @@ enum ActivityType {
   ITEM_MOVED
   ITEM_DELETED
   LOCATION_CREATED
+  LOCATION_UPDATED
+  LOCATION_DELETED
+  LOCATION_MOVED
   QR_SCANNED
   BULK_OPERATION
+  WIZARD_LOCATION_CREATED
+  WIZARD_HIERARCHY_BUILT
   LOAN_CREATED
   LOAN_RETURNED
 }
@@ -266,6 +301,7 @@ model Household {
   description String?
   
   members     HouseholdMember[]
+  locations   Location[]        @relation("HouseholdLocations")
   
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt

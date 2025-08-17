@@ -27,7 +27,8 @@ import {
   Square,
   TreePine,
   Smartphone,
-  Layout
+  Layout,
+  Sparkles
 } from 'lucide-react'
 import {
   Select,
@@ -55,26 +56,30 @@ import { BulkEditModal } from '@/components/locations/BulkEditModal'
 
 const locationTypeIcons = {
   ROOM: Home,
-  SHELF: Package,
+  CABINET: Package,
+  RACK: Package,
+  WALL_SHELF: Square,
+  SHELF: Folder,
+  DRAWER: FileText,
   BOX: Archive,
-  CONTAINER: Package,
-  DRAWER: Folder,
-  CABINET: FileText,
-  SHELF_COMPARTMENT: Layers,
   BAG: ShoppingBag,
-  SECTION: Square
+  CONTAINER: Package, // Legacy
+  SHELF_COMPARTMENT: Layers, // Legacy
+  SECTION: Square // Legacy
 }
 
 const locationTypeLabels = {
   ROOM: 'Rom',
-  SHELF: 'Reol',
-  BOX: 'Boks',
-  CONTAINER: 'Beholder',
-  DRAWER: 'Skuff',
   CABINET: 'Skap',
-  SHELF_COMPARTMENT: 'Hylle',
+  RACK: 'Reol',
+  WALL_SHELF: 'Vegghengt hylle',
+  SHELF: 'Hylle',
+  DRAWER: 'Skuff',
+  BOX: 'Boks',
   BAG: 'Pose',
-  SECTION: 'Avsnitt'
+  CONTAINER: 'Beholder', // Legacy
+  SHELF_COMPARTMENT: 'Hylle', // Legacy
+  SECTION: 'Avsnitt' // Legacy
 }
 
 // Hierarki-regler for lokasjonstyper (samme som backend)
@@ -371,6 +376,12 @@ export default function LocationsPage() {
                 <Button variant="outline">
                   <Layout className="w-4 h-4 mr-2" />
                   Layout-editor
+                </Button>
+              </Link>
+              <Link href="/locations/wizard">
+                <Button className="bg-blue-600 hover:bg-blue-700">
+                  <Sparkles className="w-4 h-4 mr-2" />
+                  Start Wizard
                 </Button>
               </Link>
             </>
