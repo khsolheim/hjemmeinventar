@@ -3,10 +3,26 @@ import * as React from "react"
 import { cn } from "@/lib/utils"
 
 function Input({ className, type, ...props }: React.ComponentProps<"input">) {
-  // Don't override value if defaultValue is provided (uncontrolled mode)
-  const inputProps = props.defaultValue !== undefined 
-    ? { ...props }
-    : { ...props, value: props.value ?? '' }
+  // Handle controlled vs uncontrolled mode properly
+  let inputProps: any = { ...props }
+  
+  // If defaultValue is provided, use uncontrolled mode
+  if (props.defaultValue !== undefined) {
+    // Uncontrolled - keep as is
+  } 
+  // If readOnly is set, allow any value without onChange
+  else if (props.readOnly) {
+    inputProps.value = props.value ?? ''
+  }
+  // If onChange is provided, use controlled mode
+  else if (props.onChange) {
+    inputProps.value = props.value ?? ''
+  }
+  // Otherwise, use uncontrolled with defaultValue
+  else {
+    inputProps.defaultValue = props.value ?? ''
+    delete inputProps.value
+  }
 
   return (
     <input

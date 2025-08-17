@@ -11,9 +11,12 @@ export default function DashboardLayout({
 }) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
   const [isMobile, setIsMobile] = useState(false)
+  const [mounted, setMounted] = useState(false)
 
   // Handle responsive behavior
   useEffect(() => {
+    setMounted(true)
+    
     const checkMobile = () => {
       const mobile = window.innerWidth < 768
       setIsMobile(mobile)
@@ -31,6 +34,17 @@ export default function DashboardLayout({
 
   const toggleSidebar = () => {
     setIsSidebarOpen(!isSidebarOpen)
+  }
+
+  // Prevent hydration mismatch by not rendering until mounted
+  if (!mounted) {
+    return (
+      <div className="min-h-screen bg-background">
+        <div className="flex items-center justify-center h-screen">
+          <div className="animate-pulse">Laster...</div>
+        </div>
+      </div>
+    )
   }
 
   return (

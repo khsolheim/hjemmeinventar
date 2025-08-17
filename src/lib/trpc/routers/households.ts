@@ -105,6 +105,7 @@ export const householdsRouter = createTRPCRouter({
         data: {
           name: input.name,
           description: input.description,
+          ownerId: ctx.user.id,
           members: {
             create: {
               userId: ctx.user.id,
@@ -496,21 +497,49 @@ export const householdsRouter = createTRPCRouter({
         })
       }
 
-      // Check if household has items
-      const itemCount = await ctx.db.item.count({
-        where: {
-          user: {
-            households: {
-              some: { householdId: input }
-            }
+      // Check what prevents deletion
+      const deletionBlockers = await ctx.db.$transaction(async (tx) => {
+        // Check for items owned by household members
+        const memberUserIds = await tx.householdMember.findMany({
+          where: { householdId: input },
+          select: { userId: true }
+        })
+        
+        const itemCount = await tx.item.count({
+          where: {
+            userId: { in: memberUserIds.map(m => m.userId) }
           }
-        }
+        })
+
+        // Check for locations owned by household members
+        const locationCount = await tx.location.count({
+          where: {
+            userId: { in: memberUserIds.map(m => m.userId) }
+          }
+        })
+
+        // Check for active loans
+        const loanCount = await tx.loan.count({
+          where: {
+            item: {
+              userId: { in: memberUserIds.map(m => m.userId) }
+            },
+            status: 'OUT'
+          }
+        })
+
+        return { itemCount, locationCount, loanCount, memberCount: memberUserIds.length }
       })
 
-      if (itemCount > 0) {
+      if (deletionBlockers.itemCount > 0 || deletionBlockers.locationCount > 0 || deletionBlockers.loanCount > 0) {
+        const reasons = []
+        if (deletionBlockers.itemCount > 0) reasons.push(`${deletionBlockers.itemCount} gjenstander`)
+        if (deletionBlockers.locationCount > 0) reasons.push(`${deletionBlockers.locationCount} lokasjoner`)
+        if (deletionBlockers.loanCount > 0) reasons.push(`${deletionBlockers.loanCount} aktive utlån`)
+        
         throw new TRPCError({
           code: 'BAD_REQUEST',
-          message: 'Kan ikke slette husholdning som har gjenstander. Flytt eller slett alle gjenstander først.'
+          message: `Kan ikke slette husholdning. Følgende må håndteres først: ${reasons.join(', ')}.`
         })
       }
 
@@ -526,6 +555,98 @@ export const householdsRouter = createTRPCRouter({
       })
 
       return { success: true }
+    }),
+
+  // Check what prevents household deletion
+  checkDeletionBlockers: protectedProcedure
+    .input(z.string())
+    .query(async ({ ctx, input }) => {
+      // Verify user is admin
+      const membership = await ctx.db.householdMember.findFirst({
+        where: {
+          userId: ctx.user.id,
+          householdId: input,
+          role: 'ADMIN'
+        },
+        include: {
+          household: true
+        }
+      })
+
+      if (!membership) {
+        throw new TRPCError({
+          code: 'FORBIDDEN',
+          message: 'Kun administratorer kan sjekke slettingsstatus'
+        })
+      }
+
+      // Check what prevents deletion
+      const blockers = await ctx.db.$transaction(async (tx) => {
+        // Get all household members
+        const memberUserIds = await tx.householdMember.findMany({
+          where: { householdId: input },
+          select: { userId: true, user: { select: { name: true, email: true } } }
+        })
+        
+        // Check for items
+        const items = await tx.item.findMany({
+          where: {
+            userId: { in: memberUserIds.map(m => m.userId) }
+          },
+          select: { id: true, name: true, user: { select: { name: true } } },
+          take: 10 // Limit for display
+        })
+
+        // Check for locations
+        const locations = await tx.location.findMany({
+          where: {
+            userId: { in: memberUserIds.map(m => m.userId) }
+          },
+          select: { id: true, name: true, user: { select: { name: true } } },
+          take: 10
+        })
+
+        // Check for active loans
+        const loans = await tx.loan.findMany({
+          where: {
+            item: {
+              userId: { in: memberUserIds.map(m => m.userId) }
+            },
+            status: 'OUT'
+          },
+          select: { 
+            id: true, 
+            borrowerName: true, 
+            item: { select: { name: true } } 
+          },
+          take: 10
+        })
+
+        const totalItemCount = await tx.item.count({
+          where: { userId: { in: memberUserIds.map(m => m.userId) } }
+        })
+        
+        const totalLocationCount = await tx.location.count({
+          where: { userId: { in: memberUserIds.map(m => m.userId) } }
+        })
+        
+        const totalLoanCount = await tx.loan.count({
+          where: {
+            item: { userId: { in: memberUserIds.map(m => m.userId) } },
+            status: 'OUT'
+          }
+        })
+
+        return { 
+          members: memberUserIds,
+          items: { list: items, total: totalItemCount },
+          locations: { list: locations, total: totalLocationCount },
+          loans: { list: loans, total: totalLoanCount },
+          canDelete: totalItemCount === 0 && totalLocationCount === 0 && totalLoanCount === 0
+        }
+      })
+
+      return blockers
     }),
 
   // Get household statistics

@@ -74,22 +74,22 @@ export default function SettingsPage() {
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <Label htmlFor="firstName">Fornavn</Label>
-                <Input id="firstName" placeholder="Ditt fornavn" />
+                <Input id="firstName" placeholder="Ditt fornavn" readOnly />
               </div>
               <div>
                 <Label htmlFor="lastName">Etternavn</Label>
-                <Input id="lastName" placeholder="Ditt etternavn" />
+                <Input id="lastName" placeholder="Ditt etternavn" readOnly />
               </div>
             </div>
             <div>
               <Label htmlFor="email">E-post</Label>
-              <Input id="email" type="email" placeholder="din@epost.no" />
+              <Input id="email" type="email" placeholder="din@epost.no" readOnly />
             </div>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-3 items-end">
               <div className="md:col-span-2">
                 <Label htmlFor="user-logo-url">Logo</Label>
                 <div className="flex items-center gap-3">
-                  <Input id="user-logo-url" placeholder="https://..." />
+                  <Input id="user-logo-url" placeholder="https://..." readOnly />
                   <input id="user-logo-file" type="file" accept="image/*" className="hidden" onChange={async (e) => {
                     const file = e.target.files?.[0]
                     if (!file) return
@@ -241,9 +241,9 @@ export default function SettingsPage() {
             <div className="space-y-2">
               <Label className="text-base">Endre passord</Label>
               <div className="grid grid-cols-1 gap-2">
-                <Input id="currentPassword" name="currentPassword" type="password" placeholder="Nåværende passord" />
-                <Input id="newPassword" name="newPassword" type="password" placeholder="Nytt passord" />
-                <Input id="confirmNewPassword" name="confirmNewPassword" type="password" placeholder="Bekreft nytt passord" />
+                <Input id="currentPassword" name="currentPassword" type="password" placeholder="Nåværende passord" readOnly />
+                <Input id="newPassword" name="newPassword" type="password" placeholder="Nytt passord" readOnly />
+                <Input id="confirmNewPassword" name="confirmNewPassword" type="password" placeholder="Bekreft nytt passord" readOnly />
               </div>
               <Button variant="outline">Oppdater passord</Button>
             </div>
