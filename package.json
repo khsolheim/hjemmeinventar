@@ -11,6 +11,7 @@
     "lint:fix": "next lint --fix",
     "type-check": "tsc --noEmit",
     "analyze": "node scripts/analyze-bundle.js",
+    "fix-issues": "node scripts/fix-remaining-issues.js",
     "db:migrate": "prisma migrate dev",
     "db:generate": "prisma generate",
     "db:seed": "tsx prisma/seed.ts",

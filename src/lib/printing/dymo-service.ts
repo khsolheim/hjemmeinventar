@@ -3,21 +3,21 @@
  * Provides abstraction layer for DYMO.js printer communication
  */
 
+import type { 
+  DymoFramework, 
+  DymoPrinter, 
+  DymoLabelFile, 
+  DymoEnvironmentCheck,
+  DymoPrintParameters,
+  DymoLabelData,
+  DymoStatus 
+} from '@/types/dymo'
+
 declare global {
   interface Window {
     dymo: {
       label: {
-        framework: {
-          init: () => Promise<void>
-          getPrinters: () => any[]
-          openLabelFile: (xmlData: string) => any
-          printLabel: (printer: string, printParameters: string, labelXml: string, labelData: string) => void
-          printLabel2: (printer: string, printParameters: string, labelXml: string, labelData: string) => Promise<void>
-          checkEnvironment: () => {
-            framework: boolean
-            printers: boolean
-            addIn: boolean
-          }
+        framework: DymoFramework
           trace: boolean
         }
       }

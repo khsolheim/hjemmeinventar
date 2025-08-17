@@ -253,7 +253,16 @@ export function YarnBulkOperations({ items, onRefresh, itemType }: YarnBulkOpera
                     className={`flex items-center gap-3 p-2 rounded hover:bg-muted cursor-pointer ${
                       selectedItems.has(item.id) ? 'bg-primary/10' : ''
                     }`}
+                    role="button"
+                    tabIndex={0}
                     onClick={() => toggleSelectItem(item.id)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault()
+                        toggleSelectItem(item.id)
+                      }
+                    }}
+                    aria-label={`Toggle selection for ${item.name}`}
                   >
                     <Checkbox
                       checked={selectedItems.has(item.id)}

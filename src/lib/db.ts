@@ -1,5 +1,5 @@
 // Database connection og utilities
-import { PrismaClient } from '@prisma/client'
+import { PrismaClient, ActivityType } from '@prisma/client'
 
 // PrismaClient singleton pattern for Next.js
 const globalForPrisma = globalThis as unknown as {
@@ -72,21 +72,21 @@ export async function logActivity({
   locationId,
   metadata
 }: {
-  type: string
+  type: ActivityType
   description: string
   userId: string
   itemId?: string
   locationId?: string
-  metadata?: any
+  metadata?: Record<string, unknown>
 }) {
   return await db.activity.create({
     data: {
-      type: type as any,
+      type,
       description,
       userId,
       itemId,
       locationId,
-      metadata
+      metadata: metadata ? JSON.stringify(metadata) : null
     }
   })
 }

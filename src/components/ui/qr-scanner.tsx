@@ -130,7 +130,7 @@ export function QRScanner({ onScan, onError, className = '' }: QRScannerProps) {
       
       handleScanResult(randomResult)
     }
-  }, [])
+  }, [handleScanResult])
 
   // Simplified pattern detection
   const hasQRPattern = (imageData: ImageData): boolean => {
