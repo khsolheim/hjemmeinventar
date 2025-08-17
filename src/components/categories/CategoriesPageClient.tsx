@@ -49,16 +49,16 @@ export function CategoriesPageClient({ initialCategories }: { initialCategories?
     staleTime: 30000,
     refetchOnWindowFocus: false,
     refetchOnMount: false,
-    keepPreviousData: true,
+    placeholderData: (prev) => prev,
     initialData: initialCategories,
   })
   const { data: categoryItems, isLoading: itemsLoading } = trpc.categories.getItems.useQuery(
     { categoryId: selectedCategory!, limit: 20 },
-    { enabled: !!selectedCategory, staleTime: 30000, refetchOnWindowFocus: false, refetchOnMount: false, keepPreviousData: true }
+    { enabled: !!selectedCategory, staleTime: 30000, refetchOnWindowFocus: false, refetchOnMount: false, placeholderData: (prev) => prev }
   )
   const { data: categoryStats } = trpc.categories.getStats.useQuery(
     selectedCategory!,
-    { enabled: !!selectedCategory, staleTime: 30000, refetchOnWindowFocus: false, refetchOnMount: false, keepPreviousData: true }
+    { enabled: !!selectedCategory, staleTime: 30000, refetchOnWindowFocus: false, refetchOnMount: false, placeholderData: (prev) => prev }
   )
 
   const initializeDefaultsMutation = trpc.categories.initializeDefaults.useMutation({

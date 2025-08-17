@@ -35,7 +35,7 @@ export function YarnMasterDetail({
     staleTime: 30000,
     refetchOnWindowFocus: false,
     refetchOnMount: false,
-    keepPreviousData: true,
+    placeholderData: (prev) => prev,
     initialData: initialMaster,
   })
   const { data: totals, isLoading: totalsLoading } = trpc.yarn.getMasterTotals.useQuery({ masterId: id }, {
@@ -43,7 +43,7 @@ export function YarnMasterDetail({
     staleTime: 30000,
     refetchOnWindowFocus: false,
     refetchOnMount: false,
-    keepPreviousData: true,
+    placeholderData: (prev) => prev,
     initialData: initialTotals,
   })
   const { data: colors, isLoading: colorsLoading } = trpc.yarn.getColorsForMaster.useQuery({ masterId: id }, {
@@ -51,7 +51,7 @@ export function YarnMasterDetail({
     staleTime: 0,
     refetchOnWindowFocus: false,
     refetchOnMount: true,
-    keepPreviousData: true,
+    placeholderData: (prev) => prev,
     initialData: initialColors,
   })
   const { data: batches } = trpc.yarn.getBatchesForMaster.useQuery({ masterId: id }, {
@@ -59,7 +59,7 @@ export function YarnMasterDetail({
     staleTime: 30000,
     refetchOnWindowFocus: false,
     refetchOnMount: false,
-    keepPreviousData: true,
+    placeholderData: (prev) => prev,
   })
   const utils = trpc.useUtils()
   const [isAddBatchOpen, setIsAddBatchOpen] = React.useState(false)

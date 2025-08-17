@@ -68,15 +68,21 @@ class DymoService {
   /**
    * Initialize DYMO Label Framework
    */
-  async initialize(): Promise<void> {
-    if (this.isInitialized) return
+  async initialize(): Promise<boolean> {
+    try {
+      if (this.isInitialized) return true
 
-    if (this.initializationPromise) {
-      return this.initializationPromise
+      if (this.initializationPromise) {
+        await this.initializationPromise
+        return this.isInitialized
+      }
+
+      this.initializationPromise = this.performInitialization()
+      await this.initializationPromise
+      return this.isInitialized
+    } catch {
+      return false
     }
-
-    this.initializationPromise = this.performInitialization()
-    return this.initializationPromise
   }
 
   private async performInitialization(): Promise<void> {
@@ -529,8 +535,163 @@ class DymoService {
   </ObjectInfo>
 </DieCutLabel>`
   }
+
+  /**
+   * Utility: expose available printers as string array for UI
+   */
+  getAvailablePrinters(): string[] {
+    return this.printers.map(p => p.name)
+  }
+
+  /**
+   * Check DYMO/WebService status and list available printers
+   */
+  async getServiceStatus(): Promise<{
+    isFrameworkInstalled: boolean
+    isWebServicePresent: boolean
+    availablePrinters: string[]
+  }> {
+    const initialized = await this.initialize()
+    if (typeof window === 'undefined' || !initialized) {
+      return {
+        isFrameworkInstalled: false,
+        isWebServicePresent: false,
+        availablePrinters: []
+      }
+    }
+
+    try {
+      const env = window.dymo.label.framework.checkEnvironment()
+      const printers = await this.refreshPrinters()
+      return {
+        isFrameworkInstalled: !!env.framework,
+        isWebServicePresent: !!env.addIn || !!env.printers,
+        availablePrinters: printers.map(p => p.name),
+      }
+    } catch {
+      return {
+        isFrameworkInstalled: false,
+        isWebServicePresent: false,
+        availablePrinters: []
+      }
+    }
+  }
+
+  /**
+   * Force re-initialization
+   */
+  async forceReinitialize(): Promise<boolean> {
+    this.isInitialized = false
+    this.initializationPromise = null
+    try {
+      return await this.initialize()
+    } catch {
+      return false
+    }
+  }
+
+  /**
+   * Generate a simple canvas-based preview (returns base64 without data URL prefix)
+   */
+  async previewLabel(data: { [key: string]: string }, type: 'qr' | 'barcode'): Promise<string> {
+    if (typeof document === 'undefined') return ''
+    const canvas = document.createElement('canvas')
+    canvas.width = 400
+    canvas.height = 200
+    const ctx = canvas.getContext('2d')
+    if (!ctx) return ''
+
+    // Background
+    ctx.fillStyle = '#ffffff'
+    ctx.fillRect(0, 0, canvas.width, canvas.height)
+    ctx.strokeStyle = '#000000'
+    ctx.strokeRect(0, 0, canvas.width, canvas.height)
+
+    // Title
+    ctx.fillStyle = '#000000'
+    ctx.font = 'bold 16px Arial'
+    const title = type === 'qr' ? 'QR Label Preview' : 'Barcode Label Preview'
+    ctx.fillText(title, 12, 24)
+
+    // Content lines
+    ctx.font = '13px Arial'
+    const line1 = data.itemName || data.locationName || 'Item'
+    const line2 = data.locationName || data.categoryName || ''
+    const code = type === 'qr' ? (data.qrCode || '') : (data.barcode || '')
+    ctx.fillText(line1, 12, 60)
+    if (line2) ctx.fillText(line2, 12, 80)
+
+    // Code box
+    ctx.strokeRect(12, 100, 160, 60)
+    ctx.font = '12px monospace'
+    ctx.fillText(code, 16, 130)
+
+    const dataUrl = canvas.toDataURL('image/png')
+    return dataUrl.replace(/^data:image\/png;base64,/, '')
+  }
+
+  /**
+   * Convenience: print QR label using built-in template
+   */
+  async printQRLabel(data: { qrCode: string; itemName?: string; locationName?: string; categoryName?: string }, options: Partial<DymoPrintSettings> & { printerName?: string } = {}) {
+    const labelXml = this.getQRTemplate('medium')
+    const printerName = options.printerName || this.getAvailablePrinters()[0]
+    const labelData: DymoLabelData = {
+      QRCODE: data.qrCode,
+      ADDRESS_TEXT: `${data.itemName || ''} ${data.locationName || ''}`.trim()
+    }
+    return this.printLabel(printerName || '', labelXml, labelData, options)
+  }
+
+  /**
+   * Convenience: print Barcode label using built-in template
+   */
+  async printBarcodeLabel(data: { barcode: string; itemName?: string; locationName?: string }, options: Partial<DymoPrintSettings> & { printerName?: string } = {}) {
+    const labelXml = this.getBarcodeTemplate('medium')
+    const printerName = options.printerName || this.getAvailablePrinters()[0]
+    const labelData: DymoLabelData = {
+      BARCODE: data.barcode,
+      ADDRESS_TEXT: `${data.itemName || ''} ${data.locationName || ''}`.trim()
+    }
+    return this.printLabel(printerName || '', labelXml, labelData, options)
+  }
+
+  /**
+   * Print a single location label (expects minimal fields)
+   */
+  async printLocationLabel(location: { name: string; qrCode: string }, options: Partial<DymoPrintSettings> & { printerName?: string } = {}) {
+    return this.printQRLabel({ qrCode: location.qrCode, itemName: location.name, locationName: location.name }, options)
+  }
+
+  /**
+   * Print multiple labels in sequence
+   */
+  async printMultipleLabels(locations: Array<{ name: string; qrCode: string }>, options: Partial<DymoPrintSettings> & { printerName?: string } = {}) {
+    for (const loc of locations) {
+      await this.printLocationLabel(loc, options)
+    }
+    return { success: true }
+  }
+
+  /**
+   * Generic bulk printer used by queue
+   */
+  async printBulkLabels(labels: Array<{ qrCode?: string; barcode?: string; itemName?: string; locationName?: string }>, type: 'qr' | 'barcode', options: Partial<DymoPrintSettings> & { printerName?: string; labelSize?: 'small' | 'standard' | 'large' } = {}) {
+    for (const label of labels) {
+      if (type === 'qr' && label.qrCode) {
+        await this.printQRLabel({ qrCode: label.qrCode, itemName: label.itemName, locationName: label.locationName }, options)
+      } else if (type === 'barcode' && label.barcode) {
+        await this.printBarcodeLabel({ barcode: label.barcode, itemName: label.itemName, locationName: label.locationName }, options)
+      }
+    }
+    return { success: true }
+  }
 }
 
 // Export singleton instance
 export const dymoService = new DymoService()
 export default dymoService
+
+// Re-export friendly type aliases expected by components
+export type LabelData = DymoLabelData
+export type PrintOptions = Partial<DymoPrintSettings> & { printerName?: string; labelSize?: 'small' | 'standard' | 'large' }

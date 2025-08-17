@@ -32,7 +32,7 @@ import {
   RefreshCw
 } from 'lucide-react'
 import { toast } from 'sonner'
-import { dymoService, type LabelData, type PrintOptions } from '@/lib/printing/dymo-service'
+import dymoService, { type LabelData, type PrintOptions } from '@/lib/printing/dymo-service'
 
 // Compatible Location interface based on Prisma model
 interface Location {
@@ -152,7 +152,7 @@ export function DymoPrintDialog({
       }
       
       const preview = await dymoService.previewLabel(labelData, 'qr')
-      setPreviewImage(preview)
+      setPreviewImage(preview.startsWith('data:') ? preview : `data:image/png;base64,${preview}`)
     } catch (error) {
       console.error('Preview generation error:', error)
       toast.error('Kunne ikke generere forhåndsvisning')

@@ -47,7 +47,7 @@ export function BatchGrid({ masterId, hideMasterHeader = false, hideTotals = fal
     staleTime: 30000,
     refetchOnWindowFocus: false,
     refetchOnMount: false,
-    keepPreviousData: true,
+    placeholderData: (prev) => prev,
   })
   
   // Fetch batches for this master
@@ -55,7 +55,7 @@ export function BatchGrid({ masterId, hideMasterHeader = false, hideTotals = fal
     staleTime: 30000,
     refetchOnWindowFocus: false,
     refetchOnMount: false,
-    keepPreviousData: true,
+    placeholderData: (prev) => prev,
   })
 
   // Fetch colors for master to get color images
@@ -63,7 +63,7 @@ export function BatchGrid({ masterId, hideMasterHeader = false, hideTotals = fal
     staleTime: 30000,
     refetchOnWindowFocus: false,
     refetchOnMount: false,
-    keepPreviousData: true,
+    placeholderData: (prev) => prev,
   })
   
   // Fetch master totals
@@ -71,7 +71,7 @@ export function BatchGrid({ masterId, hideMasterHeader = false, hideTotals = fal
     staleTime: 30000,
     refetchOnWindowFocus: false,
     refetchOnMount: false,
-    keepPreviousData: true,
+    placeholderData: (prev) => prev,
   })
 
   // Delete batch mutation

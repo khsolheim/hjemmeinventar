@@ -87,8 +87,8 @@ export function CategoryDetailClient({
     staleTime: 30000,
     refetchOnWindowFocus: false,
     refetchOnMount: false,
-    keepPreviousData: true,
-    initialData: initialCategory ?? undefined,
+    placeholderData: (prev) => prev,
+    initialData: (initialCategory as any) ?? undefined,
   })
   const { data: itemsData, isLoading: itemsLoading, refetch: refetchItems } = trpc.categories.getItems.useQuery({
     categoryId,
@@ -97,14 +97,14 @@ export function CategoryDetailClient({
     staleTime: 30000,
     refetchOnWindowFocus: false,
     refetchOnMount: false,
-    keepPreviousData: true,
-    initialData: initialItems ?? undefined,
+    placeholderData: (prev) => prev,
+    initialData: (initialItems as any) ?? undefined,
   })
   const { data: categoryStats, refetch: refetchStats } = trpc.categories.getStats.useQuery(categoryId, {
     staleTime: 30000,
     refetchOnWindowFocus: false,
     refetchOnMount: false,
-    keepPreviousData: true,
+    placeholderData: (prev) => prev,
     initialData: initialTotal !== undefined && initialTotalValue !== undefined ? {
       totalItems: initialTotal,
       totalValue: initialTotalValue,
