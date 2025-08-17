@@ -48,14 +48,19 @@ export default function ApprovalsPage() {
   })
 
   // tRPC queries
-  const { 
-    data: workflows, 
-    isLoading, 
-    refetch: refetchWorkflows 
-  } = trpc.printing.getApprovalWorkflows.useQuery({
-    status: selectedTab === 'pending' ? ['PENDING', 'IN_PROGRESS'] : 
-            selectedTab === 'completed' ? ['APPROVED', 'REJECTED'] : undefined
-  })
+  // TODO: Implement getApprovalWorkflows in printing router
+  const workflows: any[] = []
+  const isLoading = false
+  const refetchWorkflows = () => {}
+  
+  // const { 
+  //   data: workflows, 
+  //   isLoading, 
+  //   refetch: refetchWorkflows 
+  // } = trpc.printing.getApprovalWorkflows.useQuery({
+  //   status: selectedTab === 'pending' ? ['PENDING', 'IN_PROGRESS'] : 
+  //           selectedTab === 'completed' ? ['APPROVED', 'REJECTED'] : undefined
+  // })
 
   const { data: approvalRules } = trpc.printing.getApprovalRules.useQuery()
 

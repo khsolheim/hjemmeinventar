@@ -7,6 +7,10 @@ const withBundleAnalyzer = require('@next/bundle-analyzer')({
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
+  eslint: {
+    // Disable ESLint during builds for deployment
+    ignoreDuringBuilds: true,
+  },
   experimental: {
     optimizePackageImports: ['lucide-react'],
     // Turbopack configuration

@@ -69,7 +69,12 @@ export default async function YarnDetailPage({ params }: { params: Promise<{ id:
 
   return (
     <div className="page container mx-auto px-4 py-8">
-      <YarnMasterDetail id={id} initialMaster={initialMaster} initialTotals={initialTotals} initialColors={initialColors} />
+      <YarnMasterDetail 
+        id={id} 
+        initialMaster={initialMaster} 
+        initialTotals={initialTotals} 
+        {...(initialColors && { initialColors })} 
+      />
     </div>
   )
 }

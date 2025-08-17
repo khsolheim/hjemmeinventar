@@ -178,14 +178,14 @@ export default function LocationsMobilePage() {
 
   // Pull-to-refresh handlers
   const handleTouchStart = (e: React.TouchEvent) => {
-    if (containerRef.current?.scrollTop === 0) {
+    if (containerRef.current?.scrollTop === 0 && e.touches[0]) {
       startY.current = e.touches[0].clientY
       setIsPulling(true)
     }
   }
 
   const handleTouchMove = (e: React.TouchEvent) => {
-    if (!isPulling || containerRef.current?.scrollTop !== 0) return
+    if (!isPulling || containerRef.current?.scrollTop !== 0 || !e.touches[0]) return
     
     const currentY = e.touches[0].clientY
     pullDistance.current = currentY - startY.current

@@ -18,8 +18,7 @@ declare global {
     dymo: {
       label: {
         framework: DymoFramework
-          trace: boolean
-        }
+        trace: boolean
       }
     }
   }

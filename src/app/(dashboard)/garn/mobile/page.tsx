@@ -34,7 +34,7 @@ export default function MobileYarnPage() {
   const totalMasters = masters.length
   const totalValue = masters.reduce((sum, master) => sum + (master.totals?.totalValue || 0), 0)
   const lowStockCount = masters.filter(master => 
-    master.totals?.totalAvailableQuantity && master.totals.totalAvailableQuantity <= 2
+    master.totals?.availableSkeins !== undefined && master.totals.availableSkeins <= 2
   ).length
 
   return (

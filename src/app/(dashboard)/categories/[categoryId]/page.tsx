@@ -2,10 +2,11 @@ import { auth } from '@/auth'
 import { db } from '@/lib/db'
 import { CategoryDetailClient } from '@/components/categories/CategoryDetailClient'
 
-export default async function CategoryDetailPage({ params }: { params: { categoryId: string } }) {
+export default async function CategoryDetailPage({ params }: { params: Promise<{ categoryId: string }> }) {
   const session = await auth()
   const userId = session?.user?.id
-  const categoryId = params.categoryId
+  const resolvedParams = await params
+  const categoryId = resolvedParams.categoryId
 
   let initialCategory: any = null
   let initialItems: any = undefined
@@ -13,7 +14,7 @@ export default async function CategoryDetailPage({ params }: { params: { categor
   let initialTotalValue: number | undefined
 
   if (userId) {
-    initialCategory = await db.category.findFirst({ where: { id: categoryId, userId } })
+    initialCategory = await db.category.findFirst({ where: { id: categoryId } })
     const items = await db.item.findMany({
       where: { userId, categoryId },
       include: { location: true, tags: true },
@@ -32,8 +33,8 @@ export default async function CategoryDetailPage({ params }: { params: { categor
       categoryId={categoryId}
       initialCategory={initialCategory}
       initialItems={initialItems}
-      initialTotal={initialTotal}
-      initialTotalValue={initialTotalValue}
+      {...(initialTotal !== undefined && { initialTotal })}
+      {...(initialTotalValue !== undefined && { initialTotalValue })}
     />
   )
 }
