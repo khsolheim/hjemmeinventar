@@ -4,7 +4,7 @@ import { cn } from "@/lib/utils"
 
 function Input({ className, type, ...props }: React.ComponentProps<"input">) {
   // Handle controlled vs uncontrolled mode properly
-  let inputProps: any = { ...props }
+  const inputProps: React.ComponentProps<"input"> = { ...props }
   
   // If defaultValue is provided, use uncontrolled mode
   if (props.defaultValue !== undefined) {

@@ -6,6 +6,7 @@ import { SessionProvider } from "@/components/providers/SessionProvider"
 import { Toaster } from "@/components/ui/sonner"
 // import { initializeAxe } from "@/lib/testing/accessibility" // Disabled for production build
 import { SkipToContent } from "@/components/accessibility/SkipToContent"
+import { ErrorBoundary } from "@/components/error/ErrorBoundary"
 
 const inter = Inter({
   subsets: ["latin"],
@@ -64,16 +65,18 @@ export default function RootLayout({
       </head>
       <body className="min-h-screen bg-background font-sans antialiased">
         <SkipToContent />
-        <SessionProvider>
-          <TRPCProvider>
-            <div className="relative flex min-h-screen flex-col">
-              <main id="main-content" className="flex-1" tabIndex={-1}>
-                {children}
-              </main>
-            </div>
-            <Toaster />
-          </TRPCProvider>
-        </SessionProvider>
+        <ErrorBoundary>
+          <SessionProvider>
+            <TRPCProvider>
+              <div className="relative flex min-h-screen flex-col">
+                <main id="main-content" className="flex-1" tabIndex={-1}>
+                  {children}
+                </main>
+              </div>
+              <Toaster />
+            </TRPCProvider>
+          </SessionProvider>
+        </ErrorBoundary>
       </body>
     </html>
   )
