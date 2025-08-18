@@ -107,16 +107,18 @@ export function AIPageClient({ aiEnabled }: { aiEnabled: boolean }) {
             <CardContent className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="text-sm font-medium">Gjenstandsnavn</label>
+                  <label htmlFor="test-item-name" className="text-sm font-medium">Gjenstandsnavn</label>
                   <Input
+                    id="test-item-name"
                     placeholder="F.eks. 'iPhone 15 Pro Max'"
                     value={testItemName}
                     onChange={(e) => setTestItemName(e.target.value)}
                   />
                 </div>
                 <div>
-                  <label className="text-sm font-medium">Beskrivelse (valgfritt)</label>
+                  <label htmlFor="test-item-description" className="text-sm font-medium">Beskrivelse (valgfritt)</label>
                   <Input
+                    id="test-item-description"
                     placeholder="F.eks. 'Svart, 256GB, med deksel'"
                     value={testDescription}
                     onChange={(e) => setTestDescription(e.target.value)}
@@ -160,9 +162,10 @@ export function AIPageClient({ aiEnabled }: { aiEnabled: boolean }) {
               </CardHeader>
               <CardContent className="space-y-4">
                 <div>
-                  <label className="text-sm font-medium">Opprinnelig søkequery</label>
+                  <label htmlFor="search-query" className="text-sm font-medium">Opprinnelig søkequery</label>
                   <div className="flex gap-2">
                     <Input
+                      id="search-query"
                       placeholder="F.eks. 'rød garn ull'"
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}

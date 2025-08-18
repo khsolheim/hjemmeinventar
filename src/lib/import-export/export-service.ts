@@ -1,6 +1,24 @@
 import * as XLSX from 'xlsx'
 import { Parser } from 'json2csv'
 
+// Type definitions for export data
+interface LocationWithCount {
+  _count?: { items?: number }
+}
+
+interface ItemWithValue {
+  estimatedValue?: number
+}
+
+interface LocationWithItems {
+  items?: ItemWithValue[]
+}
+
+interface LoanData {
+  status: string
+  expectedReturnDate?: Date | string
+}
+
 // Export format options
 export interface ExportOptions {
   format: 'csv' | 'xlsx' | 'json'
@@ -25,13 +43,13 @@ export interface ExportField {
   label: string
   type?: 'string' | 'number' | 'date' | 'boolean' | 'currency'
   format?: string
-  transform?: (value: any) => any
+  transform?: (value: unknown) => unknown
 }
 
 export interface ExportFilter {
   field: string
   operator: 'equals' | 'contains' | 'startsWith' | 'gt' | 'lt' | 'between' | 'in'
-  value: any
+  value: unknown
 }
 
 // Pre-configured export templates
@@ -96,7 +114,7 @@ export const ExportTemplates = {
         key: 'daysUntilExpiry', 
         label: 'Dager til utløp', 
         type: 'number',
-        transform: (item: any) => {
+        transform: (item: { expiryDate?: Date | string }) => {
           if (!item.expiryDate) return null
           const today = new Date()
           const expiry = new Date(item.expiryDate)
@@ -126,14 +144,14 @@ export const ExportTemplates = {
         key: 'itemCount', 
         label: 'Antall gjenstander', 
         type: 'number',
-        transform: (location: any) => location._count?.items || 0
+        transform: (location: LocationWithCount) => location._count?.items || 0
       },
       { 
         key: 'totalValue', 
         label: 'Total verdi', 
         type: 'currency',
-        transform: (location: any) => {
-          return location.items?.reduce((sum: number, item: any) => sum + (item.estimatedValue || 0), 0) || 0
+        transform: (location: LocationWithItems) => {
+          return location.items?.reduce((sum: number, item: ItemWithValue) => sum + (item.estimatedValue || 0), 0) || 0
         }
       }
     ]
@@ -155,7 +173,7 @@ export const ExportTemplates = {
         key: 'daysOverdue', 
         label: 'Dager forsinket', 
         type: 'number',
-        transform: (loan: any) => {
+        transform: (loan: LoanData) => {
           if (loan.status !== 'OUT' || !loan.expectedReturnDate) return 0
           const today = new Date()
           const expected = new Date(loan.expectedReturnDate)
@@ -170,7 +188,7 @@ export const ExportTemplates = {
 class ExportService {
   // Main export function
   async exportData(
-    data: any[], 
+    data: Record<string, unknown>[], 
     config: ExportConfig, 
     options: ExportOptions = { format: 'csv' }
   ): Promise<Blob> {
@@ -199,7 +217,7 @@ class ExportService {
   }
 
   // Apply data filters
-  private applyFilters(data: any[], filters: ExportFilter[]): any[] {
+  private applyFilters(data: Record<string, unknown>[], filters: ExportFilter[]): Record<string, unknown>[] {
     return data.filter(item => {
       return filters.every(filter => {
         const value = this.getNestedValue(item, filter.field)
@@ -209,7 +227,7 @@ class ExportService {
   }
 
   // Apply single filter
-  private applyFilter(value: any, operator: string, filterValue: any): boolean {
+  private applyFilter(value: unknown, operator: string, filterValue: unknown): boolean {
     switch (operator) {
       case 'equals':
         return value === filterValue
@@ -233,7 +251,7 @@ class ExportService {
   }
 
   // Apply sorting
-  private applySorting(data: any[], sortBy: string, sortOrder: 'asc' | 'desc'): any[] {
+  private applySorting(data: Record<string, unknown>[], sortBy: string, sortOrder: 'asc' | 'desc'): Record<string, unknown>[] {
     return [...data].sort((a, b) => {
       const aValue = this.getNestedValue(a, sortBy)
       const bValue = this.getNestedValue(b, sortBy)
@@ -245,9 +263,9 @@ class ExportService {
   }
 
   // Transform data according to field configuration
-  private transformData(data: any[], fields: ExportField[]): any[] {
+  private transformData(data: Record<string, unknown>[], fields: ExportField[]): Record<string, unknown>[] {
     return data.map(item => {
-      const transformedItem: any = {}
+      const transformedItem: Record<string, unknown> = {}
       
       fields.forEach(field => {
         let value = this.getNestedValue(item, field.key)
@@ -268,7 +286,7 @@ class ExportService {
   }
 
   // Format value based on type
-  private formatValue(value: any, type?: string, format?: string): any {
+  private formatValue(value: unknown, type?: string, format?: string): unknown {
     if (value === null || value === undefined) return ''
     
     switch (type) {
@@ -296,12 +314,12 @@ class ExportService {
   }
 
   // Get nested object value by dot notation
-  private getNestedValue(obj: any, path: string): any {
+  private getNestedValue(obj: Record<string, unknown>, path: string): unknown {
     return path.split('.').reduce((current, key) => current?.[key], obj)
   }
 
   // Generate CSV
-  private generateCSV(data: any[], config: ExportConfig, options: ExportOptions): Blob {
+  private generateCSV(data: Record<string, unknown>[], config: ExportConfig, options: ExportOptions): Blob {
     try {
       const parser = new Parser({
         delimiter: options.delimiter || ',',
@@ -318,7 +336,7 @@ class ExportService {
   }
 
   // Generate Excel
-  private generateExcel(data: any[], config: ExportConfig, options: ExportOptions): Blob {
+  private generateExcel(data: Record<string, unknown>[], config: ExportConfig, options: ExportOptions): Blob {
     try {
       const worksheet = XLSX.utils.json_to_sheet(data)
       const workbook = XLSX.utils.book_new()
@@ -332,7 +350,7 @@ class ExportService {
       
       // Auto-size columns
       const range = XLSX.utils.decode_range(worksheet['!ref'] || 'A1')
-      const colWidths: any[] = []
+      const colWidths: { width: number }[] = []
       
       for (let col = range.s.c; col <= range.e.c; col++) {
         let maxWidth = 10
@@ -357,7 +375,7 @@ class ExportService {
   }
 
   // Generate JSON
-  private generateJSON(data: any[], config: ExportConfig, options: ExportOptions): Blob {
+  private generateJSON(data: Record<string, unknown>[], config: ExportConfig, options: ExportOptions): Blob {
     try {
       const exportData = {
         metadata: {

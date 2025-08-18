@@ -95,7 +95,7 @@ export const importExportRouter = createTRPCRouter({
       const tx = await ctx.db.$transaction(async (prisma) => {
         let created = 0
         let updated = 0
-        let errors: string[] = []
+        const errors: string[] = []
 
         if (input.type === 'items') {
           // Import items

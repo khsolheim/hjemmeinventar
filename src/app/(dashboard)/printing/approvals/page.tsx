@@ -62,26 +62,31 @@ export default function ApprovalsPage() {
   //           selectedTab === 'completed' ? ['APPROVED', 'REJECTED'] : undefined
   // })
 
-  const { data: approvalRules } = trpc.printing.getApprovalRules.useQuery()
+  // TODO: Implement approval methods in TRPC router
+  // const { data: approvalRules } = trpc.printing.getApprovalRules.useQuery()
+  const approvalRules: any[] = []
 
-  // Mutations
-  const approveJobMutation = trpc.printing.approveJob.useMutation({
-    onSuccess: () => {
-      refetchWorkflows()
-    }
-  })
+  // Placeholder mutations until TRPC methods are implemented
+  const approveJobMutation = {
+    mutate: (data: any) => console.log('approveJob placeholder:', data),
+    isLoading: false
+  }
 
-  const rejectJobMutation = trpc.printing.rejectJob.useMutation({
-    onSuccess: () => {
-      refetchWorkflows()
-    }
-  })
+  const rejectJobMutation = {
+    mutate: (data: any) => console.log('rejectJob placeholder:', data),
+    isLoading: false
+  }
 
-  const createApprovalRuleMutation = trpc.printing.createApprovalRule.useMutation({
-    onSuccess: () => {
-      setShowCreateRule(false)
-    }
-  })
+  const createApprovalRuleMutation = {
+    mutate: (data: any) => console.log('createApprovalRule placeholder:', data),
+    isLoading: false
+  }
+
+  // const createApprovalRuleMutation = trpc.printing.createApprovalRule.useMutation({
+  //   onSuccess: () => {
+  //     setShowCreateRule(false)
+  //   }
+  // })
 
   // Filter workflows
   const filteredWorkflows = workflows?.filter(workflow => {

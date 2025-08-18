@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState, Suspense } from 'react'
+import Image from 'next/image'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -260,8 +261,13 @@ function ScanPageContent() {
                     return (
                       <div className="flex items-start gap-3">
                         {logo ? (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img src={logo} alt="Logo" className="h-10 w-auto object-contain" />
+                          <Image 
+                            src={logo} 
+                            alt="Logo" 
+                            width={80}
+                            height={40}
+                            className="h-10 w-auto object-contain" 
+                          />
                         ) : null}
                         <div className="flex-1 min-w-0">
                           <div className="text-sm font-medium truncate">{scanResult.data.item.name}</div>

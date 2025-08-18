@@ -23,6 +23,31 @@ import { Download, FileText, Table, Shield, Loader2 } from 'lucide-react'
 import { trpc } from '@/lib/trpc/client'
 import { toast } from 'sonner'
 
+// Type definitions for export data
+interface ExportDataResponse {
+  data: ExportItem[]
+  metadata?: {
+    title: string
+    description?: string
+    recordCount: number
+  }
+}
+
+interface ExportItem {
+  navn?: string
+  kategori?: string
+  lokasjon?: string
+  antall?: number | string
+  pris?: string
+  kjøpsdato?: string
+  beskrivelse?: string
+  [key: string]: unknown
+}
+
+interface TRPCError {
+  message: string
+}
+
 interface ExportDialogProps {
   isOpen: boolean
   onClose: () => void
@@ -36,19 +61,19 @@ export function ExportDialog({ isOpen, onClose }: ExportDialogProps) {
   const [isGenerating, setIsGenerating] = useState(false)
 
   const exportData = trpc.importExport.exportData.useMutation({
-    onSuccess: (data: any) => {
+    onSuccess: (data: ExportDataResponse) => {
       generateAndDownloadFile(data)
       setIsGenerating(false)
       toast.success('Eksport fullført')
       onClose()
     },
-    onError: (error: any) => {
+    onError: (error: TRPCError) => {
       toast.error(`Eksport feilet: ${error.message}`)
       setIsGenerating(false)
     }
   })
 
-  const generateAndDownloadFile = (data: any) => {
+  const generateAndDownloadFile = (data: ExportDataResponse) => {
     let content = ''
     let filename = ''
     let mimeType = ''
@@ -86,7 +111,7 @@ export function ExportDialog({ isOpen, onClose }: ExportDialogProps) {
     URL.revokeObjectURL(url)
   }
 
-  const convertToCSV = (data: any[]) => {
+  const convertToCSV = (data: ExportItem[]) => {
     if (data.length === 0) return ''
     
     const headers = Object.keys(data[0])
@@ -101,20 +126,20 @@ export function ExportDialog({ isOpen, onClose }: ExportDialogProps) {
     return [csvHeaders, ...csvRows].join('\n')
   }
 
-  const convertToExcelCSV = (data: any[]) => {
+  const convertToExcelCSV = (data: ExportItem[]) => {
     // Add UTF-8 BOM for proper Excel encoding
     const bom = '\uFEFF'
     return bom + convertToCSV(data)
   }
 
-  const generatePDFContent = (data: any) => {
+  const generatePDFContent = (data: ExportDataResponse) => {
     // For now, generate HTML content that can be converted to PDF
     // In a real implementation, you'd use a PDF library like jsPDF or Puppeteer
     const html = generateHTMLReport(data)
     return html
   }
 
-  const generateHTMLReport = (data: any) => {
+  const generateHTMLReport = (data: ExportDataResponse) => {
     const timestamp = new Date().toLocaleDateString('nb-NO')
     
     if (exportType === 'insurance') {
@@ -155,7 +180,7 @@ export function ExportDialog({ isOpen, onClose }: ExportDialogProps) {
             </tr>
           </thead>
           <tbody>
-            ${data.data.map((item: any) => `
+            ${data.data.map((item: ExportItem) => `
               <tr>
                 ${Object.values(item).map(value => `<td>${value || '-'}</td>`).join('')}
               </tr>
@@ -172,9 +197,9 @@ export function ExportDialog({ isOpen, onClose }: ExportDialogProps) {
     `
   }
 
-  const generateInsuranceReport = (data: any, timestamp: string) => {
-    const totalValue = data.data.reduce((sum: number, item: any) => sum + (parseFloat(item.pris) || 0), 0)
-    const itemsWithValue = data.data.filter((item: any) => item.pris && parseFloat(item.pris) > 0)
+  const generateInsuranceReport = (data: ExportDataResponse, timestamp: string) => {
+    const totalValue = data.data.reduce((sum: number, item: ExportItem) => sum + (parseFloat(item.pris || '0') || 0), 0)
+    const itemsWithValue = data.data.filter((item: ExportItem) => item.pris && parseFloat(item.pris) > 0)
     
     return `
       <!DOCTYPE html>
@@ -242,7 +267,7 @@ export function ExportDialog({ isOpen, onClose }: ExportDialogProps) {
             </tr>
           </thead>
           <tbody>
-            ${data.data.map((item: any) => `
+            ${data.data.map((item: ExportItem) => `
               <tr style="${item.pris && parseFloat(item.pris) > 5000 ? 'background-color: #fef3c7;' : ''}">
                 <td><strong>${item.navn || 'Ukjent'}</strong></td>
                 <td>${item.kategori || 'Ukategorisert'}</td>
@@ -261,19 +286,19 @@ export function ExportDialog({ isOpen, onClose }: ExportDialogProps) {
           <table style="margin: 0;">
             <tr>
               <td><strong>Gjenstander over 10,000 NOK:</strong></td>
-              <td>${itemsWithValue.filter((item: any) => parseFloat(item.pris) > 10000).length}</td>
+              <td>${itemsWithValue.filter((item: ExportItem) => parseFloat(item.pris || '0') > 10000).length}</td>
             </tr>
             <tr>
               <td><strong>Gjenstander 5,000-10,000 NOK:</strong></td>
-              <td>${itemsWithValue.filter((item: any) => parseFloat(item.pris) >= 5000 && parseFloat(item.pris) <= 10000).length}</td>
+              <td>${itemsWithValue.filter((item: ExportItem) => parseFloat(item.pris || '0') >= 5000 && parseFloat(item.pris || '0') <= 10000).length}</td>
             </tr>
             <tr>
               <td><strong>Gjenstander 1,000-5,000 NOK:</strong></td>
-              <td>${itemsWithValue.filter((item: any) => parseFloat(item.pris) >= 1000 && parseFloat(item.pris) < 5000).length}</td>
+              <td>${itemsWithValue.filter((item: ExportItem) => parseFloat(item.pris || '0') >= 1000 && parseFloat(item.pris || '0') < 5000).length}</td>
             </tr>
             <tr>
               <td><strong>Gjenstander under 1,000 NOK:</strong></td>
-              <td>${itemsWithValue.filter((item: any) => parseFloat(item.pris) < 1000).length}</td>
+              <td>${itemsWithValue.filter((item: ExportItem) => parseFloat(item.pris || '0') < 1000).length}</td>
             </tr>
           </table>
         </div>
@@ -317,7 +342,7 @@ export function ExportDialog({ isOpen, onClose }: ExportDialogProps) {
         <div className="space-y-6">
           <div className="space-y-2">
             <Label>Rapport type</Label>
-            <Select value={exportType} onValueChange={(value: any) => setExportType(value)}>
+            <Select value={exportType} onValueChange={(value: typeof exportType) => setExportType(value)}>
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
@@ -346,7 +371,7 @@ export function ExportDialog({ isOpen, onClose }: ExportDialogProps) {
 
           <div className="space-y-2">
             <Label>Format</Label>
-            <Select value={format} onValueChange={(value: any) => setFormat(value)}>
+            <Select value={format} onValueChange={(value: typeof format) => setFormat(value)}>
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>

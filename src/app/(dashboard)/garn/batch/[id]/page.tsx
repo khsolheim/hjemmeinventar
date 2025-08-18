@@ -1,6 +1,24 @@
 'use client'
 
 import React from 'react'
+import Image from 'next/image'
+
+// Type definitions
+interface LocationTreeNode {
+  id: string
+  name: string
+  type: string
+  children?: LocationTreeNode[]
+}
+
+interface LabelProfile {
+  id: string
+  name: string
+  logoUrl?: string | null
+  extraLine1?: string | null
+  extraLine2?: string | null
+  showUrl?: boolean
+}
 import { useSession } from 'next-auth/react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
@@ -114,15 +132,19 @@ export default function BatchDetailPage() {
             </div>
 
             <div className="lg:col-span-1 xl:col-span-1">
-              <div className="aspect-square w-full max-w-xs overflow-hidden rounded-md bg-muted mx-auto">
+              <div className="aspect-square w-full max-w-xs overflow-hidden rounded-md bg-muted mx-auto relative">
                 {(() => {
                   // Prioriter farge-bilde, deretter batch-bilde
                   const imageUrl = color?.imageUrl || batch.imageUrl
                   const imageAlt = color?.imageUrl ? `${color.name} farge` : batch.name
                   
                   return imageUrl ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={imageUrl} alt={imageAlt} className="h-full w-full object-cover" />
+                    <Image 
+                      src={imageUrl} 
+                      alt={imageAlt} 
+                      fill
+                      className="object-cover" 
+                    />
                   ) : (
                     <div className="h-full w-full flex items-center justify-center text-muted-foreground text-sm">
                       Ingen bilde
@@ -174,7 +196,7 @@ export default function BatchDetailPage() {
                       <DialogDescription>Velg plassering ved å klikke deg nedover i hierarkiet. Valgfritt: Opprett emballasje.</DialogDescription>
                     </DialogHeader>
                     <InlineBuilderForm 
-                      tree={(locationTree as any) || []}
+                      tree={(locationTree as LocationTreeNode[]) || []}
                       {...(hierarchyMatrixQuery.data?.matrix && { hierarchyMatrix: hierarchyMatrixQuery.data.matrix })}
                       onCreateContainer={async (parentId, type, name) => {
                         const created = await createLocation.mutateAsync({ name, type, parentId })
@@ -211,7 +233,7 @@ export default function BatchDetailPage() {
                 </Dialog>
                 <Button size="sm" variant="outline" onClick={async () => {
                   try {
-                    const profile = (profiles.data || []).find((p: any) => p.id === selectedProfileId)
+                    const profile = (profiles.data || []).find((p: LabelProfile) => p.id === selectedProfileId)
                     const labels = (distributions || []).map((dist) => ({
                       itemName: batch.name,
                       locationName: dist.location?.name || 'Lokasjon',
@@ -344,7 +366,7 @@ export default function BatchDetailPage() {
                           <div className="border rounded p-2">
                             <div className="text-xs font-medium mb-1">Forhåndsvisning</div>
                             {(() => {
-                              const profile = (profiles.data || []).find((p: any) => p.id === selectedProfileId)
+                              const profile = (profiles.data || []).find((p: LabelProfile) => p.id === selectedProfileId)
                               const logo = profile?.logoUrl || userProfile.data?.logoUrl || ''
                               const extra1 = profile?.extraLine1 || ''
                               const extra2 = profile?.extraLine2 || ''
@@ -353,8 +375,13 @@ export default function BatchDetailPage() {
                               return (
                                 <div className="flex items-start gap-3">
                                   {logo ? (
-                                    // eslint-disable-next-line @next/next/no-img-element
-                                    <img src={logo} alt="Logo" className="h-10 w-auto object-contain" />
+                                    <Image 
+                                      src={logo} 
+                                      alt="Logo" 
+                                      width={80}
+                                      height={40}
+                                      className="h-10 w-auto object-contain" 
+                                    />
                                   ) : null}
                                   <div className="flex-1 min-w-0">
                                     <div className="text-sm font-medium truncate">{batch.name}</div>
@@ -403,7 +430,7 @@ export default function BatchDetailPage() {
                               const printWindow = window.open('', '_blank')
                               if (printWindow) {
                                 const url = `${window.location.origin}/scan?d=${d.qrCode}`
-                                const profile = (profiles.data || []).find((p: any) => p.id === selectedProfileId)
+                                const profile = (profiles.data || []).find((p: LabelProfile) => p.id === selectedProfileId)
                                 const extra1 = profile?.extraLine1 || ''
                                 const extra2 = profile?.extraLine2 || ''
                                 const showUrl = profile?.showUrl ?? true
@@ -417,7 +444,7 @@ export default function BatchDetailPage() {
                               try {
                                 const copies = Number((document.getElementById(`dy-copies-${d.id}`) as HTMLInputElement)?.value || '1')
                                 const size = ((document.getElementById(`dy-size-${d.id}`) as HTMLSelectElement)?.value || 'standard') as 'small'|'standard'|'large'
-                                const profile = (profiles.data || []).find((p: any) => p.id === selectedProfileId)
+                                const profile = (profiles.data || []).find((p: LabelProfile) => p.id === selectedProfileId)
                                 await dymoService.printQRLabel({
                                   itemName: batch.name,
                                   locationName: d.location?.name || 'Lokasjon',

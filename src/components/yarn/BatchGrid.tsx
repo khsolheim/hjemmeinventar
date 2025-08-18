@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
+import Image from 'next/image'
 import { useRouter } from 'next/navigation'
 import { Plus, Edit, Trash2, Package, MapPin, Calendar, DollarSign, Hash, QrCode, Grid, List } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -345,8 +346,13 @@ export function BatchGrid({ masterId, hideMasterHeader = false, hideTotals = fal
                   <CardHeader className="px-3 py-2">
                     <div className="flex justify-end items-start gap-1">
                       {batch.imageUrl && (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img src={batch.imageUrl} alt={batchData.color || batch.name} className="h-8 w-8 rounded object-cover mr-1" />
+                        <Image 
+                          src={batch.imageUrl} 
+                          alt={batchData.color || batch.name} 
+                          width={32}
+                          height={32}
+                          className="h-8 w-8 rounded object-cover mr-1" 
+                        />
                       )}
                       <Link href={`/garn/batch/${batch.id}`} className="inline-flex">
                         <Button variant="ghost" size="sm" title="Åpne detaljer">

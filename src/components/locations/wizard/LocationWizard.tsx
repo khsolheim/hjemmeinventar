@@ -63,11 +63,12 @@ export function LocationWizard() {
   )
 
   // Check if tutorial should be skipped on mount
+  const shouldSkipTutorial = useShouldSkipTutorial()
   useEffect(() => {
-    if (useShouldSkipTutorial() && state.showWelcome) {
+    if (shouldSkipTutorial && state.showWelcome) {
       skipTutorial(false) // Don't save again, just skip
     }
-  }, [state.showWelcome, skipTutorial])
+  }, [state.showWelcome, skipTutorial, shouldSkipTutorial])
 
   // Update wizard locations when data changes
   useEffect(() => {

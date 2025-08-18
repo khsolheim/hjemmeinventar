@@ -249,8 +249,8 @@ function DetailPanel({ selection, onChange, onSelect, masters }: { selection: Se
 
 	if (selection.level === 'color') {
 		if (selection.id === 'new') {
-			let newName = ''
-			let newCode = ''
+			const newName = ''
+			const newCode = ''
 			return (
 				<div className="space-y-2">
 					<div className="font-medium">Ny farge</div>
@@ -288,9 +288,9 @@ function DetailPanel({ selection, onChange, onSelect, masters }: { selection: Se
 
 	if (selection.level === 'batch') {
 		if (selection.id === 'new') {
-			let bn = ''
-			let qty = ''
-			let price = ''
+			const bn = ''
+			const qty = ''
+			const price = ''
 			const master = masters.find((m) => m.id === selection.masterId)
 			const locationId = master?.location?.id
 			return (

@@ -65,7 +65,7 @@ export function OfflineStatusBanner({
 
     // Network connection info
     const updateConnectionInfo = () => {
-      // @ts-ignore - navigator.connection is experimental
+      // @ts-expect-error - Navigator API not fully typed - navigator.connection is experimental
       const connection = navigator.connection || navigator.mozConnection || navigator.webkitConnection
       
       if (connection) {
@@ -79,7 +79,7 @@ export function OfflineStatusBanner({
     
     // @ts-ignore
     if (navigator.connection) {
-      // @ts-ignore
+      // @ts-expect-error - Navigator API not fully typed
       navigator.connection.addEventListener('change', updateConnectionInfo)
     }
 
@@ -91,9 +91,9 @@ export function OfflineStatusBanner({
       window.removeEventListener('online', updateOnlineStatus)
       window.removeEventListener('offline', updateOnlineStatus)
       
-      // @ts-ignore
+      // @ts-expect-error - Navigator API not fully typed
       if (navigator.connection) {
-        // @ts-ignore
+        // @ts-expect-error - Navigator API not fully typed
         navigator.connection.removeEventListener('change', updateConnectionInfo)
       }
     }

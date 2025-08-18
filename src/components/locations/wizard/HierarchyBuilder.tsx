@@ -22,7 +22,11 @@ import {
   Eye,
   MoreVertical,
   ArrowLeft,
-  TreePine
+  TreePine,
+  Lock,
+  Unlock,
+  Printer,
+  Sparkles
 } from 'lucide-react'
 import {
   DropdownMenu,

@@ -1,11 +1,13 @@
 'use client'
 
+import { lazy, Suspense } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { ChevronLeft } from 'lucide-react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { YarnWizard } from '@/components/yarn/YarnWizard'
+
+const YarnWizard = lazy(() => import('@/components/yarn/YarnWizard').then(module => ({ default: module.YarnWizard })))
 
 export default function RegisterYarnPage() {
   const router = useRouter()
@@ -25,7 +27,9 @@ export default function RegisterYarnPage() {
       </div>
 
       <div className="w-full">
-        <YarnWizard onComplete={() => router.push('/garn')} />
+        <Suspense fallback={<div className="flex items-center justify-center p-8 text-muted-foreground">Laster garn registrering...</div>}>
+          <YarnWizard onComplete={() => router.push('/garn')} />
+        </Suspense>
       </div>
     </div>
   )

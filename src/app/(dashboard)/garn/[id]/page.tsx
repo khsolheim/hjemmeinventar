@@ -1,7 +1,12 @@
 import { auth } from '@/auth'
 import { db } from '@/lib/db'
 import { calculateMasterTotals } from '@/lib/utils/yarn-helpers'
-import { YarnMasterDetail } from '@/components/yarn/YarnMasterDetail'
+import { Suspense } from 'react'
+import dynamic from 'next/dynamic'
+
+const YarnMasterDetail = dynamic(() => import('@/components/yarn/YarnMasterDetail').then(mod => ({ default: mod.YarnMasterDetail })), {
+  loading: () => <div className="flex items-center justify-center p-8 text-muted-foreground">Laster garn detaljer...</div>
+})
 
 export default async function YarnDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params

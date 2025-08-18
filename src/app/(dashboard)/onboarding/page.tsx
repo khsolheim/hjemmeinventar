@@ -1,7 +1,11 @@
 'use client'
 
 import { useState } from 'react'
-import { OnboardingWizard } from '@/components/onboarding/OnboardingWizard'
+import dynamic from 'next/dynamic'
+
+const OnboardingWizard = dynamic(() => import('@/components/onboarding/OnboardingWizard').then(mod => ({ default: mod.OnboardingWizard })), {
+  loading: () => <div className="flex items-center justify-center p-8 text-muted-foreground">Laster onboarding veiviser...</div>
+})
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Sparkles, ArrowRight, Home } from 'lucide-react'

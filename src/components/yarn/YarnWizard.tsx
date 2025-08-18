@@ -276,7 +276,7 @@ export function YarnWizard({ onComplete, existingMasterId, preset }: YarnWizardP
       const batchName = `${colorDisplay || 'Batch'} - ${data.batchNumber}`
       
       // Bruk valgt farge fra fargesteg (eller preset)
-      let colorId: string | undefined = selectedColorId || preset?.colorId
+      const colorId: string | undefined = selectedColorId || preset?.colorId
 
       await createBatchMutation.mutateAsync({
         masterId,

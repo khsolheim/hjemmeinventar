@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import Image from 'next/image'
 import { Button } from '@/components/ui/button'
 import { 
   Menu, 
@@ -258,8 +259,13 @@ export function Header({ onToggleSidebar }: HeaderProps) {
                   return (
                     <div className="flex items-start gap-3">
                       {logo ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img src={logo} alt="Logo" className="h-10 w-auto object-contain" />
+                        <Image 
+                          src={logo} 
+                          alt="Logo" 
+                          width={80}
+                          height={40}
+                          className="h-10 w-auto object-contain" 
+                        />
                       ) : null}
                       <div className="flex-1 min-w-0">
                         <div className="text-sm font-medium truncate">{q.itemName}</div>
