@@ -17,7 +17,8 @@ import {
   MapPin, 
   Package, 
   Calendar,
-  ExternalLink
+  ExternalLink,
+  Scissors
 } from 'lucide-react'
 import { format } from 'date-fns'
 
@@ -38,10 +39,10 @@ interface RemnantCardProps {
   remnant: {
     id: string
     name: string
-    description?: string
+    description?: string | null
     availableQuantity: number
     unit: string
-    categoryData?: string
+    categoryData?: string | null
     createdAt: Date
     location?: {
       name: string
@@ -68,6 +69,14 @@ const conditionColors = {
   'Fair': 'bg-yellow-500',
   'Tangled': 'bg-orange-500',
   'Needs sorting': 'bg-red-500'
+}
+
+const conditionLabels = {
+  'Excellent': 'Utmerket',
+  'Good': 'God',
+  'Fair': 'OK',
+  'Tangled': 'Floket',
+  'Needs sorting': 'Trenger sortering'
 }
 
 export function RemnantCard({ 
@@ -100,13 +109,14 @@ export function RemnantCard({
         <div className="flex items-start justify-between">
           <div className="flex-1">
             <div className="flex items-center gap-2 mb-1">
+              <Scissors className="h-4 w-4 text-muted-foreground" />
               <h3 className="font-semibold text-lg">{remnant.name}</h3>
               {remnantData?.condition && (
                 <Badge 
                   variant="secondary" 
                   className={`text-white ${conditionColors[remnantData.condition]}`}
                 >
-                  {remnantData.condition}
+                  {conditionLabels[remnantData.condition]}
                 </Badge>
               )}
             </div>
@@ -206,7 +216,7 @@ export function RemnantCard({
 
         {/* Notes */}
         {remnantData?.notes && (
-          <div className="text-sm text-muted-foreground mb-4">
+          <div className="text-sm text-muted-foreground mb-4 p-2 bg-muted rounded">
             {remnantData.notes}
           </div>
         )}

@@ -11,6 +11,9 @@ import { YarnWizard } from './YarnWizard'
 import { AdvancedYarnSearch } from './AdvancedYarnSearch'
 import { YarnAnalytics } from './YarnAnalytics'
 import { YarnBulkOperations } from './YarnBulkOperations'
+import { RemnantGrid } from './remnants/RemnantGrid'
+import { RemnantCreator } from './remnants/RemnantCreator'
+import { RemnantUsageDialog } from './remnants/RemnantUsageDialog'
 import Link from 'next/link'
 import { trpc } from '@/lib/trpc/client'
 
@@ -35,7 +38,10 @@ export interface YarnMasterWithTotals {
 export function YarnMasterDashboard({ initialMasters, initialTotal }: { initialMasters?: YarnMasterWithTotals[]; initialTotal?: number }) {
   const [searchTerm, setSearchTerm] = useState('')
   const [searchFilters, setSearchFilters] = useState<any>(null)
-  const [activeTab, setActiveTab] = useState<'grid' | 'list' | 'bulk' | 'analytics' | 'colors'>('grid')
+  const [activeTab, setActiveTab] = useState<'grid' | 'list' | 'bulk' | 'analytics' | 'colors' | 'remnants'>('grid')
+  const [showRemnantCreator, setShowRemnantCreator] = useState(false)
+  const [showRemnantUsage, setShowRemnantUsage] = useState<any>(null)
+  const [selectedRemnant, setSelectedRemnant] = useState<any>(null)
 
   // Fetch yarn masters
   const useSearchApi = Boolean((searchFilters && Object.keys(searchFilters).length > 0) || (searchTerm && searchTerm.trim().length > 0))
