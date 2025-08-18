@@ -16,14 +16,20 @@ function safeParseColorCode(categoryData: string | null): string | null {
 import {
   isYarnMaster,
   isYarnBatch,
+  isYarnRemnant,
   getBatchesForMaster,
   getMasterForBatch,
   calculateMasterTotals,
   createBatchForMaster,
   createYarnMaster,
   syncMasterDataToBatches,
+  createRemnantFromBatch,
+  getRemnants,
+  useRemnantInProject,
+  getRemnantStats,
   type YarnMasterData,
-  type YarnBatchData
+  type YarnBatchData,
+  type YarnRemnantData
 } from '../../utils/yarn-helpers'
 import { YarnService } from '@/lib/services/yarn-service'
 import { meilisearchService } from '@/lib/search/meilisearch-service'
@@ -2770,6 +2776,339 @@ export const yarnRouter = createTRPCRouter({
         throw new TRPCError({
           code: 'INTERNAL_SERVER_ERROR',
           message: 'Kunne ikke slette garn-type og tilknyttede elementer'
+        })
+      }
+    }),
+
+  // REMNANT MANAGEMENT ENDPOINTS
+
+  // Create a remnant from an existing batch
+  createRemnant: protectedProcedure
+    .input(z.object({
+      originalBatchId: z.string(),
+      remainingAmount: z.number().positive(),
+      unit: z.enum(['g', 'm', 'nøste', 'gram', 'meter']),
+      condition: z.enum(['Excellent', 'Good', 'Fair', 'Tangled', 'Needs sorting']),
+      sourceProjectId: z.string().optional(),
+      notes: z.string().optional()
+    }))
+    .mutation(async ({ ctx, input }) => {
+      try {
+        const remnant = await createRemnantFromBatch(
+          ctx.db,
+          input.originalBatchId,
+          ctx.user.id,
+          {
+            remainingAmount: input.remainingAmount,
+            unit: input.unit,
+            condition: input.condition,
+            sourceProjectId: input.sourceProjectId,
+            notes: input.notes
+          }
+        )
+
+        // Update search index if available
+        try {
+          await meilisearchService.indexDocument({
+            id: remnant.id,
+            type: 'item',
+            name: remnant.name,
+            description: remnant.description || '',
+            categoryName: 'Garn Restegarn',
+            quantity: remnant.availableQuantity,
+            userId: ctx.user.id,
+            createdAt: remnant.createdAt.toISOString(),
+            updatedAt: remnant.updatedAt.toISOString()
+          })
+        } catch (searchError) {
+          console.warn('Failed to update search index:', searchError)
+        }
+
+        return remnant
+      } catch (error) {
+        console.error('Error creating remnant:', error)
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Kunne ikke opprette garnrest'
+        })
+      }
+    }),
+
+  // Get all remnants for user
+  getRemnants: protectedProcedure
+    .input(z.object({
+      minAmount: z.number().optional(),
+      unit: z.enum(['g', 'm', 'nøste', 'gram', 'meter']).optional(),
+      condition: z.enum(['Excellent', 'Good', 'Fair', 'Tangled', 'Needs sorting']).optional(),
+      originalBatchId: z.string().optional(),
+      limit: z.number().min(1).max(100).default(50),
+      offset: z.number().min(0).default(0)
+    }))
+    .query(async ({ ctx, input }) => {
+      try {
+        const remnants = await getRemnants(ctx.db, ctx.user.id, {
+          minAmount: input.minAmount,
+          unit: input.unit,
+          condition: input.condition,
+          originalBatchId: input.originalBatchId
+        })
+
+        const total = remnants.length
+        const paginatedRemnants = remnants.slice(input.offset, input.offset + input.limit)
+
+        return {
+          remnants: paginatedRemnants,
+          total,
+          hasMore: input.offset + input.limit < total
+        }
+      } catch (error) {
+        console.error('Error getting remnants:', error)
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Kunne ikke hente garnrester'
+        })
+      }
+    }),
+
+  // Get remnant by ID
+  getRemnantById: protectedProcedure
+    .input(z.string())
+    .query(async ({ ctx, input }) => {
+      try {
+        const remnant = await ctx.db.item.findFirst({
+          where: {
+            id: input,
+            userId: ctx.user.id,
+            category: { name: 'Garn Restegarn' }
+          },
+          include: {
+            category: true,
+            location: true,
+            itemRelationsFrom: {
+              where: { relationType: 'REMNANT_OF' },
+              include: {
+                toItem: {
+                  include: { category: true }
+                }
+              }
+            },
+            projectUsage: {
+              include: {
+                project: {
+                  select: {
+                    id: true,
+                    name: true,
+                    status: true
+                  }
+                }
+              }
+            }
+          }
+        })
+
+        if (!remnant) {
+          throw new TRPCError({
+            code: 'NOT_FOUND',
+            message: 'Garnrest ikke funnet'
+          })
+        }
+
+        return remnant
+      } catch (error) {
+        if (error instanceof TRPCError) throw error
+        console.error('Error getting remnant:', error)
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Kunne ikke hente garnrest'
+        })
+      }
+    }),
+
+  // Update remnant
+  updateRemnant: protectedProcedure
+    .input(z.object({
+      id: z.string(),
+      name: z.string().optional(),
+      description: z.string().optional(),
+      availableQuantity: z.number().positive().optional(),
+      condition: z.enum(['Excellent', 'Good', 'Fair', 'Tangled', 'Needs sorting']).optional(),
+      notes: z.string().optional(),
+      locationId: z.string().optional()
+    }))
+    .mutation(async ({ ctx, input }) => {
+      try {
+        const remnant = await ctx.db.item.findFirst({
+          where: {
+            id: input.id,
+            userId: ctx.user.id,
+            category: { name: 'Garn Restegarn' }
+          }
+        })
+
+        if (!remnant) {
+          throw new TRPCError({
+            code: 'NOT_FOUND',
+            message: 'Garnrest ikke funnet'
+          })
+        }
+
+        const currentData = remnant.categoryData ? JSON.parse(remnant.categoryData) : {}
+        const updatedData = {
+          ...currentData,
+          ...(input.condition && { condition: input.condition }),
+          ...(input.notes && { notes: input.notes })
+        }
+
+        const updatedRemnant = await ctx.db.item.update({
+          where: { id: input.id },
+          data: {
+            ...(input.name && { name: input.name }),
+            ...(input.description && { description: input.description }),
+            ...(input.availableQuantity && { availableQuantity: input.availableQuantity }),
+            ...(input.locationId && { locationId: input.locationId }),
+            categoryData: JSON.stringify(updatedData)
+          },
+          include: {
+            category: true,
+            location: true
+          }
+        })
+
+        // Update search index
+        try {
+          await meilisearchService.indexDocument('items', {
+            id: updatedRemnant.id,
+            name: updatedRemnant.name,
+            description: updatedRemnant.description || '',
+            category: 'Garn Restegarn',
+            availableQuantity: updatedRemnant.availableQuantity,
+            unit: updatedRemnant.unit,
+            userId: ctx.user.id
+          })
+        } catch (searchError) {
+          console.warn('Failed to update search index:', searchError)
+        }
+
+        return updatedRemnant
+      } catch (error) {
+        if (error instanceof TRPCError) throw error
+        console.error('Error updating remnant:', error)
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Kunne ikke oppdatere garnrest'
+        })
+      }
+    }),
+
+  // Use remnant in project
+  useRemnant: protectedProcedure
+    .input(z.object({
+      remnantId: z.string(),
+      projectId: z.string(),
+      amountUsed: z.number().positive(),
+      notes: z.string().optional()
+    }))
+    .mutation(async ({ ctx, input }) => {
+      try {
+        const updatedRemnant = await useRemnantInProject(
+          ctx.db,
+          input.remnantId,
+          input.projectId,
+          input.amountUsed,
+          ctx.user.id,
+          input.notes
+        )
+
+        // Update search index
+        try {
+          await meilisearchService.indexDocument('items', {
+            id: updatedRemnant.id,
+            name: updatedRemnant.name,
+            description: updatedRemnant.description || '',
+            category: 'Garn Restegarn',
+            availableQuantity: updatedRemnant.availableQuantity,
+            unit: updatedRemnant.unit,
+            userId: ctx.user.id
+          })
+        } catch (searchError) {
+          console.warn('Failed to update search index:', searchError)
+        }
+
+        return updatedRemnant
+      } catch (error) {
+        console.error('Error using remnant:', error)
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: error instanceof Error ? error.message : 'Kunne ikke bruke garnrest'
+        })
+      }
+    }),
+
+  // Delete remnant
+  deleteRemnant: protectedProcedure
+    .input(z.string())
+    .mutation(async ({ ctx, input }) => {
+      try {
+        const remnant = await ctx.db.item.findFirst({
+          where: {
+            id: input,
+            userId: ctx.user.id,
+            category: { name: 'Garn Restegarn' }
+          }
+        })
+
+        if (!remnant) {
+          throw new TRPCError({
+            code: 'NOT_FOUND',
+            message: 'Garnrest ikke funnet'
+          })
+        }
+
+        // Delete relations
+        await ctx.db.itemRelation.deleteMany({
+          where: {
+            OR: [
+              { fromItemId: input },
+              { toItemId: input }
+            ],
+            userId: ctx.user.id
+          }
+        })
+
+        // Delete the remnant
+        await ctx.db.item.delete({
+          where: { id: input }
+        })
+
+        // Update search index
+        try {
+          await meilisearchService.deleteDocument('items', input)
+        } catch (searchError) {
+          console.warn('Failed to update search index:', searchError)
+        }
+
+        return { success: true }
+      } catch (error) {
+        if (error instanceof TRPCError) throw error
+        console.error('Error deleting remnant:', error)
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Kunne ikke slette garnrest'
+        })
+      }
+    }),
+
+  // Get remnant statistics
+  getRemnantStats: protectedProcedure
+    .query(async ({ ctx }) => {
+      try {
+        const stats = await getRemnantStats(ctx.db, ctx.user.id)
+        return stats
+      } catch (error) {
+        console.error('Error getting remnant stats:', error)
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Kunne ikke hente statistikk for garnrester'
         })
       }
     }),
