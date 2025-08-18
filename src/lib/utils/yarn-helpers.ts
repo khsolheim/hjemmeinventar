@@ -396,3 +396,293 @@ export async function syncMasterDataToBatches(
   
   await Promise.all(updatePromises)
 }
+
+/**
+ * Interface for yarn remnant data
+ */
+export interface YarnRemnantData {
+  originalBatchId: string
+  originalColor: string
+  originalColorCode?: string
+  condition: 'Excellent' | 'Good' | 'Fair' | 'Tangled' | 'Needs sorting'
+  sourceProject?: string
+  sourceProjectId?: string
+  createdFrom: 'project_completion' | 'manual_entry' | 'batch_split' | 'leftover'
+  originalProducer?: string
+  originalComposition?: string
+  estimatedLength?: string
+  suitableFor?: string
+}
+
+/**
+ * Check if an item is a yarn remnant
+ */
+export function isYarnRemnant(categoryName?: string): boolean {
+  return categoryName === 'Garn Restegarn'
+}
+
+/**
+ * Create a remnant from an existing yarn batch
+ */
+export async function createRemnantFromBatch(
+  db: PrismaClient,
+  originalBatchId: string,
+  userId: string,
+  remnantData: {
+    remainingAmount: number
+    unit: string
+    condition: string
+    sourceProjectId?: string
+    notes?: string
+  }
+) {
+  // Get the original batch
+  const originalBatch = await db.item.findFirst({
+    where: { id: originalBatchId, userId },
+    include: { category: true, location: true }
+  })
+
+  if (!originalBatch) {
+    throw new Error('Original batch not found')
+  }
+
+  const originalBatchData = originalBatch.categoryData ? JSON.parse(originalBatch.categoryData) : {}
+
+  // Get the remnant category
+  const remnantCategory = await db.category.findFirst({
+    where: { name: 'Garn Restegarn' }
+  })
+
+  if (!remnantCategory) {
+    throw new Error('Garn Restegarn category not found')
+  }
+
+  // Create the remnant item
+  const remnant = await db.item.create({
+    data: {
+      name: `${originalBatch.name} - Rest`,
+      description: `Garnrest fra ${originalBatch.name}`,
+      totalQuantity: 1,
+      availableQuantity: remnantData.remainingAmount,
+      consumedQuantity: 0,
+      unit: remnantData.unit,
+      userId,
+      categoryId: remnantCategory.id,
+      locationId: originalBatch.locationId,
+      categoryData: JSON.stringify({
+        originalBatchId: originalBatchId,
+        originalColor: originalBatchData.color || 'Ukjent',
+        originalColorCode: originalBatchData.colorCode,
+        condition: remnantData.condition,
+        sourceProjectId: remnantData.sourceProjectId,
+        createdFrom: remnantData.sourceProjectId ? 'project_completion' : 'manual_entry',
+        originalProducer: originalBatchData.producer,
+        originalComposition: originalBatchData.composition,
+        notes: remnantData.notes
+      } as YarnRemnantData)
+    }
+  })
+
+  // Create relation to original batch
+  await db.itemRelation.create({
+    data: {
+      fromItemId: remnant.id,
+      toItemId: originalBatchId,
+      relationType: 'REMNANT_OF',
+      userId
+    }
+  })
+
+  return remnant
+}
+
+/**
+ * Get all remnants for a user
+ */
+export async function getRemnants(
+  db: PrismaClient,
+  userId: string,
+  filters?: {
+    minAmount?: number
+    unit?: string
+    condition?: string
+    originalBatchId?: string
+  }
+) {
+  const remnantCategory = await db.category.findFirst({
+    where: { name: 'Garn Restegarn' }
+  })
+
+  if (!remnantCategory) {
+    return []
+  }
+
+  const where: any = {
+    userId,
+    categoryId: remnantCategory.id,
+    availableQuantity: { gt: 0 }
+  }
+
+  if (filters?.minAmount) {
+    where.availableQuantity = { gte: filters.minAmount }
+  }
+
+  if (filters?.unit) {
+    where.unit = filters.unit
+  }
+
+  const remnants = await db.item.findMany({
+    where,
+    include: {
+      category: true,
+      location: true,
+      itemRelationsFrom: {
+        where: { relationType: 'REMNANT_OF' },
+        include: {
+          toItem: {
+            include: { category: true }
+          }
+        }
+      }
+    },
+    orderBy: [
+      { availableQuantity: 'desc' },
+      { createdAt: 'desc' }
+    ]
+  })
+
+  return remnants.filter(remnant => {
+    if (filters?.originalBatchId) {
+      const hasRelation = remnant.itemRelationsFrom.some(rel => rel.toItemId === filters.originalBatchId)
+      if (!hasRelation) return false
+    }
+
+    if (filters?.condition) {
+      const remnantData = remnant.categoryData ? JSON.parse(remnant.categoryData) : {}
+      if (remnantData.condition !== filters.condition) return false
+    }
+
+    return true
+  })
+}
+
+/**
+ * Use a remnant in a project
+ */
+export async function useRemnantInProject(
+  db: PrismaClient,
+  remnantId: string,
+  projectId: string,
+  amountUsed: number,
+  userId: string,
+  notes?: string
+) {
+  const remnant = await db.item.findFirst({
+    where: { id: remnantId, userId }
+  })
+
+  if (!remnant) {
+    throw new Error('Remnant not found')
+  }
+
+  if (remnant.availableQuantity < amountUsed) {
+    throw new Error('Not enough remnant available')
+  }
+
+  // Update remnant quantity
+  const updatedRemnant = await db.item.update({
+    where: { id: remnantId },
+    data: {
+      availableQuantity: remnant.availableQuantity - amountUsed,
+      consumedQuantity: remnant.consumedQuantity + amountUsed
+    }
+  })
+
+  // Create project usage record
+  await db.projectYarnUsage.create({
+    data: {
+      projectId,
+      itemId: remnantId,
+      quantityUsed: amountUsed,
+      notes: notes || `Brukt ${amountUsed}${remnant.unit} garnrest`
+    }
+  })
+
+  // Log activity
+  await db.activity.create({
+    data: {
+      type: 'ITEM_USED',
+      description: `Brukt ${amountUsed}${remnant.unit} av garnrest i prosjekt`,
+      userId,
+      itemId: remnantId,
+      metadata: JSON.stringify({
+        projectId,
+        amountUsed,
+        remainingAmount: updatedRemnant.availableQuantity
+      })
+    }
+  })
+
+  return updatedRemnant
+}
+
+/**
+ * Get remnants statistics for a user
+ */
+export async function getRemnantStats(db: PrismaClient, userId: string) {
+  const remnantCategory = await db.category.findFirst({
+    where: { name: 'Garn Restegarn' }
+  })
+
+  if (!remnantCategory) {
+    return {
+      totalRemnants: 0,
+      totalWeight: 0,
+      totalLength: 0,
+      byCondition: {},
+      byUnit: {}
+    }
+  }
+
+  const remnants = await db.item.findMany({
+    where: {
+      userId,
+      categoryId: remnantCategory.id,
+      availableQuantity: { gt: 0 }
+    }
+  })
+
+  const stats = {
+    totalRemnants: remnants.length,
+    totalWeight: 0,
+    totalLength: 0,
+    byCondition: {} as Record<string, number>,
+    byUnit: {} as Record<string, { count: number, totalAmount: number }>
+  }
+
+  remnants.forEach(remnant => {
+    const data = remnant.categoryData ? JSON.parse(remnant.categoryData) : {}
+    
+    // Count by condition
+    const condition = data.condition || 'Unknown'
+    stats.byCondition[condition] = (stats.byCondition[condition] || 0) + 1
+
+    // Count by unit
+    const unit = remnant.unit
+    if (!stats.byUnit[unit]) {
+      stats.byUnit[unit] = { count: 0, totalAmount: 0 }
+    }
+    stats.byUnit[unit].count += 1
+    stats.byUnit[unit].totalAmount += remnant.availableQuantity
+
+    // Add to totals (assuming gram and meter as main units)
+    if (unit === 'g' || unit === 'gram') {
+      stats.totalWeight += remnant.availableQuantity
+    }
+    if (unit === 'm' || unit === 'meter') {
+      stats.totalLength += remnant.availableQuantity
+    }
+  })
+
+  return stats
+}
