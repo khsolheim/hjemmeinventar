@@ -234,7 +234,7 @@ export default function HierarchySettingsPage() {
               {/* Rule Set Selector */}
               <div className="flex gap-4 items-end">
                 <div className="flex-1 max-w-xs">
-                  <label htmlFor="rule-set-select" className="text-sm font-medium">Velg regel-sett</label>
+                  <label className="text-sm font-medium">Velg regel-sett</label>
                   <Select value={selectedRuleSet} onValueChange={setSelectedRuleSet}>
                     <SelectTrigger>
                       <SelectValue placeholder="Velg et regel-sett" />
