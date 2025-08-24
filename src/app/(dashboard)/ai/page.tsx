@@ -1,6 +1,11 @@
-import { AIPageClient } from '@/components/ai/AIPageClient'
+'use client'
+
+import { AdvancedAIAssistant } from '@/components/ai/AdvancedAIAssistant'
 
 export default function AIPage() {
-  const aiEnabled = !!process.env.OPENAI_API_KEY
-  return <AIPageClient aiEnabled={aiEnabled} />
+  return (
+    <div className="container mx-auto p-6">
+      <AdvancedAIAssistant />
+    </div>
+  )
 }

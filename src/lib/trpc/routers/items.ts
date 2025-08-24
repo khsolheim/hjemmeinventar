@@ -861,5 +861,246 @@ export const itemsRouter = createTRPCRouter({
         deletedCount: result.count,
         deletedItems: items
       }
+    }),
+
+  // Search product by barcode/QR code
+  searchProduct: protectedProcedure
+    .input(z.object({
+      code: z.string().min(1),
+    }))
+    .mutation(async ({ input }) => {
+      try {
+        // In a real implementation, this would query external product databases
+        // For now, we'll simulate with common products
+        const productDatabase = {
+          '123456789': {
+            name: 'Kaffemaskin',
+            brand: 'Philips',
+            category: 'Kjøkkenutstyr',
+            description: 'Automatisk kaffemaskin',
+            suggestedLocation: 'kitchen'
+          },
+          '987654321': {
+            name: 'Strikkepinner',
+            brand: 'Addi',
+            category: 'Håndarbeid',
+            description: 'Metall strikkepinner, 4mm',
+            suggestedLocation: 'living-room'
+          },
+          '456789123': {
+            name: 'Laptop',
+            brand: 'Apple',
+            category: 'Elektronikk',
+            description: 'MacBook Pro 13"',
+            suggestedLocation: 'bedroom'
+          }
+        }
+
+        const product = productDatabase[input.code]
+        
+        if (!product) {
+          // Return a generic product structure for unknown codes
+          return {
+            name: `Produkt (${input.code})`,
+            brand: 'Ukjent',
+            category: 'Generisk',
+            description: 'Produkt funnet via strekkode',
+            suggestedLocation: 'living-room'
+          }
+        }
+
+        return product
+      } catch (error) {
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Kunne ikke søke etter produkt'
+        })
+      }
+    }),
+
+  // Get smart suggestions for items
+  getSuggestions: protectedProcedure
+    .input(z.object({
+      query: z.string().min(1),
+    }))
+    .query(async ({ ctx, input }) => {
+      try {
+        // Search for similar items in user's inventory
+        const suggestions = await ctx.db.item.findMany({
+          where: {
+            userId: ctx.user.id,
+            OR: [
+              { name: { contains: input.query, mode: 'insensitive' } },
+              { description: { contains: input.query, mode: 'insensitive' } },
+              { brand: { contains: input.query, mode: 'insensitive' } }
+            ]
+          },
+          take: 5,
+          orderBy: { createdAt: 'desc' },
+          select: {
+            id: true,
+            name: true,
+            description: true,
+            locationId: true,
+            category: true
+          }
+        })
+
+        return suggestions
+      } catch (error) {
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Kunne ikke hente forslag'
+        })
+      }
+    }),
+
+  // Quick add item with minimal data
+  quickAdd: protectedProcedure
+    .input(z.object({
+      name: z.string().min(1),
+      locationId: z.string().optional(),
+      category: z.string().optional(),
+      description: z.string().optional(),
+      imageUrl: z.string().optional(),
+      barcode: z.string().optional(),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      try {
+        const item = await ctx.db.item.create({
+          data: {
+            name: input.name,
+            description: input.description,
+            userId: ctx.user.id,
+            locationId: input.locationId,
+            category: input.category,
+            imageUrl: input.imageUrl,
+            barcode: input.barcode,
+            totalQuantity: 1,
+            availableQuantity: 1
+          }
+        })
+
+        // Log activity
+        await logActivity({
+          type: 'ITEM_CREATED',
+          description: `La til ${input.name} via quick add`,
+          userId: ctx.user.id,
+          itemId: item.id,
+          metadata: {
+            method: 'quick-add',
+            hasImage: !!input.imageUrl,
+            hasBarcode: !!input.barcode
+          }
+        })
+
+        return serializeItemForClient(item)
+      } catch (error) {
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Kunne ikke legge til gjenstand'
+        })
+      }
+    }),
+
+  // Search items with advanced filtering
+  search: protectedProcedure
+    .input(z.object({
+      query: z.string().min(1),
+      locationId: z.string().optional(),
+      categoryId: z.string().optional(),
+      limit: z.number().min(1).max(100).default(20),
+      offset: z.number().min(0).default(0)
+    }))
+    .query(async ({ ctx, input }) => {
+      try {
+        const where: any = {
+          userId: ctx.user.id,
+          OR: [
+            { name: { contains: input.query, mode: 'insensitive' } },
+            { description: { contains: input.query, mode: 'insensitive' } },
+            { brand: { contains: input.query, mode: 'insensitive' } }
+          ]
+        }
+
+        if (input.locationId) {
+          where.locationId = input.locationId
+        }
+
+        if (input.categoryId) {
+          where.categoryId = input.categoryId
+        }
+
+        const [items, total] = await Promise.all([
+          ctx.db.item.findMany({
+            where,
+            include: {
+              location: true,
+              category: true,
+              tags: true
+            },
+            orderBy: { updatedAt: 'desc' },
+            take: input.limit,
+            skip: input.offset
+          }),
+          ctx.db.item.count({ where })
+        ])
+
+        return {
+          items: serializeItemsForClient(items),
+          total,
+          query: input.query
+        }
+      } catch (error) {
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Kunne ikke søke etter gjenstander'
+        })
+      }
+    }),
+
+  // Get popular items based on usage
+  getPopular: protectedProcedure
+    .input(z.object({
+      limit: z.number().min(1).max(50).default(10)
+    }))
+    .query(async ({ ctx, input }) => {
+      try {
+        // Get items with most recent activity
+        const popularItems = await ctx.db.item.findMany({
+          where: {
+            userId: ctx.user.id
+          },
+          include: {
+            location: true,
+            category: true,
+            _count: {
+              select: {
+                activities: true
+              }
+            }
+          },
+          orderBy: [
+            { updatedAt: 'desc' },
+            { createdAt: 'desc' }
+          ],
+          take: input.limit
+        })
+
+        return popularItems.map(item => ({
+          id: item.id,
+          name: item.name,
+          description: item.description,
+          location: item.location?.name,
+          category: item.category?.name,
+          usageCount: item._count.activities,
+          lastUsed: item.updatedAt
+        }))
+      } catch (error) {
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Kunne ikke hente populære gjenstander'
+        })
+      }
     })
 })

@@ -102,6 +102,93 @@ export const usersRouter = createTRPCRouter({
           }
         }
       })
+      return user
+    }),
+
+  // Get user preferences
+  getPreferences: protectedProcedure
+    .query(async ({ ctx }) => {
+      try {
+        const user = await ctx.db.user.findUnique({
+          where: { id: ctx.user.id },
+          select: {
+            preferences: true
+          }
+        })
+
+        // Return default preferences if none exist
+        const defaultPreferences = {
+          dashboard: {
+            layout: 'grid',
+            showQuickActions: true,
+            showRecentItems: true,
+            showPopularItems: true,
+            showUpcomingTasks: true,
+            showWeather: false,
+            showAnalytics: true,
+            showSuggestions: true
+          },
+          notifications: {
+            email: true,
+            push: true,
+            reminders: true
+          },
+          theme: 'system'
+        }
+
+        return user?.preferences || defaultPreferences
+      } catch (error) {
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Kunne ikke hente brukerpreferanser'
+        })
+      }
+    }),
+
+  // Update user preferences
+  updatePreferences: protectedProcedure
+    .input(z.object({
+      dashboard: z.object({
+        layout: z.string().optional(),
+        showQuickActions: z.boolean().optional(),
+        showRecentItems: z.boolean().optional(),
+        showPopularItems: z.boolean().optional(),
+        showUpcomingTasks: z.boolean().optional(),
+        showWeather: z.boolean().optional(),
+        showAnalytics: z.boolean().optional(),
+        showSuggestions: z.boolean().optional()
+      }).optional(),
+      notifications: z.object({
+        email: z.boolean().optional(),
+        push: z.boolean().optional(),
+        reminders: z.boolean().optional()
+      }).optional(),
+      theme: z.string().optional()
+    }))
+    .mutation(async ({ ctx, input }) => {
+      try {
+        const user = await ctx.db.user.update({
+          where: { id: ctx.user.id },
+          data: {
+            preferences: input
+          }
+        })
+
+        return {
+          success: true,
+          preferences: user.preferences
+        }
+      } catch (error) {
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Kunne ikke oppdatere brukerpreferanser'
+        })
+      }
+    }),
+            }
+          }
+        }
+      })
 
       return user
     }),

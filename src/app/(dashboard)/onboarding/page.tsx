@@ -6,14 +6,19 @@ import dynamic from 'next/dynamic'
 const OnboardingWizard = dynamic(() => import('@/components/onboarding/OnboardingWizard').then(mod => ({ default: mod.OnboardingWizard })), {
   loading: () => <div className="flex items-center justify-center p-8 text-muted-foreground">Laster onboarding veiviser...</div>
 })
+
+const QuickStartWizard = dynamic(() => import('@/components/onboarding/QuickStartWizard').then(mod => ({ default: mod.QuickStartWizard })), {
+  loading: () => <div className="flex items-center justify-center p-8 text-muted-foreground">Laster rask oppstart...</div>
+})
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Sparkles, ArrowRight, Home } from 'lucide-react'
+import { Sparkles, ArrowRight, Home, Zap } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 
 export default function OnboardingPage() {
   const [showWizard, setShowWizard] = useState(false)
+  const [wizardMode, setWizardMode] = useState<'quick' | 'full' | null>(null)
   const [isCompleted, setIsCompleted] = useState(false)
   const router = useRouter()
 
@@ -68,11 +73,41 @@ export default function OnboardingPage() {
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <Sparkles className="w-5 h-5 text-purple-600" />
-                  Guiding oppsett
+                  <Zap className="w-5 h-5 text-yellow-600" />
+                  5-minutters oppsett
                 </CardTitle>
                 <CardDescription>
-                  La oss guide deg gjennom oppsettet steg for steg
+                  Rask oppstart med smarte standarder
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="min-h-40">
+                <ul className="space-y-2 text-sm text-muted-foreground mb-6">
+                  <li>• Auto-generer vanlige lokasjoner</li>
+                  <li>• Smart kategorisering</li>
+                  <li>• Legg til din første gjenstand</li>
+                  <li>• Kom i gang på 5 minutter</li>
+                </ul>
+                <Button 
+                  onClick={() => {
+                    setWizardMode('quick')
+                    setShowWizard(true)
+                  }}
+                  className="w-full bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-600 hover:to-orange-600"
+                >
+                  <Zap className="w-4 h-4 mr-2" />
+                  Start raskt (5 min)
+                </Button>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Sparkles className="w-5 h-5 text-purple-600" />
+                  Full oppsett
+                </CardTitle>
+                <CardDescription>
+                  Tilpass systemet til dine behov
                 </CardDescription>
               </CardHeader>
               <CardContent className="min-h-40">
@@ -83,11 +118,15 @@ export default function OnboardingPage() {
                   <li>• Sett opp dine preferanser</li>
                 </ul>
                 <Button 
-                  onClick={() => setShowWizard(true)}
+                  variant="outline"
+                  onClick={() => {
+                    setWizardMode('full')
+                    setShowWizard(true)
+                  }}
                   className="w-full"
                 >
                   <ArrowRight className="w-4 h-4 mr-2" />
-                  Start oppsettet (anbefalt)
+                  Start full oppsett
                 </Button>
               </CardContent>
             </Card>
@@ -133,10 +172,17 @@ export default function OnboardingPage() {
 
   return (
     <div className="page cq min-h-screen bg-gradient-to-br from-blue-50 to-purple-50 py-8 px-4">
-      <OnboardingWizard 
-        onComplete={handleComplete}
-        onSkip={handleSkip}
-      />
+      {wizardMode === 'quick' ? (
+        <QuickStartWizard 
+          onComplete={handleComplete}
+          onSkip={handleSkip}
+        />
+      ) : (
+        <OnboardingWizard 
+          onComplete={handleComplete}
+          onSkip={handleSkip}
+        />
+      )}
     </div>
   )
 }

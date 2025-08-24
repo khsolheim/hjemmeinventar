@@ -3,6 +3,8 @@
 import { useState, useEffect } from 'react'
 import { Header } from '@/components/layout/Header'
 import { Sidebar } from '@/components/layout/Sidebar'
+import { FloatingActionButton } from '@/components/ui/floating-action-button'
+import { QuickAddModal } from '@/components/items/QuickAddModal'
 
 export default function DashboardLayout({
   children,
@@ -12,6 +14,8 @@ export default function DashboardLayout({
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
   const [isMobile, setIsMobile] = useState(false)
   const [mounted, setMounted] = useState(false)
+  const [showQuickAdd, setShowQuickAdd] = useState(false)
+  const [quickAddMode, setQuickAddMode] = useState<'camera' | 'barcode' | 'text'>('text')
 
   // Handle responsive behavior
   useEffect(() => {
@@ -34,6 +38,21 @@ export default function DashboardLayout({
 
   const toggleSidebar = () => {
     setIsSidebarOpen(!isSidebarOpen)
+  }
+
+  const handleQuickAdd = () => {
+    setQuickAddMode('text')
+    setShowQuickAdd(true)
+  }
+
+  const handleCamera = () => {
+    setQuickAddMode('camera')
+    setShowQuickAdd(true)
+  }
+
+  const handleQRScan = () => {
+    setQuickAddMode('barcode')
+    setShowQuickAdd(true)
   }
 
   // Prevent hydration mismatch by not rendering until mounted
@@ -72,6 +91,22 @@ export default function DashboardLayout({
           {children}
         </main>
       </div>
+
+      {/* Mobile Quick Actions */}
+      {isMobile && (
+        <FloatingActionButton
+          onQuickAdd={handleQuickAdd}
+          onCamera={handleCamera}
+          onQRScan={handleQRScan}
+        />
+      )}
+
+      {/* Quick Add Modal */}
+      <QuickAddModal
+        isOpen={showQuickAdd}
+        onClose={() => setShowQuickAdd(false)}
+        mode={quickAddMode}
+      />
     </div>
   )
 }

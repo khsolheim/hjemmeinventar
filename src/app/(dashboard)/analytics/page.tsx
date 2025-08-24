@@ -1,9 +1,11 @@
-import { InventoryAnalytics } from '@/components/analytics/InventoryAnalytics'
+'use client'
+
+import { AdvancedAnalytics } from '@/components/analytics/AdvancedAnalytics'
 
 export default function AnalyticsPage() {
   return (
-    <div className="page container mx-auto px-4 py-8 cq">
-      <InventoryAnalytics />
+    <div className="container mx-auto p-6">
+      <AdvancedAnalytics />
     </div>
   )
 }
