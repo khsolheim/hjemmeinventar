@@ -24,11 +24,13 @@ export default function SignInPage() {
       const result = await signIn('credentials', {
         email,
         password,
-        redirect: false
+        redirect: false,
+        callbackUrl: '/dashboard'
       })
 
       if (result?.error) {
-        toast.error('Ugyldig e-post eller passord')
+        console.error('Login error:', result.error)
+        toast.error(`Innlogging feilet: ${result.error}`)
       } else if (result?.ok) {
         toast.success('Velkommen tilbake!')
         // Wait a moment for session to be established, then redirect
@@ -39,6 +41,7 @@ export default function SignInPage() {
         toast.error('Innlogging feilet. Prøv igjen.')
       }
     } catch (error) {
+      console.error('Login error:', error)
       toast.error('Noe gikk galt. Prøv igjen.')
     } finally {
       setIsLoading(false)
@@ -61,11 +64,13 @@ export default function SignInPage() {
       const result = await signIn('credentials', {
         email: 'test@example.com',
         password: 'test123',
-        redirect: false
+        redirect: false,
+        callbackUrl: '/dashboard'
       })
 
       if (result?.error) {
-        toast.error('Test innlogging feilet')
+        console.error('Test login error:', result.error)
+        toast.error(`Test innlogging feilet: ${result.error}`)
       } else if (result?.ok) {
         toast.success('Test bruker logget inn!')
         setTimeout(() => {
@@ -75,6 +80,7 @@ export default function SignInPage() {
         toast.error('Test innlogging feilet. Prøv igjen.')
       }
     } catch (error) {
+      console.error('Test login error:', error)
       toast.error('Noe gikk galt med test innlogging.')
     } finally {
       setIsLoading(false)

@@ -396,7 +396,7 @@ export class ImageService {
   private extractSizeFromUrl(search: string, param: string): number {
     const regex = new RegExp(`[?&]${param}=(\\d+)`, 'i')
     const match = search.match(regex)
-    return match ? parseInt(match[1], 10) : 0
+    return match ? parseInt(match[1] || '0', 10) : 0
   }
 }
 

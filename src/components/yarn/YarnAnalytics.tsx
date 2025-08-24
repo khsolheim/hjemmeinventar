@@ -404,7 +404,7 @@ export function YarnAnalytics({ className, overallStats }: YarnAnalyticsProps) {
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-3">
-                    {stockAlerts.lowStockItems.map((item) => (
+                    {stockAlerts.lowStockItems.map((item: any) => (
                       <div key={item.id} className="flex items-center justify-between p-3 border rounded-lg">
                         <div className="flex-1">
                           <div className="font-medium">{item.name}</div>

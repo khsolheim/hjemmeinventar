@@ -10,7 +10,7 @@ interface MobileYarnCardProps {
 }
 
 export function MobileYarnCard({ master, onClick }: MobileYarnCardProps) {
-  const masterData = master.categoryData ? JSON.parse(master.categoryData) : {}
+  const masterData = master.categoryData || {}
   const totals = master.totals || {}
   
   // Determine stock level

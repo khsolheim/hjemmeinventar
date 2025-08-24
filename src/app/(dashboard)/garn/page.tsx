@@ -2,6 +2,7 @@ import { YarnMasterDashboard, type YarnMasterWithTotals } from '@/components/yar
 import { db } from '@/lib/db'
 import { calculateMasterTotals } from '@/lib/utils/yarn-helpers'
 import { auth } from '@/auth'
+import { serializeItemsForClient } from '@/lib/utils/decimal-serializer'
 
 export default async function GarnPage() {
   const session = await auth()
@@ -12,7 +13,7 @@ export default async function GarnPage() {
     if (masterCategory) {
       const masters = await db.item.findMany({
         where: { userId: session.user.id, categoryId: masterCategory.id },
-        include: { location: true, category: true, relatedTo: { include: { category: true } } },
+        include: { location: true, category: true },
         orderBy: { createdAt: 'desc' },
         take: 50,
         skip: 0,
@@ -30,7 +31,7 @@ export default async function GarnPage() {
           createdAt: m.createdAt,
         } as any)
       }
-      initialMasters = withTotals
+      initialMasters = serializeItemsForClient(withTotals)
       initialTotal = await db.item.count({ where: { userId: session.user.id, categoryId: masterCategory.id } })
     }
   }

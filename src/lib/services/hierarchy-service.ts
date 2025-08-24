@@ -8,7 +8,7 @@ export function validateAcyclic(rules: Array<{ parentType: LocationType; childTy
 		if (!graph[rule.parentType]) {
 			graph[rule.parentType] = []
 		}
-		graph[rule.parentType].push(rule.childType)
+		         graph[rule.parentType]!.push(rule.childType)
 	})
 
 	const visited = new Set<string>()

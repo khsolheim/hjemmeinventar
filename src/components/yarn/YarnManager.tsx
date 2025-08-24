@@ -188,25 +188,25 @@ function DetailPanel({ selection, onChange, onSelect, masters }: { selection: Se
 	const deleteMaster = trpc.yarn.deleteMaster.useMutation({ onSuccess: () => { utils.yarn.getAllMasters.invalidate(); onChange() } })
 	const updateColor = trpc.yarn.updateColor.useMutation({ onSuccess: () => { utils.yarn.getColorsForMaster.invalidate(); onChange() } })
 	const deleteColor = trpc.yarn.deleteColor.useMutation({ onSuccess: () => { utils.yarn.getColorsForMaster.invalidate(); onChange() } })
-	const updateBatch = trpc.yarn.updateBatch.useMutation({ onSuccess: () => { utils.yarn.getBatchesForMaster.invalidate(); onChange() } })
-	const deleteBatch = trpc.yarn.deleteBatch.useMutation({ onSuccess: () => { utils.yarn.getBatchesForMaster.invalidate(); onChange() } })
-	const adjustQty = trpc.yarn.adjustBatchQuantity.useMutation({ onSuccess: () => { utils.yarn.getBatchesForMaster.invalidate(); onChange() } })
-	const createColor = trpc.yarn.createColor.useMutation({
-		onSuccess: (color) => {
-			utils.yarn.getColorsForMaster.invalidate()
-			onChange()
-			toast.success('Farge opprettet')
-			// Velg ny farge
-			if (selection && selection.level === 'color' && selection.id === 'new') {
-				onSelect({ level: 'color', id: color.id, masterId: selection.masterId })
-			}
-		},
-		onError: (err: any) => {
-			const code = err?.data?.code
-			if (code === 'CONFLICT') toast.error('Fargen finnes allerede')
-			else toast.error('Kunne ikke opprette farge')
-		}
-	})
+	// const updateBatch = trpc.yarn.updateBatch.useMutation({ onSuccess: () => { utils.yarn.getBatchesForMaster.invalidate(); onChange() } })
+	// const deleteBatch = trpc.yarn.deleteBatch.useMutation({ onSuccess: () => { utils.yarn.getBatchesForMaster.invalidate(); onChange() } })
+	// const adjustQty = trpc.yarn.adjustBatchQuantity.useMutation({ onSuccess: () => { utils.yarn.getBatchesForMaster.invalidate(); onChange() } })
+	        const createColor = trpc.yarn.createColor.useMutation({
+                onSuccess: (color: any) => {
+                        utils.yarn.getColorsForMaster.invalidate()
+                        onChange()
+                        toast.success('Farge opprettet')
+                        // Velg ny farge
+                        if (selection && selection.level === 'color' && selection.id === 'new') {
+                                onSelect({ level: 'color', id: color.id, masterId: selection.masterId })
+                        }
+                },
+                onError: (err: any) => {
+                        const code = err?.data?.code
+                        if (code === 'CONFLICT') toast.error('Fargen finnes allerede')
+                        else toast.error('Kunne ikke opprette farge')
+                }
+        })
 	const createBatch = trpc.yarn.createBatch.useMutation({
 		onSuccess: () => {
 			utils.yarn.getBatchesForMaster.invalidate()
@@ -235,8 +235,8 @@ function DetailPanel({ selection, onChange, onSelect, masters }: { selection: Se
 				<div className="font-medium">Rediger master</div>
 				<div className="grid grid-cols-2 gap-2">
 					<Input placeholder="Navn" onBlur={(e) => updateMaster.mutate({ id: selection.id, name: e.target.value })} />
-					<Input placeholder="Produsent" onBlur={(e) => updateMaster.mutate({ id: selection.id, producer: e.target.value })} />
-					<Input placeholder="Sammensetning" onBlur={(e) => updateMaster.mutate({ id: selection.id, composition: e.target.value })} />
+					<Input placeholder="Produsent" onBlur={(e) => updateMaster.mutate({ id: selection.id, categoryData: { producer: e.target.value } })} />
+					<Input placeholder="Sammensetning" onBlur={(e) => updateMaster.mutate({ id: selection.id, categoryData: { composition: e.target.value } })} />
 				</div>
 				<div className="flex gap-2">
 					<Button variant="destructive" size="sm" onClick={() => deleteMaster.mutate({ id: selection.id })}>
@@ -329,18 +329,8 @@ function DetailPanel({ selection, onChange, onSelect, masters }: { selection: Se
 		return (
 			<div className="space-y-2">
 				<div className="font-medium">Rediger batch</div>
-				<div className="grid grid-cols-2 gap-2">
-					<Input placeholder="Navn" onBlur={(e) => updateBatch.mutate({ batchId: selection.id, name: e.target.value })} />
-					<Input placeholder="Partinummer" onBlur={(e) => updateBatch.mutate({ batchId: selection.id, batchNumber: e.target.value })} />
-					<Input placeholder="Antall" type="number" onBlur={(e) => updateBatch.mutate({ batchId: selection.id, quantity: Number(e.target.value || 0) })} />
-					<Input placeholder="Pris per nøste" type="number" step="0.01" onBlur={(e) => updateBatch.mutate({ batchId: selection.id, pricePerSkein: Number(e.target.value || 0) })} />
-				</div>
-				<div className="flex items-center gap-2">
-					<Button size="sm" onClick={() => adjustQty.mutate({ batchId: selection.id, delta: 1, reason: 'COUNT' })}>+1</Button>
-					<Button size="sm" onClick={() => adjustQty.mutate({ batchId: selection.id, delta: -1, reason: 'COUNT' })}>-1</Button>
-					<Button variant="destructive" size="sm" onClick={() => deleteBatch.mutate({ batchId: selection.id })}>
-						<Trash2 className="h-4 w-4 mr-1" /> Slett batch
-					</Button>
+				<div className="text-sm text-muted-foreground">
+					Batch-redigering er ikke implementert ennå
 				</div>
 			</div>
 		)
@@ -407,10 +397,10 @@ function CreateBatchDialog({ context, onOpenChange, onCreated }: { context: { ma
 	}, [context])
 
 	useEffect(() => {
-		// Default lokasjon: første i listen
-		if (!locationId && locations && locations.length > 0) {
-			setLocationId(locations[0].id)
-		}
+						// Default lokasjon: første i listen
+				if (!locationId && locations && locations.length > 0) {
+					setLocationId(locations[0]?.id || '')
+				}
 	}, [locations, locationId])
 
 	return (

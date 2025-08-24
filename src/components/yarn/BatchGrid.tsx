@@ -22,13 +22,24 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 
 // Helper function to parse batch category data
-function getBatchData(categoryData: string | null) {
+function getBatchData(categoryData: any) {
   if (!categoryData) return {}
-  try {
-    return JSON.parse(categoryData)
-  } catch {
-    return {}
+  
+  // If it's already an object, return it directly
+  if (typeof categoryData === 'object') {
+    return categoryData
   }
+  
+  // If it's a string, try to parse it as JSON
+  if (typeof categoryData === 'string') {
+    try {
+      return JSON.parse(categoryData)
+    } catch {
+      return {}
+    }
+  }
+  
+  return {}
 }
 
 interface BatchGridProps {
@@ -48,7 +59,7 @@ export function BatchGrid({ masterId, hideMasterHeader = false, hideTotals = fal
     staleTime: 30000,
     refetchOnWindowFocus: false,
     refetchOnMount: false,
-    placeholderData: (prev) => prev,
+    placeholderData: (prev: any) => prev,
   })
   
   // Fetch batches for this master
@@ -56,7 +67,7 @@ export function BatchGrid({ masterId, hideMasterHeader = false, hideTotals = fal
     staleTime: 30000,
     refetchOnWindowFocus: false,
     refetchOnMount: false,
-    placeholderData: (prev) => prev,
+    placeholderData: (prev: any) => prev,
   })
 
   // Fetch colors for master to get color images
@@ -64,7 +75,7 @@ export function BatchGrid({ masterId, hideMasterHeader = false, hideTotals = fal
     staleTime: 30000,
     refetchOnWindowFocus: false,
     refetchOnMount: false,
-    placeholderData: (prev) => prev,
+    placeholderData: (prev: any) => prev,
   })
   
   // Fetch master totals
@@ -72,7 +83,7 @@ export function BatchGrid({ masterId, hideMasterHeader = false, hideTotals = fal
     staleTime: 30000,
     refetchOnWindowFocus: false,
     refetchOnMount: false,
-    placeholderData: (prev) => prev,
+    placeholderData: (prev: any) => prev,
   })
 
   // Delete batch mutation
@@ -82,7 +93,7 @@ export function BatchGrid({ masterId, hideMasterHeader = false, hideTotals = fal
       refetchTotals()
       toast.success('Batch slettet')
     },
-    onError: (error) => {
+    onError: (error: any) => {
       toast.error('Feil ved sletting av batch')
       console.error(error)
     }
@@ -93,7 +104,7 @@ export function BatchGrid({ masterId, hideMasterHeader = false, hideTotals = fal
       refetchBatches(); refetchTotals();
       toast.success('Batch oppdatert')
     },
-    onError: (e) => {
+    onError: (e: any) => {
       toast.error('Kunne ikke oppdatere batch')
       console.error(e)
     }
@@ -114,12 +125,23 @@ export function BatchGrid({ masterId, hideMasterHeader = false, hideTotals = fal
   }
 
   const getMasterData = () => {
-    if (!master?.categoryData) return {}
-    try {
-      return JSON.parse(master.categoryData)
-    } catch {
-      return {}
+    if (!(master as any)?.categoryData) return {}
+    
+    // If it's already an object, return it directly
+    if (typeof (master as any).categoryData === 'object') {
+      return (master as any).categoryData
     }
+    
+    // If it's a string, try to parse it as JSON
+    if (typeof (master as any).categoryData === 'string') {
+      try {
+        return JSON.parse((master as any).categoryData)
+      } catch {
+        return {}
+      }
+    }
+    
+    return {}
   }
 
   const formatDate = (date: Date | string | null) => {
@@ -320,7 +342,7 @@ export function BatchGrid({ masterId, hideMasterHeader = false, hideTotals = fal
               <CompactBatchView batches={batches} colors={colors} filterColorName={filterColorName} />
             ) : (
               <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2">
-            {batches.map((batch) => {
+            {batches.map((batch: any) => {
               const batchData = getBatchData(batch.categoryData)
               if (filterColorName && (batchData.color || '').toLowerCase() !== filterColorName.toLowerCase()) {
                 return null
@@ -459,7 +481,7 @@ export function BatchGrid({ masterId, hideMasterHeader = false, hideTotals = fal
                       <span className="text-muted-foreground">Antall</span>
                       {(() => {
                         const reserved = Number(batchData.reserved || 0)
-                        const eff = Math.max((batch.availableQuantity || 0) - reserved, 0)
+                        const eff = Math.max((Number(batch.availableQuantity) || 0) - reserved, 0)
                         const total = batchData.quantity || batch.totalQuantity
                         return <span className="font-medium">{eff}/{total}</span>
                       })()}
@@ -470,13 +492,13 @@ export function BatchGrid({ masterId, hideMasterHeader = false, hideTotals = fal
                       <div className="w-full bg-gray-200 rounded-full h-1.5">
                         <div 
                           className={`h-1.5 rounded-full ${
-                            (batch.availableQuantity || 0) === batch.totalQuantity ? 'bg-green-500' :
-                            (batch.availableQuantity || 0) === 0 ? 'bg-red-500' : 'bg-yellow-500'
+                            (Number(batch.availableQuantity) || 0) === batch.totalQuantity ? 'bg-green-500' :
+                            (Number(batch.availableQuantity) || 0) === 0 ? 'bg-red-500' : 'bg-yellow-500'
                           }`}
                           style={{ 
                             width: `${(() => {
                               const reserved = Number(batchData.reserved || 0)
-                              const eff = Math.max((batch.availableQuantity || 0) - reserved, 0)
+                              const eff = Math.max((Number(batch.availableQuantity) || 0) - reserved, 0)
                               const total = batch.totalQuantity || 1
                               return Math.round((eff / total) * 100)
                             })()}%` 
@@ -545,7 +567,7 @@ function CompactBatchView({ batches, colors, filterColorName }: {
   }
 
   // Gruppper batches etter farge
-  const colorGroups = batches.reduce((groups, batch) => {
+  const colorGroups = batches.reduce((groups: any, batch: any) => {
     const batchData = getBatchData(batch.categoryData)
     const color = batchData.color || 'Ukjent farge'
     const colorCode = batchData.colorCode
@@ -570,7 +592,7 @@ function CompactBatchView({ batches, colors, filterColorName }: {
     return groups
   }, {} as Record<string, { color: string, colorCode?: string, colorImage?: string, batches: any[] }>)
 
-  const colorEntries = Object.values(colorGroups)
+  const colorEntries = Object.values(colorGroups) as { color: string, colorCode?: string, colorImage?: string, batches: any[] }[]
 
   if (colorEntries.length === 0) {
     return (

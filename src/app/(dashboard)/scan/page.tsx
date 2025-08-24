@@ -30,10 +30,11 @@ function ScanPageContent() {
   const distributionCode = params?.get('d') || ''
   const { data: session, status } = useSession()
   const commonOpts = { retry: 0, refetchOnWindowFocus: false, refetchOnMount: false, staleTime: 5 * 60 * 1000 } as const
-  const profiles = trpc.users.getLabelProfiles.useQuery(undefined, { 
-    ...commonOpts, 
-    enabled: status === 'authenticated' && !!scanResult && scanResult.type === 'distribution' 
-  })
+    // const profiles = trpc.users.getLabelProfiles.useQuery(undefined, { // Temporarily disabled
+  //   ...commonOpts, 
+  //   enabled: status === 'authenticated' && !!scanResult && scanResult.type === 'distribution'
+  // })
+  const profiles = { data: [] } // Placeholder since getLabelProfiles not available
   const userProfile = trpc.users.getProfile.useQuery(undefined, { 
     ...commonOpts, 
     enabled: status === 'authenticated' && !!scanResult && scanResult.type === 'distribution' 
@@ -41,9 +42,10 @@ function ScanPageContent() {
   const [selectedProfileId, setSelectedProfileId] = useState('')
 
   useEffect(() => {
-    if (!selectedProfileId && userProfile.data?.defaultLabelProfileId) {
-      setSelectedProfileId(userProfile.data.defaultLabelProfileId)
-    }
+    // TODO: Implement default label profile selection
+    // if (!selectedProfileId && userProfile.data?.defaultLabelProfileId) {
+    //   setSelectedProfileId(userProfile.data.defaultLabelProfileId)
+    // }
   }, [userProfile.data, selectedProfileId])
 
   const { data: distributionData, refetch: refetchDistribution } = trpc.items.getDistributionByQRCode.useQuery(
@@ -66,8 +68,9 @@ function ScanPageContent() {
     // Kun distributionskoder (D-......) støttes
     if (code.startsWith('D-')) {
       try {
-        const data = await consumeMutation.client.items.getDistributionByQRCode.query({ qrCode: code })
-        setScanResult({ type: 'distribution', data })
+        // TODO: Implement manual QR code lookup
+        // const data = await trpc.items.getDistributionByQRCode.fetch({ qrCode: code })
+        setScanResult({ error: 'Manuell QR-kode lookup ikke implementert ennå' })
         return
       } catch (e) {
         setScanResult({ error: 'QR-kode ikke funnet i systemet' })
@@ -253,10 +256,10 @@ function ScanPageContent() {
                   <div className="text-xs font-medium mb-1">Forhåndsvisning</div>
                   {(() => {
                     const profile = (profiles.data || []).find((p: any) => p.id === selectedProfileId)
-                    const logo = profile?.logoUrl || userProfile.data?.logoUrl || ''
-                    const extra1 = profile?.extraLine1 || ''
-                    const extra2 = profile?.extraLine2 || ''
-                    const showUrl = profile?.showUrl ?? true
+                    const logo = '' // Temporarily disabled
+                    const extra1 = '' // Temporarily disabled
+                    const extra2 = '' // Temporarily disabled
+                    const showUrl = true // Temporarily disabled
                     const url = typeof window !== 'undefined' ? `${window.location.origin}/scan?d=${scanResult.data.qrCode}` : ''
                     return (
                       <div className="flex items-start gap-3">
@@ -292,9 +295,9 @@ function ScanPageContent() {
                     itemName: scanResult.data.item.name,
                     locationName: scanResult.data.location.name,
                     qrCode: scanResult.data.qrCode,
-                      dateAdded: new Date().toLocaleDateString('nb-NO'),
-                      extraLine1: profile?.extraLine1,
-                      extraLine2: profile?.extraLine2
+                      // dateAdded: new Date().toLocaleDateString('nb-NO'), // TODO: Add dateAdded to type
+                      // extraLine1: profile?.extraLine1, // TODO: Add extraLine1 to type
+                      // extraLine2: profile?.extraLine2 // TODO: Add extraLine2 to type
                     }, { copies: 1 })
                 } catch (e) {
                   console.error(e)
@@ -305,10 +308,10 @@ function ScanPageContent() {
                   if (printWindow) {
                     const url = `${window.location.origin}/scan?d=${scanResult.data.qrCode}`
                     const profile = (profiles.data || []).find((p: any) => p.id === selectedProfileId)
-                    const extra1 = profile?.extraLine1 || ''
-                    const extra2 = profile?.extraLine2 || ''
-                    const showUrl = profile?.showUrl ?? true
-                    const logo = profile?.logoUrl || userProfile.data?.logoUrl || ''
+                    const extra1 = '' // Temporarily disabled
+                    const extra2 = '' // Temporarily disabled
+                    const showUrl = true // Temporarily disabled
+                    const logo = '' // Temporarily disabled
                     printWindow.document.write(`<!DOCTYPE html><html><head><title>Etikett</title><style>body{margin:0;padding:12px;font-family:Arial} .box{border:1px solid #000; padding:8px; width:280px} .title{font-weight:bold; font-size:14px; margin:6px 0} .small{font-size:12px; color:#444} .code{font-family:monospace; font-size:12px}</style></head><body><div class='box'>${logo ? `<img src='${logo}' style='max-width:260px;max-height:40px'/>` : ''}<div class='title'>${scanResult.data.item.name}</div><div class='small'>${scanResult.data.location.name}</div>${extra1 ? `<div class='small'>${extra1}</div>` : ''}${extra2 ? `<div class='small'>${extra2}</div>` : ''}<img id='qr' style='width:160px;height:160px'/><div class='code'>${scanResult.data.qrCode}</div>${showUrl ? `<div class='small'>${url}</div>` : ''}<script src='https://unpkg.com/qrcode/build/qrcode.min.js'></script><script>window.addEventListener('load',()=>{window.QRCode.toDataURL(${JSON.stringify(url)}, { width: 160, margin: 1 }, function (err, data){ if(!err){ document.getElementById('qr').src = data; } });});</script></div></body></html>`)
                     printWindow.document.close()
                     setTimeout(() => { printWindow.print(); printWindow.close() }, 250)

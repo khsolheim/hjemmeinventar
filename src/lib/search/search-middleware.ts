@@ -153,7 +153,7 @@ async function indexItem(itemId: string) {
       categoryName: item.category?.name,
       locationName: item.location?.name,
       tags: item.tags.map(t => t.name),
-      price: item.price || undefined,
+      price: item.price ? Number(item.price) : undefined,
       quantity: item.totalQuantity,
       expiryDate: item.expiryDate?.toISOString(),
       imageUrl: item.imageUrl || undefined,

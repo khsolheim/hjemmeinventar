@@ -1,6 +1,7 @@
 import { auth } from '@/auth'
 import { db } from '@/lib/db'
 import { calculateMasterTotals } from '@/lib/utils/yarn-helpers'
+import { serializeItemForClient, serializeItemsForClient } from '@/lib/utils/decimal-serializer'
 import { Suspense } from 'react'
 import dynamic from 'next/dynamic'
 
@@ -18,9 +19,10 @@ export default async function YarnDetailPage({ params }: { params: Promise<{ id:
   let initialColors: Array<{ id: string, name: string, colorCode?: string, batchCount: number, skeinCount: number }> | undefined = undefined
 
   if (userId) {
-    initialMaster = await db.item.findFirst({
+    const master = await db.item.findFirst({
       where: { id, userId },
     })
+    initialMaster = master ? serializeItemForClient(master) : undefined
 
     try {
       initialTotals = await calculateMasterTotals(db as any, id, userId)
@@ -30,39 +32,41 @@ export default async function YarnDetailPage({ params }: { params: Promise<{ id:
       const colorCategory = await db.category.findFirst({ where: { name: 'Garn Farge' } })
       const batchCategory = await db.category.findFirst({ where: { name: 'Garn Batch' } })
       if (colorCategory) {
-        const colors = await db.item.findMany({
-          where: {
-            userId,
-            categoryId: colorCategory.id,
-            OR: [
-               { relatedItems: { some: { id } } },
-               { relatedTo: { some: { id } } }
-            ]
-          }
-        })
+                    const colors = await db.item.findMany({
+              where: {
+                userId,
+                categoryId: colorCategory.id,
+                OR: [
+                   { itemRelationsFrom: { some: { toItemId: id } } },
+                   { itemRelationsTo: { some: { fromItemId: id } } }
+                ]
+              }
+            })
+            const serializedColors = serializeItemsForClient(colors)
         const results: Array<{ id: string, name: string, colorCode?: string, batchCount: number, skeinCount: number }> = []
         if (batchCategory) {
-          for (const color of colors) {
+          for (const color of serializedColors) {
             const batches = await db.item.findMany({
               where: {
                 userId,
                 categoryId: batchCategory.id,
                 OR: [
-                  { relatedItems: { some: { id: color.id } } },
-                  { relatedTo: { some: { id: color.id } } }
+                  { itemRelationsFrom: { some: { toItemId: color.id } } },
+                  { itemRelationsTo: { some: { fromItemId: color.id } } }
                 ]
               }
             })
-            const skeins = batches.reduce((sum, b) => {
+            const serializedBatches = serializeItemsForClient(batches)
+            const skeins = serializedBatches.reduce((sum, b) => {
               const qty = Number(b.availableQuantity || 0)
               return sum + qty
             }, 0)
-            const colorData = color.categoryData ? JSON.parse(color.categoryData) : {}
+            const colorData = color.categoryData as any || {}
             results.push({
               id: color.id,
               name: color.name,
               colorCode: colorData.colorCode,
-              batchCount: batches.length,
+              batchCount: serializedBatches.length,
               skeinCount: Math.round(skeins)
             })
           }

@@ -45,15 +45,15 @@ export interface DymoLabelData {
 }
 
 // Global DYMO object
-declare global {
-  interface Window {
-    dymo?: {
-      label: {
-        framework: DymoFramework
-      }
-    }
-  }
-}
+// declare global { // Removed - conflicts with other declarations
+//   interface Window {
+//     dymo?: {
+//       label: {
+//         framework: DymoFramework
+//       }
+//     }
+//   }
+// }
 
 export type DymoStatus = 'NotInstalled' | 'Installed' | 'Ready' | 'Error'
 

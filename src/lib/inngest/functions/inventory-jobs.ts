@@ -77,8 +77,9 @@ export const dailyInventoryMaintenance = inngest.createFunction(
 
       // Group by user
       const itemsByUser = criticalItems.reduce((acc, item) => {
-        if (!acc[item.userId]) acc[item.userId] = []
-        acc[item.userId].push(item)
+        const userId = item.userId!
+        if (!acc[userId]) acc[userId] = []
+        acc[userId].push(item)
         return acc
       }, {} as Record<string, typeof criticalItems>)
 
@@ -104,8 +105,9 @@ export const dailyInventoryMaintenance = inngest.createFunction(
       if (overdueLoans.length === 0) return
 
       const loansByUser = overdueLoans.reduce((acc, loan) => {
-        if (!acc[loan.userId]) acc[loan.userId] = []
-        acc[loan.userId].push(loan)
+        const userId = loan.userId!
+        if (!acc[userId]) acc[userId] = []
+        acc[userId].push(loan)
         return acc
       }, {} as Record<string, typeof overdueLoans>)
 
@@ -154,7 +156,7 @@ export const dailyInventoryMaintenance = inngest.createFunction(
             categoryName: item.category?.name,
             locationName: item.location?.name,
             tags: item.tags.map(t => t.name),
-            price: item.price || undefined,
+            price: item.price ? Number(item.price) : undefined,
             quantity: item.totalQuantity,
             expiryDate: item.expiryDate?.toISOString(),
             imageUrl: item.imageUrl || undefined,
@@ -220,6 +222,7 @@ export const weeklyInventoryCleanup = inngest.createFunction(
         return stats
       } catch (error) {
         console.error('Failed to optimize search index:', error)
+        return null
       }
     })
 
@@ -302,7 +305,7 @@ export const onItemCreated = inngest.createFunction(
           categoryName: item.category?.name,
           locationName: item.location?.name,
           tags: item.tags.map(t => t.name),
-          price: item.price || undefined,
+          price: item.price ? Number(item.price) : undefined,
           quantity: item.totalQuantity,
           expiryDate: item.expiryDate?.toISOString(),
           imageUrl: item.imageUrl || undefined,
@@ -397,7 +400,7 @@ export const sendUserNotification = inngest.createFunction(
       try {
         await db.activity.create({
           data: {
-            type: 'SYSTEM_NOTIFICATION',
+            type: 'SYSTEM_NOTIFICATION' as any,
             description: `Varsel sendt: ${title}`,
             userId,
             metadata: JSON.stringify({
@@ -453,9 +456,9 @@ export const weeklyYarnRelationsConsistency = inngest.createFunction(
               userId: u.id,
               categoryId: batchCategory.id,
               OR: [
-                { relatedItems: { some: { id: m.id } } },
-                { relatedTo: { some: { id: m.id } } },
-                { categoryData: { contains: `"masterItemId":"${m.id}"` } }
+                // { relatedItems: { some: { id: m.id } } }, // Removed - not in schema
+                // { relatedTo: { some: { id: m.id } } }, // Removed - not in schema
+                // { categoryData: { contains: `"masterItemId":"${m.id}"` } } // Removed - not in schema
               ]
             },
             select: { id: true }
@@ -470,10 +473,10 @@ export const weeklyYarnRelationsConsistency = inngest.createFunction(
 
         // Master -> Color (typed COLOR_OF)
         if (colorCategory) {
-          const colors = await db.item.findMany({ where: { userId: u.id, categoryId: colorCategory.id }, select: { id: true, categoryData: true, relatedItems: { select: { id: true } } } })
+          const colors = await db.item.findMany({ where: { userId: u.id, categoryId: colorCategory.id }, select: { id: true, categoryData: true } })
           for (const c of colors) {
-            const data = c.categoryData ? JSON.parse(c.categoryData) : {}
-            const masterId = data.masterItemId || c.relatedItems[0]?.id
+            const data = c.categoryData ? JSON.parse(c.categoryData as string) : {}
+            const masterId = data.masterItemId
             if (!masterId) continue
             try {
               await db.itemRelation.create({ data: { relationType: 'COLOR_OF', fromItemId: masterId, toItemId: c.id, userId: u.id } })
@@ -484,14 +487,14 @@ export const weeklyYarnRelationsConsistency = inngest.createFunction(
 
         // Color -> Batch (typed BATCH_OF)
         if (colorCategory) {
-          const batches = await db.item.findMany({ where: { userId: u.id, categoryId: batchCategory.id }, select: { id: true, relatedItems: { select: { id: true, categoryId: true } } } })
+          const batches = await db.item.findMany({ where: { userId: u.id, categoryId: batchCategory.id }, select: { id: true } })
           for (const b of batches) {
-            const relColor = b.relatedItems.find(r => r.categoryId === colorCategory.id)
-            if (!relColor) continue
-            try {
-              await db.itemRelation.create({ data: { relationType: 'BATCH_OF', fromItemId: relColor.id, toItemId: b.id, userId: u.id } })
-              created++
-            } catch {}
+            // const relColor = b.relatedItems.find(r => r.categoryId === colorCategory.id) // Removed - not in schema
+            // if (!relColor) continue
+            // try {
+            //   await db.itemRelation.create({ data: { relationType: 'BATCH_OF', fromItemId: relColor.id, toItemId: b.id, userId: u.id } })
+            //   created++
+            // } catch {}
           }
         }
       })

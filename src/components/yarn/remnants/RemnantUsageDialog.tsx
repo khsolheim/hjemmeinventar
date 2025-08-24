@@ -88,7 +88,7 @@ export function RemnantUsageDialog({
       onOpenChange(false)
       onSuccess?.()
     },
-    onError: (error) => {
+    onError: (error: any) => {
       toast.error(`Feil ved bruk: ${error.message}`)
     }
   })
@@ -111,9 +111,7 @@ export function RemnantUsageDialog({
   const remainingAfterUse = remnant ? remnant.availableQuantity - amountUsed : 0
   const willExceedAvailable = amountUsed > (remnant?.availableQuantity || 0)
 
-  const remnantData = remnant?.categoryData 
-    ? JSON.parse(remnant.categoryData) 
-    : null
+  const remnantData = remnant?.categoryData ? (remnant.categoryData as any) : null
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -184,7 +182,7 @@ export function RemnantUsageDialog({
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      {projectsData?.projects.map((project) => (
+                      {projectsData?.projects.map((project: any) => (
                         <SelectItem key={project.id} value={project.id}>
                           <div className="flex items-center gap-2">
                             <span>{project.name}</span>

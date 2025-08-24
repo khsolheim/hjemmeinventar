@@ -14,7 +14,10 @@ const protectedRoutes = [
 
 // Routes that should be accessible without authentication  
 const publicRoutes = [
-  '/test'
+  '/',
+  '/test',
+  '/auth/signin',
+  '/auth/signup'
 ]
 
 // tRPC routes that should be public (no authentication required)
@@ -39,7 +42,7 @@ export async function middleware(request: NextRequest) {
   
   // Allow public routes without authentication
   const isPublicRoute = publicRoutes.some(route => 
-    pathname.startsWith(route)
+    pathname === route || (route !== '/' && pathname.startsWith(route))
   )
   
   if (isPublicTrpcRoute || isPublicRoute) {
@@ -70,8 +73,8 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(signInUrl)
   }
   
-  // Redirect authenticated users away from auth routes
-  if (isAuthRoute && isAuthenticated) {
+  // Redirect authenticated users away from auth routes (only if they're not already on a public route)
+  if (isAuthRoute && isAuthenticated && !isPublicRoute) {
     return NextResponse.redirect(new URL('/dashboard', request.url))
   }
   
@@ -90,7 +93,8 @@ export const config = {
      * - workbox (workbox files)
      * - manifest.json (PWA manifest)
      * - public folder
+     * - api/ping (health check)
      */
-    '/((?!api/auth|_next/static|_next/image|favicon.ico|sw.js|workbox|manifest.json|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
+    '/((?!api/auth|api/ping|_next/static|_next/image|favicon.ico|sw.js|workbox|manifest.json|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
   ],
 }

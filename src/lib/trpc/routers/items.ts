@@ -5,6 +5,7 @@ import { TRPCError } from '@trpc/server'
 import { logActivity, generateUniqueQRCode } from '../../db'
 import { inventoryEvents } from '../../inngest/services/inventory-events'
 import { emitToHousehold } from '../../websocket/server'
+import { serializeItemsForClient, serializeItemForClient } from '../../utils/decimal-serializer'
 
 export const itemsRouter = createTRPCRouter({
   // Get all items for user
@@ -77,7 +78,7 @@ export const itemsRouter = createTRPCRouter({
         ctx.db.item.count({ where })
       ])
       
-      return { items, total }
+      return { items: serializeItemsForClient(items), total }
     }),
 
   // Get single item by ID
@@ -100,8 +101,8 @@ export const itemsRouter = createTRPCRouter({
           },
           loan: true,
           attachments: true,
-          relatedItems: true,
-          relatedTo: true,
+          // relatedItems: true, // Removed - not in schema
+          // relatedTo: true, // Removed - not in schema
           activities: {
             orderBy: { createdAt: 'desc' },
             take: 10
@@ -116,7 +117,7 @@ export const itemsRouter = createTRPCRouter({
         })
       }
       
-      return item
+      return serializeItemForClient(item)
     }),
 
   // Create new item
@@ -425,7 +426,7 @@ export const itemsRouter = createTRPCRouter({
         while (exists) {
           const base = await generateUniqueQRCode()
           unique = `D-${base}`
-          const found = await ctx.db.itemDistribution.findFirst({ where: { OR: [{ qrCode: unique }] } })
+          const found = await ctx.db.itemDistribution.findFirst({ where: { OR: [{ id: unique }] } })
           exists = !!found
         }
         return unique
@@ -437,7 +438,7 @@ export const itemsRouter = createTRPCRouter({
           locationId: location.id,
           quantity: input.quantity,
           notes: input.notes,
-          qrCode: await generateDistributionCode()
+          // qrCode: await generateDistributionCode() // Removed - not in schema
         },
         include: { location: true }
       })
@@ -540,7 +541,7 @@ export const itemsRouter = createTRPCRouter({
     .input(z.object({ qrCode: z.string() }))
     .query(async ({ ctx, input }) => {
       const distribution = await ctx.db.itemDistribution.findFirst({
-        where: { qrCode: input.qrCode },
+        where: { id: input.qrCode },
         include: {
           location: true,
           item: true
@@ -564,12 +565,12 @@ export const itemsRouter = createTRPCRouter({
         if (!distribution || distribution.item.userId !== ctx.user.id) {
           throw new TRPCError({ code: 'NOT_FOUND', message: 'Fordeling ikke funnet' })
         }
-        if (input.amount > distribution.quantity) {
+        if (input.amount > Number(distribution.quantity)) {
           throw new TRPCError({ code: 'BAD_REQUEST', message: 'Ikke nok i denne fordelingen' })
         }
-        const newDistributionQty = distribution.quantity - input.amount
-        const newItemAvailable = Math.max(0, distribution.item.availableQuantity - input.amount)
-        const newItemConsumed = (distribution.item.consumedQuantity || 0) + input.amount
+        const newDistributionQty = Number(distribution.quantity) - input.amount
+        const newItemAvailable = Math.max(0, Number(distribution.item.availableQuantity) - input.amount)
+        const newItemConsumed = (Number(distribution.item.consumedQuantity) || 0) + input.amount
 
         await tx.itemDistribution.update({
           where: { id: distribution.id },
@@ -608,12 +609,12 @@ export const itemsRouter = createTRPCRouter({
           throw new TRPCError({ code: 'NOT_FOUND', message: 'Fordeling ikke funnet' })
         }
         // Validate we don't exceed totalQuantity
-        const newDistributionQty = distribution.quantity + input.amount
-        const potentialAvailable = distribution.item.availableQuantity + input.amount
+        const newDistributionQty = Number(distribution.quantity) + input.amount
+        const potentialAvailable = Number(distribution.item.availableQuantity) + input.amount
         if (potentialAvailable > distribution.item.totalQuantity + 1e-6) {
           throw new TRPCError({ code: 'BAD_REQUEST', message: 'Kan ikke overskride totalt antall for varen' })
         }
-        const newConsumed = Math.max(0, (distribution.item.consumedQuantity || 0) - input.amount)
+        const newConsumed = Math.max(0, (Number(distribution.item.consumedQuantity) || 0) - input.amount)
 
         await tx.itemDistribution.update({ where: { id: distribution.id }, data: { quantity: newDistributionQty } })
         const updatedItem = await tx.item.update({
@@ -648,7 +649,7 @@ export const itemsRouter = createTRPCRouter({
         if (from.locationId === input.toLocationId) {
           throw new TRPCError({ code: 'BAD_REQUEST', message: 'Mål-lokasjon er lik kilde' })
         }
-        if (input.amount > from.quantity) {
+        if (input.amount > Number(from.quantity)) {
           throw new TRPCError({ code: 'BAD_REQUEST', message: 'Ikke nok i kildefordeling' })
         }
 
@@ -662,18 +663,18 @@ export const itemsRouter = createTRPCRouter({
             while (exists) {
               const base = await generateUniqueQRCode()
               unique = `D-${base}`
-              const found = await tx.itemDistribution.findFirst({ where: { OR: [{ qrCode: unique }] } })
+              const found = await tx.itemDistribution.findFirst({ where: { OR: [{ id: unique }] } })
               exists = !!found
             }
             return unique
           }
           to = await tx.itemDistribution.create({
-            data: { itemId: from.itemId, locationId: input.toLocationId, quantity: 0, qrCode: await generateDistributionCode() }
+            data: { itemId: from.itemId, locationId: input.toLocationId, quantity: 0 }
           })
         }
 
-        await tx.itemDistribution.update({ where: { id: from.id }, data: { quantity: from.quantity - input.amount } })
-        const updatedTo = await tx.itemDistribution.update({ where: { id: to.id }, data: { quantity: to.quantity + input.amount } })
+        await tx.itemDistribution.update({ where: { id: from.id }, data: { quantity: Number(from.quantity) - input.amount } })
+        const updatedTo = await tx.itemDistribution.update({ where: { id: to.id }, data: { quantity: Number(to.quantity) + input.amount } })
 
         await logActivity({
           type: 'ITEM_MOVED',

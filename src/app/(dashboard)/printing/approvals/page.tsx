@@ -17,7 +17,10 @@ import { Slider } from '@/components/ui/slider'
 import { CheckCircle, XCircle, Clock, AlertCircle, Plus, MoreHorizontal, Eye, Edit, Trash2, Users, DollarSign, Calendar, Filter, Search, UserCheck } from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
 import { nb } from 'date-fns/locale'
-import type { PrintApprovalWorkflow, PrintApproval, ApprovalStatus } from '@prisma/client'
+// TODO: Add these types when printing models are implemented
+type PrintApprovalWorkflow = any
+type PrintApproval = any
+type ApprovalStatus = 'PENDING' | 'IN_PROGRESS' | 'APPROVED' | 'REJECTED' | 'EXPIRED'
 
 interface WorkflowWithDetails extends PrintApprovalWorkflow {
   approvals: Array<PrintApproval & {
@@ -120,7 +123,7 @@ export default function ApprovalsPage() {
 
   const handleApprove = async (workflowId: string, comments?: string) => {
     try {
-      await approveJobMutation.mutateAsync({ 
+      approveJobMutation.mutate({ 
         workflowId, 
         comments: comments || 'Godkjent' 
       })
@@ -131,7 +134,7 @@ export default function ApprovalsPage() {
 
   const handleReject = async (workflowId: string, reason: string) => {
     try {
-      await rejectJobMutation.mutateAsync({ 
+      rejectJobMutation.mutate({ 
         workflowId, 
         reason 
       })
@@ -616,7 +619,7 @@ export default function ApprovalsPage() {
                   <div>
                     <Label className="text-sm font-medium">Godkjennings-historikk</Label>
                     <div className="mt-2 space-y-2">
-                      {workflow.approvals.map((approval, index) => (
+                      {workflow.approvals.map((approval: any, index: number) => (
                         <div key={approval.id} className="flex items-center justify-between p-2 border rounded">
                           <div className="flex items-center gap-3">
                             <div className={`

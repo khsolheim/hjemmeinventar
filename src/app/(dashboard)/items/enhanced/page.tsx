@@ -94,15 +94,15 @@ export default function EnhancedItemsPage() {
 
     // Status filtering
     if (filters.status && filters.status.length > 0) {
-      filtered = filtered.filter(item => {
+      filtered = filtered.filter((item: any) => {
         const hasStatus = (status: string) => {
           switch (status) {
             case 'available':
-              return item.availableQuantity > 1
+              return Number(item.availableQuantity) > 1
             case 'lowStock':
-              return item.availableQuantity <= 1 && item.availableQuantity > 0
+              return Number(item.availableQuantity) <= 1 && Number(item.availableQuantity) > 0
             case 'outOfStock':
-              return item.availableQuantity === 0
+              return Number(item.availableQuantity) === 0
             case 'expired':
               return item.expiryDate && new Date(item.expiryDate) < new Date()
             case 'loanedOut':
@@ -117,7 +117,7 @@ export default function EnhancedItemsPage() {
 
     // Quantity range filtering
     if (filters.quantityRange?.min !== undefined || filters.quantityRange?.max !== undefined) {
-      filtered = filtered.filter(item => {
+      filtered = filtered.filter((item: any) => {
         const qty = Number(item.availableQuantity)
         if (filters.quantityRange?.min !== undefined && qty < filters.quantityRange.min) return false
         if (filters.quantityRange?.max !== undefined && qty > filters.quantityRange.max) return false
@@ -127,7 +127,7 @@ export default function EnhancedItemsPage() {
 
     // Date range filtering
     if (filters.dateRange?.from || filters.dateRange?.to) {
-      filtered = filtered.filter(item => {
+      filtered = filtered.filter((item: any) => {
         const field = filters.dateRange!.field || 'createdAt'
         const itemDate = new Date(item[field as keyof typeof item] as string)
         
@@ -139,13 +139,13 @@ export default function EnhancedItemsPage() {
 
     // Special filters
     if (filters.hasImages) {
-      filtered = filtered.filter(item => 
+      filtered = filtered.filter((item: any) => 
         item.attachments && item.attachments.some((att: any) => att.type === 'IMAGE')
       )
     }
 
     if (filters.hasBarcode) {
-      filtered = filtered.filter(item => item.barcode)
+      filtered = filtered.filter((item: any) => item.barcode)
     }
 
     return filtered
@@ -163,17 +163,17 @@ export default function EnhancedItemsPage() {
     if (selectedItems.length === filteredItems.length) {
       setSelectedItems([])
     } else {
-      setSelectedItems(filteredItems.map(item => item.id))
+      setSelectedItems(filteredItems.map((item: any) => item.id))
     }
   }
 
   const handleExport = () => {
     // Create CSV export
-    const csvData = filteredItems.map(item => ({
+    const csvData = filteredItems.map((item: any) => ({
       Navn: item.name,
       Kategori: item.category?.name || '',
       Lokasjon: item.location.name,
-      Antall: item.availableQuantity,
+      Antall: Number(item.availableQuantity),
       Enhet: item.unit,
       Pris: item.price || '',
       Opprettet: new Date(item.createdAt).toLocaleDateString('no-NO'),
@@ -356,7 +356,7 @@ export default function EnhancedItemsPage() {
       {/* Items Display */}
       {viewMode === 'grid' ? (
         <div className="cq-grid items-grid gap-6" style={{"--card-min":"220px"} as any}>
-          {filteredItems.map((item) => (
+          {filteredItems.map((item: any) => (
             <Card key={item.id} className="hover:shadow-md transition-shadow group cursor-pointer">
               <Link href={`/items/${item.id}`} className="block">
                 <CardHeader className="pb-3">
@@ -470,7 +470,7 @@ export default function EnhancedItemsPage() {
         <Card>
           <CardContent className="p-0">
             <div className="space-y-0">
-              {filteredItems.map((item, index) => (
+              {filteredItems.map((item: any, index: number) => (
                 <Link href={`/items/${item.id}`} key={item.id}>
                   <div 
                     className={`flex items-center gap-4 p-4 hover:bg-muted/50 transition-colors cursor-pointer ${index !== filteredItems.length - 1 ? 'border-b' : ''}`}

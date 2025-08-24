@@ -50,7 +50,7 @@ export const analyticsRouter = createTRPCRouter({
       }, {} as Record<string, number>)
 
       // Value estimate
-      const totalValue = items.reduce((sum, item) => sum + (item.price || 0), 0)
+      const totalValue = items.reduce((sum, item) => sum + (item.price ? Number(item.price) : 0), 0)
       const averageValue = items.length > 0 ? totalValue / items.length : 0
 
       // Activity heatmap (activities by hour of day)
@@ -75,8 +75,8 @@ export const analyticsRouter = createTRPCRouter({
         valueEstimate: {
           total: totalValue,
           average: averageValue,
-          highest: Math.max(...items.map(i => i.price || 0)),
-          itemsWithPrice: items.filter(i => i.price && i.price > 0).length
+          highest: Math.max(...items.map(i => i.price ? Number(i.price) : 0)),
+          itemsWithPrice: items.filter(i => i.price && Number(i.price) > 0).length
         },
         activityHeatmap
       }
@@ -100,9 +100,9 @@ export const analyticsRouter = createTRPCRouter({
         id: category.id,
         name: category.name,
         itemCount: category.items.length,
-        totalValue: category.items.reduce((sum, item) => sum + (item.price || 0), 0),
+        totalValue: category.items.reduce((sum, item) => sum + (item.price ? Number(item.price) : 0), 0),
         averageValue: category.items.length > 0 
-          ? category.items.reduce((sum, item) => sum + (item.price || 0), 0) / category.items.length 
+          ? category.items.reduce((sum, item) => sum + (item.price ? Number(item.price) : 0), 0) / category.items.length 
           : 0,
         locations: category.items.reduce((acc, item) => {
           const locationName = item.location.name
@@ -138,7 +138,7 @@ export const analyticsRouter = createTRPCRouter({
         name: location.name,
         type: location.type,
         itemCount: location.items.length,
-        totalValue: location.items.reduce((sum, item) => sum + (item.price || 0), 0),
+        totalValue: location.items.reduce((sum, item) => sum + (item.price ? Number(item.price) : 0), 0),
         categories: location.items.reduce((acc, item) => {
           const categoryName = item.category?.name || 'Ukategorisert'
           acc[categoryName] = (acc[categoryName] || 0) + 1
@@ -180,7 +180,7 @@ export const analyticsRouter = createTRPCRouter({
       // Daily activity
       const dailyActivity = activities.reduce((acc, activity) => {
         const date = new Date(activity.createdAt).toISOString().split('T')[0]
-        acc[date] = (acc[date] || 0) + 1
+        acc[date!] = (acc[date!] || 0) + 1
         return acc
       }, {} as Record<string, number>)
 
@@ -236,7 +236,7 @@ export const analyticsRouter = createTRPCRouter({
         registrert: item.createdAt.toISOString().split('T')[0],
         oppdatert: item.updatedAt.toISOString().split('T')[0],
         ...(input.includeImages && { bildeUrl: item.imageUrl }),
-        ...(item.categoryData ? JSON.parse(item.categoryData) : {}) // Include category-specific fields
+        ...(item.categoryData ? JSON.parse(item.categoryData as string) : {}) // Include category-specific fields
       }))
 
       return {

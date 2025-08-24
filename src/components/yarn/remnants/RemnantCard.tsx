@@ -89,7 +89,9 @@ export function RemnantCard({
   const [isLoading, setIsLoading] = useState(false)
   
   const remnantData: RemnantData | null = remnant.categoryData 
-    ? JSON.parse(remnant.categoryData) 
+    ? typeof remnant.categoryData === 'string' 
+      ? JSON.parse(remnant.categoryData) 
+      : remnant.categoryData
     : null
 
   const originalBatch = remnant.itemRelationsFrom?.[0]?.toItem

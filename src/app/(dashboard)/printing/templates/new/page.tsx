@@ -8,16 +8,20 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
-import { ArrowLeft, Wand2, FileTemplate, Download } from 'lucide-react'
+import { ArrowLeft, Wand2, FileText, Download } from 'lucide-react'
 import Link from 'next/link'
+import { trpc } from '@/lib/trpc/client'
+import { LabelSizeSelector } from '@/components/printing/LabelSizeSelector'
 
 export default function NewTemplatePage() {
   const router = useRouter()
+  const { data: labelSizes } = trpc.labelSizes.getAll.useQuery()
+  
   const [template, setTemplate] = useState({
     name: '',
     description: '',
     type: 'QR' as 'QR' | 'BARCODE' | 'CUSTOM',
-    size: 'STANDARD' as 'SMALL' | 'STANDARD' | 'LARGE',
+    size: '',
     category: ''
   })
 
@@ -27,32 +31,31 @@ export default function NewTemplatePage() {
     { value: 'CUSTOM', label: 'Tilpasset design', icon: '🎨' }
   ]
 
-  const templateSizes = [
-    { value: 'SMALL', label: 'Liten (30x15mm)', description: 'For små gjenstander' },
-    { value: 'STANDARD', label: 'Standard (54x25mm)', description: 'Mest brukt størrelse' },
-    { value: 'LARGE', label: 'Stor (89x36mm)', description: 'For store gjenstander' }
-  ]
-
+  // Get default size for quick templates
+  const defaultSize = labelSizes?.find(s => s.isDefault) || labelSizes?.[0]
+  
   const quickTemplates = [
     { 
       name: 'Standard HMS Etikett', 
       type: 'QR', 
-      size: 'STANDARD',
+      size: defaultSize?.id || 'STANDARD',
       description: 'QR-kode med gjenstandsnavn og lokasjon'
     },
     { 
       name: 'Kompakt Etikett', 
       type: 'QR', 
-      size: 'SMALL',
+      size: labelSizes?.find(s => s.name === 'Liten')?.id || 'SMALL',
       description: 'Minimal QR-kode for små gjenstander'
     },
     { 
       name: 'Detaljert Etikett', 
       type: 'CUSTOM', 
-      size: 'LARGE',
+      size: labelSizes?.find(s => s.name === 'Stor')?.id || 'LARGE',
       description: 'QR + tekst + logo for viktige gjenstander'
     }
   ]
+
+
 
   const handleCreateFromScratch = () => {
     const params = new URLSearchParams({
@@ -140,7 +143,7 @@ export default function NewTemplatePage() {
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <FileTemplate className="h-5 w-5" />
+              <FileText className="h-5 w-5" />
               Tilpasset mal
             </CardTitle>
           </CardHeader>
@@ -195,24 +198,11 @@ export default function NewTemplatePage() {
 
               <div>
                 <Label>Størrelse</Label>
-                <Select 
-                  value={template.size} 
-                  onValueChange={(value: any) => setTemplate({...template, size: value})}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Velg størrelse" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {templateSizes.map(size => (
-                      <SelectItem key={size.value} value={size.value}>
-                        <div>
-                          <div className="font-medium">{size.label}</div>
-                          <div className="text-xs text-muted-foreground">{size.description}</div>
-                        </div>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <LabelSizeSelector
+                  value={template.size}
+                  onValueChange={(value) => setTemplate(prev => ({ ...prev, size: value }))}
+                  placeholder="Velg størrelse"
+                />
               </div>
 
               <div>

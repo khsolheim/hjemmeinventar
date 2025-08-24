@@ -306,7 +306,7 @@ export function MobileYarnWizard({ onComplete }: MobileYarnWizardProps) {
                         <SelectValue placeholder="Velg eksisterende garntype" />
                       </SelectTrigger>
                       <SelectContent>
-                        {(mastersData?.masters || []).map((master) => (
+                        {(mastersData?.masters || []).map((master: any) => (
                           <SelectItem key={master.id} value={master.id}>
                             {master.name}
                           </SelectItem>
@@ -437,7 +437,7 @@ export function MobileYarnWizard({ onComplete }: MobileYarnWizardProps) {
   const canContinue = () => {
     switch (step) {
       case 1:
-        return mode !== ''
+        return true
       case 2:
         if (mode === 'new') {
           return masterData.name && masterData.producer && masterData.composition

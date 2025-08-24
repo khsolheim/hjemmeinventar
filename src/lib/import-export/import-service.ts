@@ -153,10 +153,10 @@ class ImportService {
       
       // Use first worksheet
       const worksheetName = workbook.SheetNames[0]
-      const worksheet = workbook.Sheets[worksheetName]
+      const worksheet = workbook.Sheets[worksheetName!]
       
       // Convert to JSON
-      const jsonData = XLSX.utils.sheet_to_json(worksheet, { 
+      const jsonData = XLSX.utils.sheet_to_json(worksheet!, { 
         header: 1,
         defval: '',
         raw: false

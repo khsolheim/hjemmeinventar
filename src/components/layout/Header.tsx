@@ -43,7 +43,8 @@ export function Header({ onToggleSidebar }: HeaderProps) {
   const [queued, setQueued] = useState<any[]>([])
   const [queueCount, setQueueCount] = useState(0)
   const commonOpts = { retry: 0, refetchOnWindowFocus: false, refetchOnMount: false, staleTime: 5 * 60 * 1000 } as const
-  const profiles = trpc.users.getLabelProfiles.useQuery(undefined, { ...commonOpts, enabled: status === 'authenticated' && isQueueOpen })
+  // const profiles = trpc.users.getLabelProfiles.useQuery(undefined, { ...commonOpts, enabled: status === 'authenticated' && isQueueOpen }) // Temporarily disabled
+  const profiles = { data: [], isLoading: false } // Placeholder since getLabelProfiles not available
   const userProfile = trpc.users.getProfile.useQuery(undefined, { ...commonOpts, enabled: status === 'authenticated' && isQueueOpen })
   const [selectedProfileId, setSelectedProfileId] = useState('')
 
@@ -68,9 +69,10 @@ export function Header({ onToggleSidebar }: HeaderProps) {
 
   useEffect(() => {
     if (!isQueueOpen) return
-    if (!selectedProfileId && userProfile.data?.defaultLabelProfileId) {
-      setSelectedProfileId(userProfile.data.defaultLabelProfileId)
-    }
+    // TODO: Implement default label profile selection
+    // if (!selectedProfileId && userProfile.data?.defaultLabelProfileId) {
+    //   setSelectedProfileId(userProfile.data.defaultLabelProfileId)
+    // }
   }, [isQueueOpen, userProfile.data, selectedProfileId])
 
   const handleSignOut = async () => {
@@ -251,10 +253,10 @@ export function Header({ onToggleSidebar }: HeaderProps) {
                 {(() => {
                   const q = queued[0]
                   const profile = (profiles.data || []).find((p: any) => p.id === selectedProfileId)
-                  const logo = profile?.logoUrl || userProfile.data?.logoUrl || ''
-                  const extra1 = profile?.extraLine1 || ''
-                  const extra2 = profile?.extraLine2 || ''
-                  const showUrl = profile?.showUrl ?? true
+                  const logo = '' // Temporarily disabled
+                  const extra1 = '' // Temporarily disabled
+                  const extra2 = '' // Temporarily disabled
+                  const showUrl = true // Temporarily disabled
                   const url = typeof window !== 'undefined' ? `${window.location.origin}/scan?d=${q.qrCode}` : ''
                   return (
                     <div className="flex items-start gap-3">
@@ -295,10 +297,10 @@ export function Header({ onToggleSidebar }: HeaderProps) {
             <Button variant="outline" onClick={() => {
               if (queued.length === 0) return
               const profile = (profiles.data || []).find((p: any) => p.id === selectedProfileId)
-              const logo = profile?.logoUrl || userProfile.data?.logoUrl || ''
-              const extra1 = profile?.extraLine1 || ''
-              const extra2 = profile?.extraLine2 || ''
-              const showUrl = profile?.showUrl ?? true
+              const logo = '' // Temporarily disabled
+              const extra1 = '' // Temporarily disabled
+              const extra2 = '' // Temporarily disabled
+              const showUrl = true // Temporarily disabled
               const labels = queued.map(q => ({
                 url: `${window.location.origin}/scan?d=${q.qrCode}`,
                 itemName: q.itemName,
@@ -325,8 +327,8 @@ export function Header({ onToggleSidebar }: HeaderProps) {
                 const profile = (profiles.data || []).find((p: any) => p.id === profileId)
                 const labels = queued.map(q => ({
                   ...q,
-                  extraLine1: profile?.extraLine1,
-                  extraLine2: profile?.extraLine2
+                  extraLine1: '', // Temporarily disabled
+                  extraLine2: '' // Temporarily disabled
                 }))
                 await dymoService.printBulkLabels(labels, 'qr', { copies, labelSize: size as any })
                 toast.success(`Skrev ut ${queued.length} etiketter`)

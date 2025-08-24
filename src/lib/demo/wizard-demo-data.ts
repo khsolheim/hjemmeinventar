@@ -152,22 +152,22 @@ async function createLocationHierarchy(
     const location = await db.location.create({
       data: {
         name: locationData.name,
-        displayName: locationData.displayName,
+        // displayName: locationData.displayName, // Removed - not in schema
         type: locationData.type,
         qrCode,
         parentId,
-        autoNumber: locationData.autoNumber,
-        level: locationData.level,
-        isWizardCreated: true,
-        wizardOrder: 1,
-        isPrivate: locationData.isPrivate || false,
-        colorCode: locationData.colorCode,
-        tags: locationData.tags ? JSON.stringify(locationData.tags) : null,
-        allowedUsers: null,
-        images: null,
-        primaryImage: null,
-        householdId: null,
-        isActive: true,
+        // autoNumber: locationData.autoNumber, // Removed - not in schema
+        // level: locationData.level, // Removed - not in schema
+        // isWizardCreated: true, // Removed - not in schema
+        // wizardOrder: 1, // Removed - not in schema
+        // isPrivate: locationData.isPrivate || false, // Removed - not in schema
+        // colorCode: locationData.colorCode, // Removed - not in schema
+        // tags: locationData.tags ? JSON.stringify(locationData.tags) : null, // Removed - not in schema
+        // allowedUsers: null, // Removed - not in schema
+        // images: null, // Removed - not in schema
+        // primaryImage: null, // Removed - not in schema
+        // householdId: null, // Removed - not in schema
+        // isActive: true, // Removed - not in schema
         userId
       }
     })
@@ -184,8 +184,8 @@ export async function clearDemoLocations(userId: string): Promise<void> {
   
   await db.location.deleteMany({
     where: { 
-      userId,
-      isWizardCreated: true 
+      userId
+      // isWizardCreated: true // Removed - not in schema
     }
   })
   

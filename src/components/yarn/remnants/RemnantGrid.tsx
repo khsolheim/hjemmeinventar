@@ -69,7 +69,7 @@ export function RemnantGrid({
   // Get unique conditions and units for filters
   const conditions = Array.from(new Set(
     remnants
-      .map(r => r.categoryData ? JSON.parse(r.categoryData).condition : null)
+      .map(r => r.categoryData ? (r.categoryData as any).condition : null)
       .filter(Boolean)
   ))
   
@@ -81,7 +81,7 @@ export function RemnantGrid({
       const matchesSearch = remnant.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         (remnant.description?.toLowerCase().includes(searchTerm.toLowerCase()))
       
-      const remnantData = remnant.categoryData ? JSON.parse(remnant.categoryData) : null
+      const remnantData = (remnant.categoryData as any) || null
       const matchesCondition = !conditionFilter || remnantData?.condition === conditionFilter
       const matchesUnit = !unitFilter || remnant.unit === unitFilter
       
@@ -94,8 +94,8 @@ export function RemnantGrid({
         case 'date':
           return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
         case 'condition':
-          const aData = a.categoryData ? JSON.parse(a.categoryData) : null
-          const bData = b.categoryData ? JSON.parse(b.categoryData) : null
+          const aData = (a.categoryData as any) || null
+          const bData = (b.categoryData as any) || null
           return (aData?.condition || '').localeCompare(bData?.condition || '')
         default:
           return 0

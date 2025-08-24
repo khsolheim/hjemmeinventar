@@ -54,13 +54,17 @@ export function LocationWizard() {
       parentId: state.selectedParent?.id
     },
     {
-      enabled: !!state.selectedType && state.step === 'location-form',
-      onSuccess: (result) => {
-        setSuggestedName(result.name)
-        setSuggestedAutoNumber(result.autoNumber)
-      }
+      enabled: !!state.selectedType && state.step === 'location-form'
     }
   )
+
+  // Handle auto name generation success
+  useEffect(() => {
+    if (generateAutoNameQuery.data) {
+      setSuggestedName(generateAutoNameQuery.data.name)
+      setSuggestedAutoNumber(generateAutoNameQuery.data.autoNumber)
+    }
+  }, [generateAutoNameQuery.data])
 
   // Check if tutorial should be skipped on mount
   const shouldSkipTutorial = useShouldSkipTutorial()
@@ -80,8 +84,8 @@ export function LocationWizard() {
 
   // Set loading state
   useEffect(() => {
-    setLoading(locationsLoading || createLocationMutation.isLoading || generateAutoNameQuery.isLoading)
-  }, [locationsLoading, createLocationMutation.isLoading, generateAutoNameQuery.isLoading, setLoading])
+    setLoading(locationsLoading || createLocationMutation.isPending || generateAutoNameQuery.isLoading)
+  }, [locationsLoading, createLocationMutation.isPending, generateAutoNameQuery.isLoading, setLoading])
 
   // Convert database locations to wizard format
   const flattenToWizardLocations = (dbLocations: any[]): WizardLocation[] => {
@@ -159,8 +163,8 @@ export function LocationWizard() {
     toast.success('Privacy innstillinger lagret')
     // Update local state
     updateLocation(showPrivacyModal!.id, {
-      isPrivate: privacySettings.isPrivate,
-      allowedUsers: privacySettings.allowedUsers
+      isPrivate: privacySettings.isPrivate
+      // allowedUsers: privacySettings.allowedUsers // TODO: Add allowedUsers to WizardLocation type
     })
   }
 
@@ -215,7 +219,7 @@ export function LocationWizard() {
           <LocationForm
             type={state.selectedType}
             parent={state.selectedParent}
-            editingLocation={editingLocation}
+            editingLocation={editingLocation || undefined}
             suggestedName={suggestedName}
             suggestedAutoNumber={suggestedAutoNumber}
             onSave={handleSaveLocation}
@@ -225,7 +229,7 @@ export function LocationWizard() {
               setSuggestedAutoNumber('')
               goBack()
             }}
-            isLoading={createLocationMutation.isLoading}
+            isLoading={createLocationMutation.isPending}
           />
         )
 

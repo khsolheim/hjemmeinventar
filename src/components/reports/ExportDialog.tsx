@@ -23,26 +23,7 @@ import { Download, FileText, Table, Shield, Loader2 } from 'lucide-react'
 import { trpc } from '@/lib/trpc/client'
 import { toast } from 'sonner'
 
-// Type definitions for export data
-interface ExportDataResponse {
-  data: ExportItem[]
-  metadata?: {
-    title: string
-    description?: string
-    recordCount: number
-  }
-}
 
-interface ExportItem {
-  navn?: string
-  kategori?: string
-  lokasjon?: string
-  antall?: number | string
-  pris?: string
-  kjøpsdato?: string
-  beskrivelse?: string
-  [key: string]: unknown
-}
 
 interface TRPCError {
   message: string
@@ -61,7 +42,7 @@ export function ExportDialog({ isOpen, onClose }: ExportDialogProps) {
   const [isGenerating, setIsGenerating] = useState(false)
 
   const exportData = trpc.importExport.exportData.useMutation({
-    onSuccess: (data: ExportDataResponse) => {
+    onSuccess: (data: { content: string; filename: string; mimeType: string; }) => {
       generateAndDownloadFile(data)
       setIsGenerating(false)
       toast.success('Eksport fullført')
@@ -73,250 +54,23 @@ export function ExportDialog({ isOpen, onClose }: ExportDialogProps) {
     }
   })
 
-  const generateAndDownloadFile = (data: ExportDataResponse) => {
-    let content = ''
-    let filename = ''
-    let mimeType = ''
-
-    const timestamp = new Date().toISOString().split('T')[0]
-
-    switch (format) {
-      case 'csv':
-        content = convertToCSV(data.data)
-        filename = `${exportType}-export-${timestamp}.csv`
-        mimeType = 'text/csv'
-        break
-      case 'excel':
-        // For now, generate CSV with Excel-friendly formatting
-        content = convertToExcelCSV(data.data)
-        filename = `${exportType}-export-${timestamp}.csv`
-        mimeType = 'text/csv'
-        break
-      case 'pdf':
-        content = generatePDFContent(data)
-        filename = `${exportType}-rapport-${timestamp}.pdf`
-        mimeType = 'application/pdf'
-        break
-    }
-
+  const generateAndDownloadFile = (data: { content: string; filename: string; mimeType: string; }) => {
     // Create and download file
-    const blob = new Blob([content], { type: mimeType })
+    const blob = new Blob([data.content], { type: data.mimeType })
     const url = URL.createObjectURL(blob)
     const link = document.createElement('a')
     link.href = url
-    link.download = filename
+    link.download = data.filename
     document.body.appendChild(link)
     link.click()
     document.body.removeChild(link)
     URL.revokeObjectURL(url)
   }
 
-  const convertToCSV = (data: ExportItem[]) => {
-    if (data.length === 0) return ''
-    
-    const headers = Object.keys(data[0])
-    const csvHeaders = headers.join(',')
-    const csvRows = data.map(row => 
-      headers.map(header => {
-        const value = row[header]
-        return typeof value === 'string' ? `"${value.replace(/"/g, '""')}"` : value
-      }).join(',')
-    )
-    
-    return [csvHeaders, ...csvRows].join('\n')
-  }
 
-  const convertToExcelCSV = (data: ExportItem[]) => {
-    // Add UTF-8 BOM for proper Excel encoding
-    const bom = '\uFEFF'
-    return bom + convertToCSV(data)
-  }
 
-  const generatePDFContent = (data: ExportDataResponse) => {
-    // For now, generate HTML content that can be converted to PDF
-    // In a real implementation, you'd use a PDF library like jsPDF or Puppeteer
-    const html = generateHTMLReport(data)
-    return html
-  }
 
-  const generateHTMLReport = (data: ExportDataResponse) => {
-    const timestamp = new Date().toLocaleDateString('nb-NO')
-    
-    if (exportType === 'insurance') {
-      return generateInsuranceReport(data, timestamp)
-    }
-    
-    return `
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <meta charset="UTF-8">
-        <title>HMS Rapport</title>
-        <style>
-          body { font-family: Arial, sans-serif; margin: 20px; }
-          h1 { color: #333; border-bottom: 2px solid #ccc; }
-          h2 { color: #666; margin-top: 30px; }
-          table { width: 100%; border-collapse: collapse; margin: 20px 0; }
-          th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
-          th { background-color: #f5f5f5; font-weight: bold; }
-          .summary { background-color: #f9f9f9; padding: 15px; margin: 20px 0; }
-          .footer { margin-top: 40px; font-size: 12px; color: #666; }
-        </style>
-      </head>
-      <body>
-        <h1>📦 HMS Rapport</h1>
-        <div class="summary">
-          <h2>Sammendrag</h2>
-          <p><strong>Rapport generert:</strong> ${timestamp}</p>
-          <p><strong>Totalt antall gjenstander:</strong> ${data.data.length}</p>
-          <p><strong>Rapport type:</strong> ${exportType === 'inventory' ? 'Inventar oversikt' : 'Analytics rapport'}</p>
-        </div>
-        
-        <h2>Detaljert oversikt</h2>
-        <table>
-          <thead>
-            <tr>
-              ${Object.keys(data.data[0] || {}).map(key => `<th>${key}</th>`).join('')}
-            </tr>
-          </thead>
-          <tbody>
-            ${data.data.map((item: ExportItem) => `
-              <tr>
-                ${Object.values(item).map(value => `<td>${value || '-'}</td>`).join('')}
-              </tr>
-            `).join('')}
-          </tbody>
-        </table>
-        
-        <div class="footer">
-          <p>Generert av HMS (Home Management System) - ${timestamp}</p>
-          <p>Dette dokumentet inneholder en oversikt over registrerte gjenstander og er ikke juridisk bindende.</p>
-        </div>
-      </body>
-      </html>
-    `
-  }
 
-  const generateInsuranceReport = (data: ExportDataResponse, timestamp: string) => {
-    const totalValue = data.data.reduce((sum: number, item: ExportItem) => sum + (parseFloat(item.pris || '0') || 0), 0)
-    const itemsWithValue = data.data.filter((item: ExportItem) => item.pris && parseFloat(item.pris) > 0)
-    
-    return `
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <meta charset="UTF-8">
-        <title>Forsikringsrapport - HMS</title>
-        <style>
-          body { font-family: Arial, sans-serif; margin: 20px; line-height: 1.6; }
-          .header { text-align: center; margin-bottom: 40px; }
-          .header h1 { color: #2563eb; margin-bottom: 10px; }
-          .summary-box { background: #f8fafc; border: 2px solid #e2e8f0; padding: 20px; margin: 20px 0; }
-          .value-highlight { font-size: 24px; font-weight: bold; color: #dc2626; }
-          table { width: 100%; border-collapse: collapse; margin: 20px 0; }
-          th, td { border: 1px solid #d1d5db; padding: 10px; text-align: left; }
-          th { background-color: #f3f4f6; font-weight: bold; }
-          .category-group { margin: 30px 0; }
-          .important-note { background: #fef3c7; border-left: 4px solid #f59e0b; padding: 15px; margin: 20px 0; }
-          .footer { margin-top: 50px; padding-top: 20px; border-top: 1px solid #ccc; font-size: 12px; color: #666; }
-        </style>
-      </head>
-      <body>
-        <div class="header">
-          <h1>🛡️ FORSIKRINGSRAPPORT</h1>
-          <h2>HMS Dokumentasjon</h2>
-          <p><strong>Rapportdato:</strong> ${timestamp}</p>
-        </div>
-        
-        <div class="summary-box">
-          <h2>📊 Sammendrag av verdier</h2>
-          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
-            <div>
-              <p><strong>Totalt antall gjenstander:</strong> ${data.data.length}</p>
-              <p><strong>Gjenstander med verdi:</strong> ${itemsWithValue.length}</p>
-              <p><strong>Gjenstander uten verdi:</strong> ${data.data.length - itemsWithValue.length}</p>
-            </div>
-            <div>
-              <p><strong>Total estimert verdi:</strong></p>
-              <div class="value-highlight">${totalValue.toLocaleString('nb-NO')} NOK</div>
-            </div>
-          </div>
-        </div>
-        
-        <div class="important-note">
-          <h3>⚠️ Viktig informasjon for forsikring</h3>
-          <ul>
-            <li>Dette dokumentet er en oversikt over registrerte gjenstander per ${timestamp}</li>
-            <li>Verdier er estimerte og basert på registrerte kjøpspriser</li>
-            <li>For høyverdige gjenstander anbefales det med dokumentasjon av kvitteringer</li>
-            <li>Kontakt din forsikringsselskap for spesifikke krav til dokumentasjon</li>
-          </ul>
-        </div>
-        
-        <h2>📋 Detaljert inventarliste</h2>
-        <table>
-          <thead>
-            <tr>
-              <th>Gjenstand</th>
-              <th>Kategori</th>
-              <th>Lokasjon</th>
-              <th>Antall</th>
-              <th>Kjøpspris (NOK)</th>
-              <th>Kjøpsdato</th>
-              <th>Beskrivelse</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${data.data.map((item: ExportItem) => `
-              <tr style="${item.pris && parseFloat(item.pris) > 5000 ? 'background-color: #fef3c7;' : ''}">
-                <td><strong>${item.navn || 'Ukjent'}</strong></td>
-                <td>${item.kategori || 'Ukategorisert'}</td>
-                <td>${item.lokasjon || 'Ukjent lokasjon'}</td>
-                <td>${item.antall || 1}</td>
-                <td>${item.pris ? parseFloat(item.pris).toLocaleString('nb-NO') : 'Ikke oppgitt'}</td>
-                <td>${item.kjøpsdato || 'Ikke oppgitt'}</td>
-                <td>${item.beskrivelse || 'Ingen beskrivelse'}</td>
-              </tr>
-            `).join('')}
-          </tbody>
-        </table>
-        
-        <div class="summary-box">
-          <h2>💰 Verdikategorier</h2>
-          <table style="margin: 0;">
-            <tr>
-              <td><strong>Gjenstander over 10,000 NOK:</strong></td>
-              <td>${itemsWithValue.filter((item: ExportItem) => parseFloat(item.pris || '0') > 10000).length}</td>
-            </tr>
-            <tr>
-              <td><strong>Gjenstander 5,000-10,000 NOK:</strong></td>
-              <td>${itemsWithValue.filter((item: ExportItem) => parseFloat(item.pris || '0') >= 5000 && parseFloat(item.pris || '0') <= 10000).length}</td>
-            </tr>
-            <tr>
-              <td><strong>Gjenstander 1,000-5,000 NOK:</strong></td>
-              <td>${itemsWithValue.filter((item: ExportItem) => parseFloat(item.pris || '0') >= 1000 && parseFloat(item.pris || '0') < 5000).length}</td>
-            </tr>
-            <tr>
-              <td><strong>Gjenstander under 1,000 NOK:</strong></td>
-              <td>${itemsWithValue.filter((item: ExportItem) => parseFloat(item.pris || '0') < 1000).length}</td>
-            </tr>
-          </table>
-        </div>
-        
-        <div class="footer">
-          <p><strong>Rapportgenerator:</strong> HMS - Home Management System</p>
-          <p><strong>Kontaktinformasjon:</strong> Dette dokumentet er generert automatisk basert på registrerte data.</p>
-          <p><strong>Versjon:</strong> 1.0 - ${timestamp}</p>
-          <hr>
-          <p style="font-style: italic;">
-            Denne rapporten er utarbeidet som dokumentasjon for forsikringsformål. 
-            Kontroller at alle verdier er oppdaterte og korrekte før innsending til forsikringsselskap.
-          </p>
-        </div>
-      </body>
-      </html>
-    `
-  }
 
   const handleExport = () => {
     setIsGenerating(true)

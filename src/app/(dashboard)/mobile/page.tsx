@@ -50,14 +50,14 @@ export default function MobileDemoPage() {
     staleTime: 30000,
     refetchOnWindowFocus: false,
     refetchOnMount: false,
-    placeholderData: (prev) => prev
+    placeholderData: (prev: any) => prev
   })
   const sampleItems = sampleItemsData?.items || []
   const { data: sampleLocations = [] } = trpc.locations.getAll.useQuery(undefined, {
     staleTime: 30000,
     refetchOnWindowFocus: false,
     refetchOnMount: false,
-    placeholderData: (prev) => prev
+    placeholderData: (prev: any) => prev
   })
 
   useEffect(() => {
@@ -460,7 +460,7 @@ export default function MobileDemoPage() {
               {sampleItems.length > 0 && (
                 <div className="space-y-3">
                   <h4 className="font-medium">Gjenstander (swipe for handlinger)</h4>
-                  {sampleItems.slice(0, 3).map((item) => (
+                  {sampleItems.slice(0, 3).map((item: any) => (
                     <MobileItemCard
                       key={item.id}
                       item={item}
@@ -477,7 +477,7 @@ export default function MobileDemoPage() {
               {sampleLocations.length > 0 && (
                 <div className="space-y-3">
                   <h4 className="font-medium">Lokasjoner</h4>
-                  {sampleLocations.slice(0, 2).map((location) => (
+                  {sampleLocations.slice(0, 2).map((location: any) => (
                     <MobileLocationCard
                       key={location.id}
                       location={location}
@@ -514,7 +514,7 @@ export default function MobileDemoPage() {
                       { label: 'DOM Content Loaded', value: `${performanceMetrics.domContentLoaded}ms` },
                       { label: 'First Paint', value: `${Math.round(performanceMetrics.firstPaint)}ms` },
                       { label: 'First Contentful Paint', value: `${Math.round(performanceMetrics.firstContentfulPaint)}ms` }
-                    ].map(metric => (
+                    ].map((metric: any) => (
                       <div key={metric.label} className="flex justify-between">
                         <span className="text-sm text-muted-foreground">{metric.label}:</span>
                         <span className="text-sm font-medium">{metric.value}</span>

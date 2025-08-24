@@ -96,7 +96,7 @@ export function DymoPrintDialog({
         setIsConnected(true)
         
         if (availablePrinters.length > 0) {
-          setSelectedPrinter(availablePrinters[0])
+          setSelectedPrinter(availablePrinters[0] || '')
           toast.success(`Koblet til DYMO Connect - ${availablePrinters.length} skriver(e) funnet`)
         } else {
           toast.warning('DYMO Connect koblet til, men ingen skrivere funnet')
@@ -110,7 +110,7 @@ export function DymoPrintDialog({
           setIsConnected(true)
           
           if (availablePrinters.length > 0) {
-            setSelectedPrinter(availablePrinters[0])
+            setSelectedPrinter(availablePrinters[0] || '')
             toast.success(`Koblet til DYMO Connect etter gjenopprettelse - ${availablePrinters.length} skriver(e) funnet`)
           } else {
             toast.warning('DYMO Connect koblet til etter gjenopprettelse, men ingen skrivere funnet')
@@ -143,11 +143,13 @@ export function DymoPrintDialog({
       }
       
       // Convert Location to LabelData
+      const location = locations[0]
+      if (!location) return
       const labelData: LabelData = {
-        itemName: locations[0].name,
-        locationName: locations[0].name,
-        qrCode: locations[0].qrCode,
-        categoryName: locations[0].type,
+        itemName: location.name,
+        locationName: location.name,
+        qrCode: location.qrCode,
+        categoryName: location.type,
         dateAdded: new Date().toLocaleDateString('no-NO')
       }
       
@@ -184,7 +186,9 @@ export function DymoPrintDialog({
       
       if (locations.length === 1) {
         // Single label print
-        await dymoService.printLocationLabel(locations[0], options)
+        const location = locations[0]
+        if (!location) return
+        await dymoService.printLocationLabel(location, options)
         toast.success('Etikett skrevet ut!')
       } else {
         // Multiple labels print  
@@ -229,7 +233,7 @@ export function DymoPrintDialog({
           </DialogTitle>
           <DialogDescription>
             {locations.length === 1 
-              ? `Skriv ut etikett for "${locations[0].name}"`
+              ? `Skriv ut etikett for "${locations[0]?.name || 'Ukjent'}"`
               : `Skriv ut ${locations.length} etiketter`
             }
           </DialogDescription>

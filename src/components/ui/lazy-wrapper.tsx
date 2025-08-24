@@ -27,13 +27,13 @@ export function createLazyComponent<T extends ComponentType<any>>(
     importFn().then(module => {
       // Handle both default exports and named exports
       if ('default' in module) {
-        return { default: module.default }
+        return { default: module.default as T }
       } else if (componentName && componentName in module) {
-        return { default: module[componentName as keyof typeof module] }
+        return { default: module[componentName as keyof typeof module] as T }
       } else {
         // Fallback to first available export
         const firstKey = Object.keys(module)[0]
-        return { default: module[firstKey as keyof typeof module] }
+        return { default: module[firstKey as keyof typeof module] as T }
       }
     })
   )

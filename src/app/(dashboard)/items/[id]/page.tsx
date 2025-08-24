@@ -110,7 +110,7 @@ export default function ItemDetailPage() {
     )
   }
 
-  const images = item.attachments?.filter((att: any) => att.type === 'IMAGE') || []
+  const images = (item as any).attachments?.filter((att: any) => att.type === 'IMAGE') || []
 
   return (
     <div className="page container mx-auto px-4 py-8">
@@ -124,7 +124,7 @@ export default function ItemDetailPage() {
         </Button>
         <div className="flex items-center gap-2">
           <span className="text-2xl">
-            {item.category?.icon || '📦'}
+            {(item as any).category?.icon || '📦'}
           </span>
           <h1 className="text-3xl font-bold title">{item.name}</h1>
         </div>
@@ -230,9 +230,9 @@ export default function ItemDetailPage() {
         <div className="space-y-6">
           {/* Status and Badges */}
           <div className="flex items-center gap-2 flex-wrap">
-            {item.category && <Badge variant="secondary">{item.category.name}</Badge>}
+            {(item as any).category && <Badge variant="secondary">{(item as any).category.name}</Badge>}
             {getStatusBadge(item)}
-            {item.tags?.map((tag: any) => (
+            {(item as any).tags?.map((tag: any) => (
               <Badge key={tag.id} variant="outline" className="text-xs">
                 <Tag className="w-3 h-3 mr-1" />
                 {tag.name}
@@ -262,11 +262,11 @@ export default function ItemDetailPage() {
             </CardHeader>
             <CardContent>
               <div className="text-xl font-semibold">
-                {item.location.name}
+                {(item as any).location.name}
               </div>
-              {item.location.description && (
+                              {(item as any).location.description && (
                 <div className="text-sm text-muted-foreground mt-1">
-                  {item.location.description}
+                                      {(item as any).location.description}
                 </div>
               )}
             </CardContent>
@@ -324,14 +324,14 @@ export default function ItemDetailPage() {
             <CardContent>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {/* Category */}
-                {item.category && (
+                {(item as any).category && (
                   <div className="flex items-center gap-3">
                     <Package className="w-5 h-5 text-muted-foreground" />
                     <div>
                       <div className="font-medium">Kategori</div>
                       <div className="text-sm text-muted-foreground flex items-center gap-1">
-                        {item.category.icon && <span>{item.category.icon}</span>}
-                        {item.category.name}
+                        {(item as any).category.icon && <span>{(item as any).category.icon}</span>}
+                        {(item as any).category.name}
                       </div>
                     </div>
                   </div>
@@ -388,7 +388,7 @@ export default function ItemDetailPage() {
                 )}
 
                 {/* Image URL (if exists but no attachments) */}
-                {item.imageUrl && (!item.attachments || item.attachments.length === 0) && (
+                {item.imageUrl && (!(item as any).attachments || (item as any).attachments.length === 0) && (
                   <div className="flex items-center gap-3">
                     <ImageIcon className="w-5 h-5 text-muted-foreground" />
                     <div>
@@ -493,12 +493,12 @@ export default function ItemDetailPage() {
           </Card>
 
           {/* Category-specific Information */}
-          {item.categoryData && typeof item.categoryData === 'object' && Object.keys(item.categoryData).length > 0 && (
+          {(item as any).categoryData && typeof (item as any).categoryData === 'object' && Object.keys((item as any).categoryData).length > 0 && (
             <Card className="border-l-4 border-l-blue-500">
               <CardHeader>
                 <CardTitle className="text-lg flex items-center gap-2">
                   <Tag className="w-5 h-5 text-blue-500" />
-                  {item.category?.name ? `${item.category.name} - Spesifikke detaljer` : 'Tilpassede felter'}
+                  {(item as any).category?.name ? `${(item as any).category.name} - Spesifikke detaljer` : 'Tilpassede felter'}
                 </CardTitle>
                 <CardDescription>
                   Kategori-spesifikk informasjon for denne gjenstanden
@@ -506,7 +506,7 @@ export default function ItemDetailPage() {
               </CardHeader>
               <CardContent>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {Object.entries(item.categoryData as Record<string, any>).map(([key, value]) => {
+                  {Object.entries((item as any).categoryData as Record<string, any>).map(([key, value]: [string, any]) => {
                     if (!value && value !== 0 && value !== false) return null
                     
                     // Format the key to be more readable
@@ -618,7 +618,7 @@ export default function ItemDetailPage() {
           )}
 
           {/* Additional Information */}
-          {(item.tags && item.tags.length > 0) && (
+          {((item as any).tags && (item as any).tags.length > 0) && (
             <Card>
               <CardHeader>
                 <CardTitle className="text-lg flex items-center gap-2">
@@ -628,7 +628,7 @@ export default function ItemDetailPage() {
               </CardHeader>
               <CardContent>
                 <div className="flex flex-wrap gap-2">
-                  {item.tags.map((tag: any) => (
+                  {(item as any).tags.map((tag: any) => (
                     <Badge key={tag.id} variant="outline" className="text-sm">
                       {tag.name}
                     </Badge>
@@ -675,7 +675,7 @@ export default function ItemDetailPage() {
           </Card>
 
           {/* Loan Information */}
-          {item.loan && (
+          {(item as any).loan && (
             <Card>
               <CardHeader>
                 <CardTitle className="text-lg">Utlånsinformasjon</CardTitle>
@@ -684,26 +684,26 @@ export default function ItemDetailPage() {
                 <div className="space-y-2">
                   <div className="flex justify-between">
                     <span>Status:</span>
-                    <Badge variant={item.loan.status === 'OUT' ? 'destructive' : 'outline'}>
-                      {item.loan.status === 'OUT' ? 'Utlånt' : 'Returnert'}
+                    <Badge variant={(item as any).loan.status === 'OUT' ? 'destructive' : 'outline'}>
+                      {(item as any).loan.status === 'OUT' ? 'Utlånt' : 'Returnert'}
                     </Badge>
                   </div>
-                  {item.loan.loanedTo && (
+                  {(item as any).loan.loanedTo && (
                     <div className="flex justify-between">
                       <span>Låntaker:</span>
-                      <span>{item.loan.loanedTo}</span>
+                      <span>{(item as any).loan.loanedTo}</span>
                     </div>
                   )}
-                  {item.loan.loanDate && (
+                  {(item as any).loan.loanDate && (
                     <div className="flex justify-between">
                       <span>Utlånt dato:</span>
-                      <span>{new Date(item.loan.loanDate).toLocaleDateString('no-NO')}</span>
+                      <span>{new Date((item as any).loan.loanDate).toLocaleDateString('no-NO')}</span>
                     </div>
                   )}
-                  {item.loan.expectedReturnDate && (
+                  {(item as any).loan.expectedReturnDate && (
                     <div className="flex justify-between">
                       <span>Forventet retur:</span>
-                      <span>{new Date(item.loan.expectedReturnDate).toLocaleDateString('no-NO')}</span>
+                      <span>{new Date((item as any).loan.expectedReturnDate).toLocaleDateString('no-NO')}</span>
                     </div>
                   )}
                 </div>

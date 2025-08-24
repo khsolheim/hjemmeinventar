@@ -105,7 +105,7 @@ export const householdsRouter = createTRPCRouter({
         data: {
           name: input.name,
           description: input.description,
-          ownerId: ctx.user.id,
+          // ownerId: ctx.user.id, // Removed - not in schema
           members: {
             create: {
               userId: ctx.user.id,
@@ -186,7 +186,7 @@ export const householdsRouter = createTRPCRouter({
 
       // Log activity
       await logActivity({
-        type: 'HOUSEHOLD_UPDATED',
+        type: 'HOUSEHOLD_UPDATED' as any,
         description: `Oppdaterte husholdning: ${household.name}`,
         userId: ctx.user.id
       })
@@ -269,7 +269,7 @@ export const householdsRouter = createTRPCRouter({
 
       // Log activity
       await logActivity({
-        type: 'HOUSEHOLD_MEMBER_ADDED',
+        type: 'HOUSEHOLD_MEMBER_ADDED' as any,
         description: `Inviterte ${invitedUser.email} til ${membership.household.name}`,
         userId: ctx.user.id
       })
@@ -338,7 +338,7 @@ export const householdsRouter = createTRPCRouter({
 
       // Log activity
       await logActivity({
-        type: 'HOUSEHOLD_MEMBER_ROLE_UPDATED',
+        type: 'HOUSEHOLD_MEMBER_ROLE_UPDATED' as any,
         description: `Oppdaterte rolle for ${updatedMembership.user.email} til ${input.role}`,
         userId: ctx.user.id
       })
@@ -414,7 +414,7 @@ export const householdsRouter = createTRPCRouter({
 
       // Log activity
       await logActivity({
-        type: 'HOUSEHOLD_MEMBER_REMOVED',
+        type: 'HOUSEHOLD_MEMBER_REMOVED' as any,
         description: `Fjernet ${targetMembership.user.email} fra husholdningen`,
         userId: ctx.user.id
       })
@@ -466,7 +466,7 @@ export const householdsRouter = createTRPCRouter({
 
       // Log activity
       await logActivity({
-        type: 'HOUSEHOLD_LEFT',
+        type: 'HOUSEHOLD_LEFT' as any,
         description: `Forlot husholdning: ${membership.household.name}`,
         userId: ctx.user.id
       })
@@ -549,7 +549,7 @@ export const householdsRouter = createTRPCRouter({
 
       // Log activity
       await logActivity({
-        type: 'HOUSEHOLD_DELETED',
+        type: 'HOUSEHOLD_DELETED' as any,
         description: `Slettet husholdning: ${membership.household.name}`,
         userId: ctx.user.id
       })
@@ -616,7 +616,7 @@ export const householdsRouter = createTRPCRouter({
           },
           select: { 
             id: true, 
-            borrowerName: true, 
+            // borrowerName: true, // Removed - not in schema 
             item: { select: { name: true } } 
           },
           take: 10

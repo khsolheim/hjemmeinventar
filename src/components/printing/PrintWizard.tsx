@@ -355,7 +355,7 @@ export function PrintWizardWireframe() {
                 {selectedTemplateData.variables.map((variable) => (
                   <div key={variable}>
                     <Label htmlFor={variable}>
-                      {variable.split('.').pop()?.charAt(0).toUpperCase() + variable.split('.').pop()?.slice(1)}
+                      {(variable.split('.').pop() || variable).charAt(0).toUpperCase() + (variable.split('.').pop() || variable).slice(1)}
                     </Label>
                     <Input
                       id={variable}

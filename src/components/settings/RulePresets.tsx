@@ -82,7 +82,7 @@ export function RulePresets({
         if (!acc[rule.parentType]) {
           acc[rule.parentType] = []
         }
-        acc[rule.parentType].push(rule.childType)
+        acc[rule.parentType]!.push(rule.childType)
         return acc
       }, {} as Record<string, string[]>)
 

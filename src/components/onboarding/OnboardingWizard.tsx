@@ -549,18 +549,18 @@ export function OnboardingWizard({ onComplete, onSkip, className = '' }: Onboard
           
           <div className="flex items-center gap-3 mb-4">
             <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center">
-              <currentStepData.icon className="w-5 h-5 text-primary" />
+              {currentStepData?.icon && <currentStepData.icon className="w-5 h-5 text-primary" />}
             </div>
             <div className="text-left">
-              <CardTitle>{currentStepData.title}</CardTitle>
-              <CardDescription>{currentStepData.description}</CardDescription>
+              <CardTitle>{currentStepData?.title}</CardTitle>
+              <CardDescription>{currentStepData?.description}</CardDescription>
             </div>
           </div>
         </CardHeader>
         
         <CardContent>
           <div className="min-h-[400px]">
-            {currentStepData.content}
+            {currentStepData?.content}
           </div>
           
           <div className="flex justify-between pt-6 border-t">

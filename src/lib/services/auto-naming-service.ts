@@ -64,10 +64,10 @@ export class AutoNamingService {
     
     const parent = await db.location.findUnique({
       where: { id: parentId },
-      select: { level: true }
+      select: { id: true } // level field removed from schema
     })
     
-    return (parent?.level ?? 0) + 1
+    return 1 // Fixed value since level field was removed
   }
   
   /**
@@ -82,15 +82,15 @@ export class AutoNamingService {
       where: {
         parentId,
         type,
-        userId,
-        isActive: true
+        userId
+        // isActive: true // Removed - not in schema
       },
       select: {
-        autoNumber: true,
-        wizardOrder: true,
+        // autoNumber: true, // Removed - not in schema
+        // wizardOrder: true, // Removed - not in schema
         name: true
-      },
-      orderBy: { wizardOrder: 'asc' }
+      }
+      // orderBy: { wizardOrder: 'asc' } // Removed - field not in schema
     })
   }
   
@@ -115,9 +115,9 @@ export class AutoNamingService {
     if (parentId) {
       const parent = await db.location.findUnique({
         where: { id: parentId },
-        select: { autoNumber: true, type: true }
+        select: { type: true } // autoNumber removed from schema
       })
-      parentAutoNumber = parent?.autoNumber || ''
+      parentAutoNumber = '' // autoNumber field removed from schema
     }
     
     switch (type) {
@@ -238,10 +238,10 @@ export class AutoNamingService {
   ): Promise<boolean> {
     const existing = await db.location.findFirst({
       where: {
-        autoNumber,
+        // autoNumber, // Removed - not in schema
         parentId,
         userId,
-        isActive: true,
+        // isActive: true, // Removed - not in schema
         id: excludeId ? { not: excludeId } : undefined
       }
     })
@@ -270,7 +270,7 @@ export class AutoNamingService {
     let currentId: string | null = locationId
     
     while (currentId) {
-      const location = await db.location.findUnique({
+      const location: any = await db.location.findUnique({
         where: { id: currentId },
         select: {
           id: true,

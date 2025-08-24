@@ -512,7 +512,7 @@ export function AdvancedSearch({
                 </Badge>
               )}
               {filters.categoryIds?.map(id => {
-                const category = categories.find(c => c.id === id)
+                const category = categories.find((c: any) => c.id === id)
                 return category ? (
                   <Badge key={id} variant="secondary" className="text-xs">
                     {category.name}

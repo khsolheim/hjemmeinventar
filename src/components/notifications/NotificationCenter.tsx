@@ -389,19 +389,19 @@ export function NotificationSummary({ className = '' }: NotificationCenterProps)
   const now = new Date()
   const sevenDaysFromNow = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000)
 
-  const expiringItems = items.filter(item => {
+  const expiringItems = items.filter((item: any) => {
     if (!item.expiryDate) return false
     const expiryDate = new Date(item.expiryDate)
     return expiryDate <= sevenDaysFromNow
   })
 
-  const expiredItems = expiringItems.filter(item => {
+  const expiredItems = expiringItems.filter((item: any) => {
     const expiryDate = new Date(item.expiryDate!)
     return expiryDate < now
   })
 
-  const lowStockItems = items.filter(item => 
-    item.availableQuantity <= 1 && item.totalQuantity > 1
+  const lowStockItems = items.filter((item: any) => 
+    Number(item.availableQuantity) <= 1 && Number(item.totalQuantity) > 1
   )
 
   if (expiringItems.length === 0 && lowStockItems.length === 0) {
@@ -429,7 +429,7 @@ export function NotificationSummary({ className = '' }: NotificationCenterProps)
               </span>
             </div>
             <div className="space-y-1">
-              {expiredItems.slice(0, 3).map(item => (
+              {expiredItems.slice(0, 3).map((item: any) => (
                 <div key={item.id} className="text-sm text-red-700">
                   • {item.name} (utløp {new Date(item.expiryDate!).toLocaleDateString('no-NO')})
                 </div>
@@ -443,19 +443,19 @@ export function NotificationSummary({ className = '' }: NotificationCenterProps)
           </div>
         )}
 
-        {expiringItems.filter(item => new Date(item.expiryDate!) >= now).length > 0 && (
+        {expiringItems.filter((item: any) => new Date(item.expiryDate!) >= now).length > 0 && (
           <div className="p-3 bg-orange-50 border border-orange-200 rounded-lg">
             <div className="flex items-center gap-2 mb-2">
               <Calendar className="w-4 h-4 text-orange-600" />
               <span className="font-medium text-orange-800">
-                {expiringItems.filter(item => new Date(item.expiryDate!) >= now).length} gjenstand(er) utløper snart
+                {expiringItems.filter((item: any) => new Date(item.expiryDate!) >= now).length} gjenstand(er) utløper snart
               </span>
             </div>
             <div className="space-y-1">
               {expiringItems
-                .filter(item => new Date(item.expiryDate!) >= now)
+                .filter((item: any) => new Date(item.expiryDate!) >= now)
                 .slice(0, 3)
-                .map(item => (
+                .map((item: any) => (
                   <div key={item.id} className="text-sm text-orange-700">
                     • {item.name} (utløper {new Date(item.expiryDate!).toLocaleDateString('no-NO')})
                   </div>
@@ -473,7 +473,7 @@ export function NotificationSummary({ className = '' }: NotificationCenterProps)
               </span>
             </div>
             <div className="space-y-1">
-              {lowStockItems.slice(0, 3).map(item => (
+              {lowStockItems.slice(0, 3).map((item: any) => (
                 <div key={item.id} className="text-sm text-blue-700">
                   • {item.name} ({item.availableQuantity} {item.unit} igjen)
                 </div>

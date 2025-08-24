@@ -90,8 +90,8 @@ export const usersRouter = createTRPCRouter({
           name: true,
           email: true,
           image: true,
-          logoUrl: true,
-          defaultLabelProfileId: true,
+          // logoUrl: true, // Removed - not in schema
+          // defaultLabelProfileId: true, // Removed - not in schema
           createdAt: true,
           _count: {
             select: {
@@ -118,8 +118,8 @@ export const usersRouter = createTRPCRouter({
           name: true,
           email: true,
           image: true,
-          logoUrl: true,
-          defaultLabelProfileId: true,
+          // logoUrl: true, // Removed - not in schema
+          // defaultLabelProfileId: true, // Removed - not in schema
           updatedAt: true
         }
       })
@@ -155,10 +155,10 @@ export const usersRouter = createTRPCRouter({
             select: {
               items: true,
               locations: true,
-              activities: true,
-              yarnPatterns: true,
-              yarnProjects: true,
-              tags: true
+              activities: true
+              // yarnPatterns: true, // Removed - not in schema
+              // yarnProjects: true, // Removed - not in schema
+              // tags: true // Removed - not in schema
             }
           }
         }
@@ -174,34 +174,34 @@ export const usersRouter = createTRPCRouter({
       return stats._count
     }),
 
-  // Label profiles (public-safe: returns [] when not authenticated)
-  getLabelProfiles: publicProcedure
-    .query(async ({ ctx }) => {
-      if (!ctx.user?.id) return []
-      return await ctx.db.labelProfile.findMany({ where: { userId: ctx.user.id }, orderBy: { createdAt: 'desc' } })
-    }),
+  // Label profiles (public-safe: returns [] when not authenticated) - temporarily disabled
+  // getLabelProfiles: publicProcedure
+  //   .query(async ({ ctx }) => {
+  //     if (!ctx.user?.id) return []
+  //     return await ctx.db.labelProfile.findMany({ where: { userId: ctx.user.id }, orderBy: { createdAt: 'desc' } })
+  //   }),
 
-  createLabelProfile: protectedProcedure
-    .input(z.object({ name: z.string().min(1), extraLine1: z.string().optional(), extraLine2: z.string().optional(), showUrl: z.boolean().optional(), logoUrl: z.string().optional() }))
-    .mutation(async ({ ctx, input }) => {
-      return await ctx.db.labelProfile.create({ data: { userId: ctx.user.id, ...input } })
-    }),
+  // createLabelProfile: protectedProcedure
+  //   .input(z.object({ name: z.string().min(1), extraLine1: z.string().optional(), extraLine2: z.string().optional(), showUrl: z.boolean().optional(), logoUrl: z.string().optional() }))
+  //   .mutation(async ({ ctx, input }) => {
+  //     return await ctx.db.labelProfile.create({ data: { userId: ctx.user.id, ...input } })
+  //   }),
 
-  updateLabelProfile: protectedProcedure
-    .input(z.object({ id: z.string(), name: z.string().min(1).optional(), extraLine1: z.string().optional(), extraLine2: z.string().optional(), showUrl: z.boolean().optional(), logoUrl: z.string().optional() }))
-    .mutation(async ({ ctx, input }) => {
-      const { id, ...data } = input
-      const existing = await ctx.db.labelProfile.findFirst({ where: { id, userId: ctx.user.id } })
-      if (!existing) throw new TRPCError({ code: 'NOT_FOUND' })
-      return await ctx.db.labelProfile.update({ where: { id }, data })
-    }),
+  // updateLabelProfile: protectedProcedure
+  //   .input(z.object({ id: z.string(), name: z.string().min(1).optional(), extraLine1: z.string().optional(), extraLine2: z.string().optional(), showUrl: z.boolean().optional(), logoUrl: z.string().optional() }))
+  //   .mutation(async ({ ctx, input }) => {
+  //     const { id, ...data } = input
+  //     const existing = await ctx.db.labelProfile.findFirst({ where: { id, userId: ctx.user.id } })
+  //     if (!existing) throw new TRPCError({ code: 'NOT_FOUND' })
+  //     return await ctx.db.labelProfile.update({ where: { id }, data })
+  //   }),
 
-  deleteLabelProfile: protectedProcedure
-    .input(z.object({ id: z.string() }))
-    .mutation(async ({ ctx, input }) => {
-      const existing = await ctx.db.labelProfile.findFirst({ where: { id: input.id, userId: ctx.user.id } })
-      if (!existing) throw new TRPCError({ code: 'NOT_FOUND' })
-      await ctx.db.labelProfile.delete({ where: { id: input.id } })
-      return { success: true }
-    })
+  // deleteLabelProfile: protectedProcedure
+  //   .input(z.object({ id: z.string() }))
+  //   .mutation(async ({ ctx, input }) => {
+  //     const existing = await ctx.db.labelProfile.findFirst({ where: { id: input.id, userId: ctx.user.id } })
+  //     if (!existing) throw new TRPCError({ code: 'NOT_FOUND' })
+  //     await ctx.db.labelProfile.delete({ where: { id: input.id } })
+  //     return { success: true }
+  //   })
 })

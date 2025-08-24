@@ -40,12 +40,12 @@ export default function YarnColorPage() {
           <Button size="sm" variant="outline" onClick={() => {
             const name = prompt('Nytt navn på farge', color?.name || '')
             const code = prompt('Ny fargekode (valgfritt, f.eks. #FFB6C1)', color?.colorCode || '')
-            if (name && colorId) updateColor.mutate({ id: colorId, name, colorCode: code || undefined })
+            if (name && colorId) updateColor.mutate({ colorId, name, colorCode: code || undefined })
           }}>
             <Pencil className="h-3 w-3 mr-1"/> Rediger
           </Button>
           <Button size="sm" variant="destructive" onClick={() => {
-            if (confirm('Slette denne fargen? (Kun mulig hvis ingen batches er knyttet)') && colorId) deleteColor.mutate({ id: colorId })
+            if (confirm('Slette denne fargen? (Kun mulig hvis ingen batches er knyttet)') && colorId) deleteColor.mutate({ colorId })
           }}>
             <Trash2 className="h-3 w-3 mr-1"/> Slett
           </Button>
@@ -85,12 +85,12 @@ export default function YarnColorPage() {
       </div>
 
       <div className="cq-grid yarn-grid gap-4" style={{"--card-min":"220px"} as any}>
-        {(batches || []).map(b => {
-          const data = b.categoryData ? JSON.parse(b.categoryData) : {}
+        {(batches || []).map((b: any) => {
+          const data = b.categoryData as any || {}
           return (
             <div key={b.id} className="rounded-lg border p-4">
               <div className="text-sm text-muted-foreground">Batch</div>
-              <div className="font-medium">{data.batchNumber}</div>
+              <div className="font-medium">{data.batchNumber || 'Ukjent'}</div>
               <div className="mt-2 text-sm flex justify-between">
                 <span>Antall</span>
                 <span className="font-medium">{b.availableQuantity} / {b.totalQuantity}</span>

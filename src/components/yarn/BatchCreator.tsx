@@ -39,7 +39,7 @@ export function BatchCreator({ masterId, onComplete }: BatchCreatorProps) {
       toast.success('Batch opprettet!')
       onComplete()
     },
-    onError: (error) => {
+    onError: (error: any) => {
       if (error.data?.code === 'CONFLICT') {
         toast.error('Batch finnes allerede for valgt farge og partinummer')
       } else {
@@ -126,7 +126,7 @@ export function BatchCreator({ masterId, onComplete }: BatchCreatorProps) {
             <SelectValue placeholder="Velg en farge..." />
           </SelectTrigger>
           <SelectContent>
-            {colorsData.map((color) => (
+            {colorsData.map((color: any) => (
               <SelectItem key={color.id} value={color.id}>
                 <div className="flex items-center space-x-2">
                   <span>{color.name}</span>

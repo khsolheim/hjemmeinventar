@@ -15,7 +15,8 @@
     "db:migrate": "prisma migrate dev",
     "db:generate": "prisma generate",
     "db:seed": "tsx prisma/seed.ts",
-    "db:reset": "prisma migrate reset --force && npm run db:seed"
+    "db:reset": "prisma migrate reset --force && npm run db:seed",
+    "db:init-label-sizes": "tsx src/scripts/initialize-label-sizes.ts"
   },
   "dependencies": {
     "@asutrick/react-dymo-hooks": "^3.0.0",

@@ -256,8 +256,8 @@ class ExportService {
       const aValue = this.getNestedValue(a, sortBy)
       const bValue = this.getNestedValue(b, sortBy)
       
-      if (aValue < bValue) return sortOrder === 'asc' ? -1 : 1
-      if (aValue > bValue) return sortOrder === 'asc' ? 1 : -1
+      if ((aValue as any) < (bValue as any)) return sortOrder === 'asc' ? -1 : 1
+      if ((aValue as any) > (bValue as any)) return sortOrder === 'asc' ? 1 : -1
       return 0
     })
   }
@@ -315,7 +315,7 @@ class ExportService {
 
   // Get nested object value by dot notation
   private getNestedValue(obj: Record<string, unknown>, path: string): unknown {
-    return path.split('.').reduce((current, key) => current?.[key], obj)
+    return path.split('.').reduce((current: any, key) => current?.[key], obj)
   }
 
   // Generate CSV

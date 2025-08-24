@@ -1,6 +1,7 @@
 import { auth } from '@/auth'
 import { db } from '@/lib/db'
 import { CategoryDetailClient } from '@/components/categories/CategoryDetailClient'
+import { serializeItemsForClient } from '@/lib/utils/decimal-serializer'
 
 export default async function CategoryDetailPage({ params }: { params: Promise<{ categoryId: string }> }) {
   const session = await auth()
@@ -23,7 +24,7 @@ export default async function CategoryDetailPage({ params }: { params: Promise<{
       skip: 0,
     })
     const total = await db.item.count({ where: { userId, categoryId } })
-    initialItems = { items, total }
+    initialItems = { items: serializeItemsForClient(items), total }
     initialTotal = total
     initialTotalValue = items.reduce((sum, it) => sum + (Number(it.price) || 0), 0)
   }

@@ -21,9 +21,7 @@ export function MobileBatchView({ masterId }: MobileBatchViewProps) {
   })
 
   // Fetch master details
-  const { data: master } = trpc.items.getById.useQuery({
-    id: masterId
-  })
+  const { data: master } = trpc.items.getById.useQuery(masterId)
 
   if (isLoading) {
     return (
@@ -40,7 +38,7 @@ export function MobileBatchView({ masterId }: MobileBatchViewProps) {
     )
   }
 
-  const masterData = master?.categoryData ? JSON.parse(master.categoryData) : {}
+  const masterData = ((master as any)?.categoryData as any) || {}
 
   return (
     <div className="space-y-4">
@@ -113,8 +111,8 @@ export function MobileBatchView({ masterId }: MobileBatchViewProps) {
           </Card>
         ) : (
           <div className="space-y-3">
-            {batches.map((batch) => {
-              const batchData = batch.categoryData ? JSON.parse(batch.categoryData) : {}
+            {batches.map((batch: any) => {
+              const batchData = (batch.categoryData as any) || {}
               return (
                 <Card key={batch.id}>
                   <CardContent className="p-4">

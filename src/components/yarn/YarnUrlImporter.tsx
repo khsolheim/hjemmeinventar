@@ -500,6 +500,7 @@ export function YarnUrlImporter({ onImport, disabled }: YarnUrlImporterProps) {
               const primaryIndex = scrapedData.images.findIndex((img: any) => img.isPrimary)
               const indexToShow = primaryIndex !== -1 ? primaryIndex : 0
               const image = scrapedData.images[indexToShow]
+              if (!image) return null
               return (
                 <div>
                   <Label className="text-sm font-medium flex items-center gap-1 mb-2">
@@ -558,7 +559,7 @@ export function YarnUrlImporter({ onImport, disabled }: YarnUrlImporterProps) {
             })()}
 
             {/* Nedlastet bilde */}
-            {downloadedImages && downloadedImages.length > 0 && (
+            {downloadedImages && downloadedImages.length > 0 && downloadedImages[0] && (
               <div>
                 <Label className="text-sm font-medium flex items-center gap-1 mb-2">
                   <CheckCircle className="h-4 w-4 text-green-600" />

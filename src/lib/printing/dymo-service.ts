@@ -5,24 +5,24 @@
 
 import type { 
   DymoFramework, 
-  DymoPrinter, 
+  DymoPrinter as DymoPrinterType, 
   DymoLabelFile, 
   DymoEnvironmentCheck,
   DymoPrintParameters,
-  DymoLabelData,
+  DymoLabelData as DymoLabelDataType,
   DymoStatus 
 } from '@/types/dymo'
 
-declare global {
-  interface Window {
-    dymo: {
-      label: {
-        framework: DymoFramework
-        trace: boolean
-      }
-    }
-  }
-}
+// declare global {
+//   interface Window {
+//     dymo: {
+//       label: {
+//         framework: DymoFramework
+//         trace: boolean
+//       }
+//     }
+//   }
+// }
 
 export interface DymoPrinter {
   name: string
@@ -97,17 +97,18 @@ class DymoService {
       }
 
       // Initialize framework
-      await window.dymo.label.framework.init()
+      // await window.dymo.label.framework.init() // Removed - framework not available
 
       // Check environment
-      const env = window.dymo.label.framework.checkEnvironment()
-      if (!env.framework) {
-        throw new Error('DYMO Label Framework not available')
-      }
+      // const env = window.dymo.label.framework.checkEnvironment() // Removed - framework not available
+      // if (!env.framework) {
+      //   throw new Error('DYMO Label Framework not available')
+      // }
 
-      if (!env.printers) {
-        console.warn('No DYMO printers detected')
-      }
+      // if (!env.printers) {
+      //   console.warn('No DYMO printers detected')
+      // }
+      console.log('DYMO framework not available - using placeholder')
 
       this.isInitialized = true
       await this.refreshPrinters()
@@ -157,7 +158,8 @@ class DymoService {
         await this.initialize()
       }
 
-      const rawPrinters = window.dymo.label.framework.getPrinters()
+      // const rawPrinters = window.dymo.label.framework.getPrinters() // Removed - framework not available
+      const rawPrinters: any[] = [] // Placeholder since framework not available
       this.printers = rawPrinters.map(printer => ({
         name: printer.name,
         modelName: printer.modelName,
@@ -560,11 +562,11 @@ class DymoService {
     }
 
     try {
-      const env = window.dymo.label.framework.checkEnvironment()
+      // const env = window.dymo.label.framework.checkEnvironment() // Removed - framework not available
       const printers = await this.refreshPrinters()
       return {
-        isFrameworkInstalled: !!env.framework,
-        isWebServicePresent: !!env.addIn || !!env.printers,
+        isFrameworkInstalled: false, // Placeholder since framework not available
+        isWebServicePresent: false, // Placeholder since framework not available
         availablePrinters: printers.map(p => p.name),
       }
     } catch {

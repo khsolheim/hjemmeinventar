@@ -83,40 +83,43 @@ export function CategoryDetailClient({
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc')
   const [isEditingFields, setIsEditingFields] = useState(false)
 
-  const { data: category, isLoading: categoryLoading, error: categoryError, refetch: refetchCategory } = trpc.categories.getById.useQuery(categoryId, {
+  const categoryQuery = trpc.categories.getById.useQuery(categoryId, {
     staleTime: 30000,
     refetchOnWindowFocus: false,
     refetchOnMount: false,
-    placeholderData: (prev) => prev,
+    placeholderData: (prev: any) => prev,
     initialData: (initialCategory as any) ?? undefined,
   })
-  const { data: itemsData, isLoading: itemsLoading, refetch: refetchItems } = trpc.categories.getItems.useQuery({
+  const { data: category, isLoading: categoryLoading, error: categoryError, refetch: refetchCategory } = categoryQuery
+  const itemsQuery = trpc.categories.getItems.useQuery({
     categoryId,
     limit: 50
   }, {
     staleTime: 30000,
     refetchOnWindowFocus: false,
     refetchOnMount: false,
-    placeholderData: (prev) => prev,
+    placeholderData: (prev: any) => prev,
     initialData: (initialItems as any) ?? undefined,
   })
-  const { data: categoryStats, refetch: refetchStats } = trpc.categories.getStats.useQuery(categoryId, {
+  const { data: itemsData, isLoading: itemsLoading, refetch: refetchItems } = itemsQuery
+  const statsQuery = trpc.categories.getStats.useQuery(categoryId, {
     staleTime: 30000,
     refetchOnWindowFocus: false,
     refetchOnMount: false,
-    placeholderData: (prev) => prev,
+    placeholderData: (prev: any) => prev,
     initialData: initialTotal !== undefined && initialTotalValue !== undefined ? {
       totalItems: initialTotal,
       totalValue: initialTotalValue,
     } as any : undefined,
   })
+  const { data: categoryStats, refetch: refetchStats } = statsQuery
 
   const updateFieldSchemaMutation = trpc.categories.updateFieldSchema.useMutation({
     onSuccess: () => {
       toast.success('Kategori-felt oppdatert!')
       refetchCategory(); refetchItems(); refetchStats()
     },
-    onError: (error) => {
+    onError: (error: any) => {
       toast.error(`Feil: ${error.message}`)
     }
   })
@@ -125,21 +128,22 @@ export function CategoryDetailClient({
   const totalItems = itemsData?.total || 0
 
   const fieldSchema = useMemo(() => {
-    if (!category?.fieldSchema) return null
+    const cat = category as any
+    if (!cat?.fieldSchema) return null
     try {
-      if (typeof category.fieldSchema === 'string') return JSON.parse(category.fieldSchema)
-      if (typeof category.fieldSchema === 'object') return category.fieldSchema
+      if (typeof cat.fieldSchema === 'string') return JSON.parse(cat.fieldSchema)
+      if (typeof cat.fieldSchema === 'object') return cat.fieldSchema
       return null
     } catch {
       return null
     }
-  }, [category?.fieldSchema])
+  }, [(category as any)?.fieldSchema])
 
   const handleFieldSchemaUpdate = useCallback((newSchema: any) => {
     updateFieldSchemaMutation.mutate({ categoryId, fieldSchema: newSchema })
   }, [categoryId, updateFieldSchemaMutation])
 
-  const filteredItems = items.filter(item => 
+  const filteredItems = items.filter((item: any) => 
     item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     (item.description || '').toLowerCase().includes(searchQuery.toLowerCase())
   )
@@ -246,7 +250,7 @@ export function CategoryDetailClient({
                 <Package className="w-3 h-3" />
                 {totalItems} gjenstander
               </Badge>
-              {category.fieldSchema && (
+              {(category as any).fieldSchema && (
                 <Badge variant="outline" className="gap-1">
                   <Settings className="w-3 h-3" />
                   Smart kategori
@@ -397,7 +401,7 @@ export function CategoryDetailClient({
         </Card>
       ) : (
         <div className={viewMode === 'grid' ? 'cq-grid items-grid gap-4' : 'space-y-4'} style={viewMode === 'grid' ? ({'--card-min': '220px'} as any) : undefined}>
-          {filteredItems.map((item) => (
+          {filteredItems.map((item: any) => (
             <Card key={item.id} className="group hover:shadow-md transition-shadow">
               <CardHeader className="pb-3">
                 <div className="flex items-start justify-between">

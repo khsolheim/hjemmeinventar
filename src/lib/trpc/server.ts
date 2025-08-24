@@ -7,15 +7,24 @@ import superjson from 'superjson'
 
 // Create context for tRPC
 export async function createTRPCContext() {
-  const session = await auth()
-  
-  // Debug logging
-  console.log('tRPC Context - Session:', session?.user?.email, 'ID:', session?.user?.id)
-  
-  return {
-    db,
-    session,
-    user: session?.user ?? null
+  try {
+    const session = await auth()
+    
+    // Debug logging
+    console.log('tRPC Context - Session:', session?.user?.email, 'ID:', session?.user?.id)
+    
+    return {
+      db,
+      session,
+      user: session?.user ?? null
+    }
+  } catch (error) {
+    console.error('Error creating tRPC context:', error)
+    return {
+      db,
+      session: null,
+      user: null
+    }
   }
 }
 
@@ -39,11 +48,14 @@ const t = initTRPC.context<Context>().create({
 // Create reusable middleware
 const isAuthenticated = t.middleware(({ ctx, next }) => {
   if (!ctx.session?.user) {
+    console.log('❌ Unauthorized access attempt - no session or user')
     throw new TRPCError({
       code: 'UNAUTHORIZED',
       message: 'Du må være logget inn for å gjøre dette'
     })
   }
+  
+  console.log('✅ Authenticated access for user:', ctx.session.user.email)
   
   return next({
     ctx: {

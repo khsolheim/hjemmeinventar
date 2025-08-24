@@ -139,11 +139,11 @@ export const activitiesRouter = createTRPCRouter({
       // Group by day
       const dailyStats = dailyActivities.reduce((acc, activity) => {
         const date = activity.createdAt.toISOString().split('T')[0]
-        if (!acc[date]) {
-          acc[date] = { total: 0, byType: {} }
+        if (!acc[date!]) {
+          acc[date!] = { total: 0, byType: {} }
         }
-        acc[date].total++
-        acc[date].byType[activity.type] = (acc[date].byType[activity.type] || 0) + 1
+        acc[date!]!.total++
+        acc[date!]!.byType[activity.type] = (acc[date!]!.byType[activity.type] || 0) + 1
         return acc
       }, {} as Record<string, { total: number; byType: Record<string, number> }>)
       
@@ -201,11 +201,11 @@ export const activitiesRouter = createTRPCRouter({
       const groupedActivities = activities.reduce((acc, activity) => {
         const date = activity.createdAt.toISOString().split('T')[0]
         
-        if (!acc[date]) {
-          acc[date] = []
+        if (!acc[date!]) {
+          acc[date!] = []
         }
         
-        acc[date].push(activity)
+        acc[date!]!.push(activity)
         return acc
       }, {} as Record<string, typeof activities>)
       

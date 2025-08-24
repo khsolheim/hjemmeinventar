@@ -2,6 +2,7 @@
 import { z } from 'zod'
 import { TRPCError } from '@trpc/server'
 import { createTRPCRouter, protectedProcedure, publicProcedure } from '../server'
+import { serializeItemsForClient } from '../../utils/decimal-serializer'
 
 // Predefined category schemas
 
@@ -316,7 +317,7 @@ export const categoriesRouter = createTRPCRouter({
           const category = await ctx.db.category.create({
             data: {
               ...categoryData,
-              fieldSchema: categoryData.fieldSchema ? JSON.stringify(categoryData.fieldSchema) : null
+              fieldSchema: categoryData.fieldSchema ? JSON.stringify(categoryData.fieldSchema) : undefined
             }
           })
           created.push(category)
@@ -359,7 +360,7 @@ export const categoriesRouter = createTRPCRouter({
         })
       ])
       
-      return { items, total }
+      return { items: serializeItemsForClient(items), total }
     }),
 
   // Get category statistics for user
@@ -425,7 +426,7 @@ export const categoriesRouter = createTRPCRouter({
       // Convert fieldSchema to string if it's an object
       const fieldSchemaString = input.fieldSchema 
         ? JSON.stringify(input.fieldSchema)
-        : null
+        : undefined
       
       const updatedCategory = await ctx.db.category.update({
         where: { id: input.categoryId },
@@ -452,7 +453,7 @@ export const categoriesRouter = createTRPCRouter({
       // Convert fieldSchema to string if it's an object
       const fieldSchemaString = input.fieldSchema 
         ? JSON.stringify(input.fieldSchema)
-        : null
+        : undefined
       
       const category = await ctx.db.category.create({
         data: {

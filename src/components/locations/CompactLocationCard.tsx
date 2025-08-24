@@ -84,6 +84,7 @@ export function CompactLocationCard({
     if (isSelectionMode) return
     
     const touch = e.touches[0]
+    if (!touch) return
     startX.current = touch.clientX
     startY.current = touch.clientY
     isDragging.current = false
@@ -94,6 +95,7 @@ export function CompactLocationCard({
     if (isSelectionMode || !isSwipeActive) return
     
     const touch = e.touches[0]
+    if (!touch) return
     const deltaX = touch.clientX - startX.current
     const deltaY = touch.clientY - startY.current
     

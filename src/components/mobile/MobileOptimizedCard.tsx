@@ -55,7 +55,9 @@ export function MobileOptimizedCard({
   const handleTouchStart = (e: React.TouchEvent) => {
     if (!swipeActions) return
     
-    startX.current = e.touches[0].clientX
+    const touch = e.touches[0]
+    if (!touch) return
+    startX.current = touch.clientX
     setIsSwipeActive(true)
     
     if (hapticFeedback && 'vibrate' in navigator) {
@@ -66,7 +68,9 @@ export function MobileOptimizedCard({
   const handleTouchMove = (e: React.TouchEvent) => {
     if (!swipeActions || !isSwipeActive) return
     
-    currentX.current = e.touches[0].clientX
+    const touch = e.touches[0]
+    if (!touch) return
+    currentX.current = touch.clientX
     const deltaX = currentX.current - startX.current
     
     // Limit swipe distance

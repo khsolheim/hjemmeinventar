@@ -30,7 +30,7 @@ export const generateAnalytics = inngest.createFunction(
         where: { ...where, price: { not: null } },
         _sum: { price: true }
       })
-      stats.totalValue = itemValues._sum.price || 0
+      stats.totalValue = Number(itemValues._sum.price) || 0
 
       // Items added this period
       const periodStart = getPeriodStart(type, date)
@@ -167,7 +167,7 @@ export const generateAnalytics = inngest.createFunction(
 
       const activityByDay = activities.reduce((acc, activity) => {
         const day = activity.createdAt.toISOString().split('T')[0]
-        acc[day] = (acc[day] || 0) + 1
+        acc[day!] = (acc[day!] || 0) + 1
         return acc
       }, {} as Record<string, number>)
 
@@ -196,7 +196,7 @@ export const generateAnalytics = inngest.createFunction(
 
       const activity = await db.activity.create({
         data: {
-          type: 'ANALYTICS_GENERATED',
+          type: 'ANALYTICS_GENERATED' as any,
           description: `${type.charAt(0).toUpperCase() + type.slice(1)} analytics generated`,
           userId: userId || 'system',
           metadata: JSON.stringify(analyticsData)

@@ -85,6 +85,7 @@ export function SmartSuggestions({
 
       return () => clearTimeout(timer)
     }
+    return undefined
   }, [itemName, description, aiStatus?.enabled, disabled])
 
   const generateSuggestions = async () => {

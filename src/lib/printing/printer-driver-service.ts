@@ -384,7 +384,7 @@ class PrinterDriverService {
     const jobIndex = this.printQueue.findIndex(j => j.id === jobId)
     if (jobIndex >= 0) {
       const job = this.printQueue[jobIndex]
-      if (job.status === 'QUEUED') {
+      if (job && job.status === 'QUEUED') {
         job.status = 'CANCELLED'
         job.completedAt = new Date()
         return true

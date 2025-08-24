@@ -130,7 +130,7 @@ export default function ItemsPage() {
       })
       refetch()
     },
-    onError: (error) => {
+    onError: (error: any) => {
       toast.error(`Feil: ${error.message}`)
     }
   })
@@ -141,7 +141,7 @@ export default function ItemsPage() {
       setEditingItem(null)
       refetch()
     },
-    onError: (error) => {
+    onError: (error: any) => {
       toast.error(`Feil: ${error.message}`)
     }
   })
@@ -151,7 +151,7 @@ export default function ItemsPage() {
       toast.success('Gjenstand slettet!')
       refetch()
     },
-    onError: (error) => {
+    onError: (error: any) => {
       toast.error(`Feil: ${error.message}`)
     }
   })
@@ -167,18 +167,18 @@ export default function ItemsPage() {
     }
 
     // Validate category-specific required fields
-    if (categoryFieldSchema?.fieldSchema) {
+    if ((categoryFieldSchema as any)?.fieldSchema) {
       try {
-        const schema = typeof categoryFieldSchema.fieldSchema === 'string' 
-          ? JSON.parse(categoryFieldSchema.fieldSchema)
-          : categoryFieldSchema.fieldSchema
+        const schema = typeof (categoryFieldSchema as any).fieldSchema === 'string' 
+          ? JSON.parse((categoryFieldSchema as any).fieldSchema)
+          : (categoryFieldSchema as any).fieldSchema
 
         if (schema.required && Array.isArray(schema.required)) {
           for (const requiredField of schema.required) {
             const value = newItem.categoryData[requiredField]
             if (!value || (typeof value === 'string' && !value.trim())) {
               const fieldLabel = schema.properties?.[requiredField]?.label || requiredField
-              toast.error(`${fieldLabel} er påkrevd for ${categoryFieldSchema.name}`)
+              toast.error(`${fieldLabel} er påkrevd for ${(categoryFieldSchema as any).name}`)
               return
             }
           }
@@ -210,18 +210,18 @@ export default function ItemsPage() {
     }
 
     // Validate category-specific required fields
-    if (editCategoryFieldSchema?.fieldSchema && editingItem) {
+    if ((editCategoryFieldSchema as any)?.fieldSchema && editingItem) {
       try {
-        const schema = typeof editCategoryFieldSchema.fieldSchema === 'string' 
-          ? JSON.parse(editCategoryFieldSchema.fieldSchema)
-          : editCategoryFieldSchema.fieldSchema
+        const schema = typeof (editCategoryFieldSchema as any).fieldSchema === 'string' 
+          ? JSON.parse((editCategoryFieldSchema as any).fieldSchema)
+          : (editCategoryFieldSchema as any).fieldSchema
 
         if (schema.required && Array.isArray(schema.required)) {
           for (const requiredField of schema.required) {
             const value = editingItem.categoryData?.[requiredField]
             if (!value || (typeof value === 'string' && !value.trim())) {
               const fieldLabel = schema.properties?.[requiredField]?.label || requiredField
-              toast.error(`${fieldLabel} er påkrevd for ${editCategoryFieldSchema.name}`)
+              toast.error(`${fieldLabel} er påkrevd for ${(editCategoryFieldSchema as any).name}`)
               return
             }
           }
@@ -262,7 +262,7 @@ export default function ItemsPage() {
       description: productInfo?.description || prev.description,
       // Auto-select food category if product is from Open Food Facts
       categoryId: productInfo?.source === 'openfoodfacts' && !prev.categoryId 
-        ? categories.find(cat => cat.name.toLowerCase().includes('mat'))?.id || prev.categoryId
+        ? categories.find((cat: any) => cat.name.toLowerCase().includes('mat'))?.id || prev.categoryId
         : prev.categoryId
     }))
     
@@ -362,7 +362,7 @@ export default function ItemsPage() {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Alle kategorier</SelectItem>
-              {categories.map((category) => (
+              {categories.map((category: any) => (
                 <SelectItem key={category.id} value={category.id}>
                   {category.icon && <span className="mr-2">{category.icon}</span>}
                   {category.name}
@@ -376,7 +376,7 @@ export default function ItemsPage() {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Alle lokasjoner</SelectItem>
-              {locations.map((location) => (
+              {locations.map((location: any) => (
                 <SelectItem key={location.id} value={location.id}>
                   {location.name}
                 </SelectItem>
@@ -473,7 +473,7 @@ export default function ItemsPage() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="none">Ingen kategori</SelectItem>
-                    {categories.map((category) => (
+                    {categories.map((category: any) => (
                       <SelectItem key={category.id} value={category.id}>
                         {category.icon && <span className="mr-2">{category.icon}</span>}
                         {category.name}
@@ -489,7 +489,7 @@ export default function ItemsPage() {
                     <SelectValue placeholder="Velg lokasjon" />
                   </SelectTrigger>
                   <SelectContent>
-                    {locations.map((location) => (
+                    {locations.map((location: any) => (
                       <SelectItem key={location.id} value={location.id}>
                         {location.name}
                         {location.parent && <span className="text-muted-foreground"> (i {location.parent.name})</span>}
@@ -501,14 +501,14 @@ export default function ItemsPage() {
             </div>
             
             {/* Category-specific fields */}
-            {categoryFieldSchema?.fieldSchema && (
+            {(categoryFieldSchema as any)?.fieldSchema && (
               <DynamicFormFields
                 schema={(() => {
                   try {
-                    if (typeof categoryFieldSchema.fieldSchema === 'string') {
-                      return JSON.parse(categoryFieldSchema.fieldSchema)
+                    if (typeof (categoryFieldSchema as any).fieldSchema === 'string') {
+                      return JSON.parse((categoryFieldSchema as any).fieldSchema)
                     }
-                    return categoryFieldSchema.fieldSchema
+                    return (categoryFieldSchema as any).fieldSchema
                   } catch (error) {
                     console.error('Failed to parse field schema:', error)
                     return null
@@ -516,7 +516,7 @@ export default function ItemsPage() {
                 })()}
                 values={newItem.categoryData}
                 onChange={(categoryData) => setNewItem({...newItem, categoryData})}
-                categoryName={categoryFieldSchema.name}
+                categoryName={(categoryFieldSchema as any).name}
                 disabled={createItemMutation.isPending}
               />
             )}
@@ -619,7 +619,7 @@ export default function ItemsPage() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="none">Ingen kategori</SelectItem>
-                    {categories.map((category) => (
+                    {categories.map((category: any) => (
                       <SelectItem key={category.id} value={category.id}>
                         {category.icon && <span className="mr-2">{category.icon}</span>}
                         {category.name}
@@ -635,7 +635,7 @@ export default function ItemsPage() {
                     <SelectValue placeholder="Velg lokasjon" />
                   </SelectTrigger>
                   <SelectContent>
-                    {locations.map((location) => (
+                    {locations.map((location: any) => (
                       <SelectItem key={location.id} value={location.id}>
                         {location.name}
                         {location.parent && <span className="text-muted-foreground"> (i {location.parent.name})</span>}
@@ -647,14 +647,14 @@ export default function ItemsPage() {
             </div>
             
             {/* Category-specific fields for edit */}
-            {editCategoryFieldSchema?.fieldSchema && editingItem && (
+            {(editCategoryFieldSchema as any)?.fieldSchema && editingItem && (
               <DynamicFormFields
                 schema={(() => {
                   try {
-                    if (typeof editCategoryFieldSchema.fieldSchema === 'string') {
-                      return JSON.parse(editCategoryFieldSchema.fieldSchema)
+                    if (typeof (editCategoryFieldSchema as any).fieldSchema === 'string') {
+                      return JSON.parse((editCategoryFieldSchema as any).fieldSchema)
                     }
-                    return editCategoryFieldSchema.fieldSchema
+                    return (editCategoryFieldSchema as any).fieldSchema
                   } catch (error) {
                     console.error('Failed to parse field schema:', error)
                     return null
@@ -662,7 +662,7 @@ export default function ItemsPage() {
                 })()}
                 values={editingItem.categoryData || {}}
                 onChange={(categoryData) => setEditingItem({...editingItem, categoryData})}
-                categoryName={editCategoryFieldSchema.name}
+                categoryName={(editCategoryFieldSchema as any).name}
                 disabled={updateItemMutation.isPending}
               />
             )}
@@ -697,7 +697,7 @@ export default function ItemsPage() {
       {/* Items Display */}
       {viewMode === 'grid' ? (
         <div className="cq-grid items-grid" style={{"--card-min":"220px"} as any}>
-          {items.map((item) => (
+          {items.map((item: any) => (
           <Card key={item.id} className="hover:shadow-md transition-shadow group cursor-pointer">
             <Link href={`/items/${item.id}`} className="block">
               <CardHeader className="pb-3">
@@ -743,7 +743,7 @@ export default function ItemsPage() {
                 <div className="flex items-center gap-2 flex-wrap">
                   {item.category && <Badge variant="secondary">{item.category.name}</Badge>}
                   {getStatusBadge(item)}
-                  {item.tags?.map((tag) => (
+                  {item.tags?.map((tag: any) => (
                     <Badge key={tag.id} variant="outline" className="text-xs">
                       <Tag className="w-3 h-3 mr-1" />
                       {tag.name}
@@ -792,7 +792,7 @@ export default function ItemsPage() {
                   <div 
                     className="bg-primary h-2 rounded-full transition-all"
                     style={{ 
-                      width: `${(item.availableQuantity / item.totalQuantity) * 100}%` 
+                      width: `${(Number(item.availableQuantity) / item.totalQuantity) * 100}%` 
                     }}
                   />
                 </div>
@@ -874,7 +874,7 @@ export default function ItemsPage() {
         <Card>
           <CardContent className="p-0">
             <div className="space-y-0">
-              {items.map((item, index) => (
+              {items.map((item: any, index: number) => (
                 <Link href={`/items/${item.id}`} key={item.id}>
                   <div 
                     className={`flex items-center gap-4 p-4 hover:bg-muted/50 transition-colors cursor-pointer ${index !== items.length - 1 ? 'border-b' : ''}`}

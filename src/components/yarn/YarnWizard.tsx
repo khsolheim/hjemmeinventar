@@ -81,7 +81,7 @@ export function YarnWizard({ onComplete, existingMasterId, preset }: YarnWizardP
 
   // Auto-velg farge når det kun finnes én
   React.useEffect(() => {
-    if (currentStep === 'color-details' && !selectedColorId && Array.isArray(colorsData) && colorsData.length === 1) {
+    if (currentStep === 'color-details' && !selectedColorId && Array.isArray(colorsData) && colorsData.length === 1 && colorsData[0]) {
       setSelectedColorId(colorsData[0].id)
     }
   }, [currentStep, colorsData, selectedColorId])
@@ -728,8 +728,8 @@ export function YarnWizard({ onComplete, existingMasterId, preset }: YarnWizardP
                       <SelectValue placeholder="Velg garn-type" />
                     </SelectTrigger>
                     <SelectContent>
-                      {(mastersData?.masters || []).map((master) => {
-                        const data = master.categoryData ? JSON.parse(master.categoryData) : {}
+                      {(mastersData?.masters || []).map((master: any) => {
+                        const data = master.categoryData || {}
                         return (
                           <SelectItem key={master.id} value={master.id}>
                             {master.name} ({data.producer})
@@ -828,8 +828,8 @@ export function YarnWizard({ onComplete, existingMasterId, preset }: YarnWizardP
                       <SelectValue placeholder="Velg garn-type" />
                     </SelectTrigger>
                     <SelectContent>
-                      {(mastersData?.masters || []).map((master) => {
-                        const data = master.categoryData ? JSON.parse(master.categoryData) : {}
+                      {(mastersData?.masters || []).map((master: any) => {
+                        const data = master.categoryData || {}
                         return (
                           <SelectItem key={master.id} value={master.id}>
                             {master.name} ({data.producer})
@@ -1005,7 +1005,7 @@ export function YarnWizard({ onComplete, existingMasterId, preset }: YarnWizardP
           disabled={
             currentStep === 'choose-type' || 
             currentStep === 'summary' || 
-            (existingMasterId && currentStep === 'batch-details')
+            !!(existingMasterId && currentStep === 'batch-details')
           }
         >
           <ChevronLeft className="h-4 w-4 mr-2" />

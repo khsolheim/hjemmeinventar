@@ -56,6 +56,7 @@ export default function OfflinePage() {
         window.removeEventListener('offline', handleOffline)
       }
     }
+    return undefined
   }, [router])
 
   const loadOfflineStats = async () => {

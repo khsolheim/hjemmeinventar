@@ -93,12 +93,12 @@ export class YarnService {
 				purchaseDate: data.purchaseDate,
 				imageUrl: input.imageUrl,
 				categoryData: JSON.stringify({ ...data, masterItemId: input.masterId }),
-				relatedItems: {
-					connect: [
-						{ id: input.masterId },
-						...(input.colorId ? [{ id: input.colorId }] : [])
-					]
-				}
+				// relatedItems: { // Removed - not in schema
+				//	connect: [
+				//		{ id: input.masterId },
+				//		...(input.colorId ? [{ id: input.colorId }] : [])
+				//	]
+				// }
 			}
 		})
 
@@ -165,7 +165,7 @@ export class YarnService {
 				unit: 'nøste',
 				imageUrl: input.imageUrl,
 				categoryData: JSON.stringify(parsed.data),
-				relatedItems: { connect: { id: input.masterId } }
+				                                // relatedItems: { connect: { id: input.masterId } } // Removed - not in schema
 			}
 		})
 

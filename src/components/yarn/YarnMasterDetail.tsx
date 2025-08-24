@@ -35,7 +35,7 @@ export function YarnMasterDetail({
     staleTime: 30000,
     refetchOnWindowFocus: false,
     refetchOnMount: false,
-    placeholderData: (prev) => prev,
+    placeholderData: (prev: any) => prev,
     initialData: initialMaster,
   })
   const { data: totals, isLoading: totalsLoading } = trpc.yarn.getMasterTotals.useQuery({ masterId: id }, {
@@ -43,7 +43,7 @@ export function YarnMasterDetail({
     staleTime: 30000,
     refetchOnWindowFocus: false,
     refetchOnMount: false,
-    placeholderData: (prev) => prev,
+    placeholderData: (prev: any) => prev,
     initialData: initialTotals,
   })
   const { data: colors, isLoading: colorsLoading } = trpc.yarn.getColorsForMaster.useQuery({ masterId: id }, {
@@ -51,7 +51,7 @@ export function YarnMasterDetail({
     staleTime: 0,
     refetchOnWindowFocus: false,
     refetchOnMount: true,
-    placeholderData: (prev) => prev,
+    placeholderData: (prev: any) => prev,
     initialData: initialColors,
   })
   const { data: batches } = trpc.yarn.getBatchesForMaster.useQuery({ masterId: id }, {
@@ -59,7 +59,7 @@ export function YarnMasterDetail({
     staleTime: 30000,
     refetchOnWindowFocus: false,
     refetchOnMount: false,
-    placeholderData: (prev) => prev,
+    placeholderData: (prev: any) => prev,
   })
   const utils = trpc.useUtils()
   const [isAddBatchOpen, setIsAddBatchOpen] = React.useState(false)
@@ -156,9 +156,9 @@ export function YarnMasterDetail({
   }
 
   const startEditing = () => {
-    const data = master?.categoryData ? JSON.parse(master.categoryData) : {}
+    const data = ((master as any)?.categoryData as any) || {}
     setEditData({
-      name: master?.name || '',
+      name: (master as any)?.name || '',
       producer: data.producer || '',
       composition: data.composition || '',
       weight: data.weight || '',
@@ -166,7 +166,7 @@ export function YarnMasterDetail({
       gauge: data.gauge || '',
       needleSize: data.needleSize || '',
       careInstructions: data.careInstructions || '',
-      imageUrl: master?.imageUrl || ''
+      imageUrl: (master as any)?.imageUrl || ''
     })
     setIsEditing(true)
   }
@@ -246,7 +246,7 @@ export function YarnMasterDetail({
     }
 
     try {
-      await deleteColor.mutateAsync({ id: colorId })
+      await deleteColor.mutateAsync({ colorId })
       toast.success('Farge slettet')
       // Clear selection if the deleted color was selected
       if (selectedColorId === colorId) {
@@ -288,7 +288,7 @@ export function YarnMasterDetail({
 
     try {
       await updateColor.mutateAsync({
-        id: editingColorId,
+        colorId: editingColorId,
         name: colorEditData.name,
         colorCode: colorEditData.colorCode,
         imageUrl: colorEditData.imageUrl
@@ -304,7 +304,7 @@ export function YarnMasterDetail({
     }
   }
 
-  const data = master?.categoryData ? JSON.parse(master.categoryData) : {}
+  const data = ((master as any)?.categoryData as any) || {}
   const isInitialLoading = masterLoading || totalsLoading || colorsLoading
 
   return (
@@ -574,8 +574,8 @@ export function YarnMasterDetail({
                 ) : (isEditing ? editData.imageUrl : master?.imageUrl) ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img 
-                    src={isEditing ? editData.imageUrl : master?.imageUrl} 
-                    alt={isEditing ? editData.name : master?.name} 
+                    src={isEditing ? editData.imageUrl : master?.imageUrl || ''} 
+                    alt={isEditing ? editData.name : master?.name || ''} 
                     className="h-full w-full object-cover" 
                   />
                 ) : (
@@ -647,14 +647,14 @@ export function YarnMasterDetail({
                       <DialogDescription>Velg hvilke batches som skal knyttes til prosjekt.</DialogDescription>
                     </DialogHeader>
                     <div className="space-y-3 mt-2">
-                      {(batches || []).map((b) => {
-                        const d = b.categoryData ? JSON.parse(b.categoryData) : {}
+                      {(batches || []).map((b: any) => {
+                        const d = (b.categoryData as any) || {}
                         return (
                           <YarnProjectIntegration
                             key={b.id}
                             batchId={b.id}
                             batchName={`${d.color || ''} - ${d.batchNumber || ''}`}
-                            availableQuantity={b.availableQuantity}
+                            availableQuantity={Number(b.availableQuantity)}
                             unit={b.unit || 'nøste'}
                           />
                         )
@@ -682,7 +682,7 @@ export function YarnMasterDetail({
                       <DialogDescription>Registrer én eller flere farger. Fargekode og bilde-URL er valgfrie.</DialogDescription>
                     </DialogHeader>
                     <div className="space-y-3">
-                      {colorRows.map((row, idx) => (
+                      {colorRows.map((row: any, idx: number) => (
                         <div key={idx} className="grid grid-cols-1 md:grid-cols-5 gap-2 items-end">
                           <div className="md:col-span-2">
                             <Label className="text-xs">Fargenavn</Label>
@@ -721,7 +721,7 @@ export function YarnMasterDetail({
               </div>
             ) : colors && colors.length > 0 ? (
               <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2">
-                {colors.map((c) => (
+                {colors.map((c: any) => (
                   <div key={c.id} className={`group relative rounded-lg border transition-colors ${selectedColor === c.name ? 'bg-muted' : 'hover:bg-muted/40'}`}>
                     {editingColorId === c.id ? (
                       // Edit mode

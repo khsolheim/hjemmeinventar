@@ -82,7 +82,7 @@ export function DymoPrintCenter() {
       setServiceStatus(status)
       setAvailablePrinters(status.availablePrinters)
       if (status.availablePrinters.length > 0) {
-        setSelectedPrinter(status.availablePrinters[0])
+        setSelectedPrinter(status.availablePrinters[0] || '')
       }
     } catch (error) {
       console.error('Failed to check service status:', error)
@@ -462,7 +462,7 @@ export function DymoPrintCenter() {
                     <div>
                       <Label>Velg gjenstander</Label>
                       <div className="border rounded-lg p-4 max-h-60 overflow-y-auto">
-                        {items.slice(0, 10).map(item => (
+                        {items.slice(0, 10).map((item: any) => (
                           <div key={item.id} className="flex items-center space-x-2 py-1">
                             <Checkbox 
                               id={`item-${item.id}`}
@@ -472,8 +472,8 @@ export function DymoPrintCenter() {
                                     itemName: item.name,
                                     locationName: item.location?.name || 'Ukjent',
                                     qrCode: `item:${item.id}`,
-                                    categoryName: item.category?.name,
-                                    barcode: item.barcode || undefined,
+                                    categoryName: item.category?.name || '',
+                                    barcode: item.barcode || '',
                                     householdName: 'Min husholdning'
                                   }
                                   addToQueue(labelData, item.barcode ? 'barcode' : 'qr')

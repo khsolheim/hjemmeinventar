@@ -25,7 +25,7 @@ export async function generateUniqueQRCode(): Promise<string> {
     
     const [loc, dist] = await Promise.all([
       db.location.findUnique({ where: { qrCode } }),
-      db.itemDistribution.findFirst({ where: { qrCode: `D-${qrCode}` } })
+      db.itemDistribution.findFirst({ where: { id: `D-${qrCode}` } })
     ])
     exists = !!loc || !!dist
   } while (exists)
@@ -86,7 +86,7 @@ export async function logActivity({
       userId,
       itemId,
       locationId,
-      metadata: metadata ? JSON.stringify(metadata) : null
+      metadata: metadata ? JSON.stringify(metadata) : undefined
     }
   })
 }

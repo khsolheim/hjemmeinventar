@@ -14,6 +14,7 @@ import { aiRouter } from './routers/ai'
 import { importExportRouter } from './routers/import-export'
 import { hierarchyRouter } from './routers/hierarchy'
 import { printingRouter } from './routers/printing'
+import { labelSizesRouter } from './routers/label-sizes'
 
 export const appRouter = createTRPCRouter({
   items: itemsRouter,
@@ -29,7 +30,8 @@ export const appRouter = createTRPCRouter({
   ai: aiRouter,
   importExport: importExportRouter,
   hierarchy: hierarchyRouter,
-  printing: printingRouter
+  printing: printingRouter,
+  labelSizes: labelSizesRouter
 })
 
 export type AppRouter = typeof appRouter

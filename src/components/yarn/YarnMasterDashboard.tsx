@@ -54,9 +54,9 @@ export function YarnMasterDashboard({ initialMasters, initialTotal }: { initialM
     refetchOnWindowFocus: false,
     refetchOnMount: false,
     staleTime: 30000,
-    placeholderData: (prev) => prev,
+    placeholderData: (prev: any) => prev,
     enabled: !useSearchApi,
-    initialData: initialMasters ? { masters: initialMasters, total: initialTotal ?? initialMasters.length } : undefined
+    // initialData: initialMasters ? { masters: initialMasters, total: initialTotal ?? initialMasters.length } : undefined
   })
 
   const { data: mastersSearchData, isLoading: isLoadingSearch } = trpc.yarn.searchMasters.useQuery({
@@ -69,7 +69,7 @@ export function YarnMasterDashboard({ initialMasters, initialTotal }: { initialM
     refetchOnWindowFocus: false,
     refetchOnMount: true,
     staleTime: 0,
-    placeholderData: (prev) => prev, gcTime: 0,
+    placeholderData: (prev: any) => prev, gcTime: 0,
   })
 
   const handleAdvancedSearch = (filters: any) => {
@@ -84,8 +84,8 @@ export function YarnMasterDashboard({ initialMasters, initialTotal }: { initialM
     refetch()
   }
 
-  const masters = ((useSearchApi ? mastersSearchData?.masters : mastersData?.masters) || initialMasters) || []
-  const total = useSearchApi ? (mastersSearchData?.total ?? 0) : (mastersData?.total ?? initialTotal ?? 0)
+  const masters = ((useSearchApi ? (mastersSearchData as any)?.masters : (mastersData as any)?.masters) || initialMasters) || []
+  const total = useSearchApi ? ((mastersSearchData as any)?.total ?? 0) : ((mastersData as any)?.total ?? initialTotal ?? 0)
 
   const { data: allColors, refetch: refetchColors } = trpc.yarn.getAllMasterColors.useQuery(
     {},
@@ -105,7 +105,7 @@ export function YarnMasterDashboard({ initialMasters, initialTotal }: { initialM
   }, [activeTab, refetchColors])
 
   // Calculate overall statistics
-  const overallStats = masters.reduce((acc, master) => {
+  const overallStats = masters.reduce((acc: any, master: any) => {
     const totals = master.totals || { totalSkeins: 0, totalValue: 0, batchCount: 0 }
     return {
       totalMasters: acc.totalMasters + 1,
@@ -117,10 +117,10 @@ export function YarnMasterDashboard({ initialMasters, initialTotal }: { initialM
 
   // Wizard is now a dedicated page. Refetch happens when returning to this page.
 
-  const getMasterData = (categoryData: string | null) => {
+  const getMasterData = (categoryData: any) => {
     if (!categoryData) return {}
     try {
-      return JSON.parse(categoryData)
+      return typeof categoryData === 'string' ? JSON.parse(categoryData) : categoryData
     } catch {
       return {}
     }
@@ -223,7 +223,7 @@ export function YarnMasterDashboard({ initialMasters, initialTotal }: { initialM
             </Card>
           ) : (
             <div className="cq-grid yarn-grid gap-6 min-h-[800px]" style={{"--card-min":"220px"} as any}>
-              {masters.map((master) => {
+              {masters.map((master: any) => {
                 const data = getMasterData(master.categoryData)
                 return (
                   <Link key={master.id} href={`/garn/${master.id}`} className="block">
@@ -301,7 +301,7 @@ export function YarnMasterDashboard({ initialMasters, initialTotal }: { initialM
           <Card>
             <CardContent className="p-0">
               <div className="divide-y">
-                {masters.map((master) => {
+                {masters.map((master: any) => {
                   const data = getMasterData(master.categoryData)
                   return (
                     <Link 

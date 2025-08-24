@@ -32,8 +32,8 @@ export default function MobileYarnPage() {
 
   // Quick stats
   const totalMasters = masters.length
-  const totalValue = masters.reduce((sum, master) => sum + (master.totals?.totalValue || 0), 0)
-  const lowStockCount = masters.filter(master => 
+  const totalValue = masters.reduce((sum: number, master: any) => sum + (master.totals?.totalValue || 0), 0)
+  const lowStockCount = masters.filter((master: any) => 
     master.totals?.availableSkeins !== undefined && master.totals.availableSkeins <= 2
   ).length
 
@@ -136,7 +136,7 @@ export default function MobileYarnPage() {
           </Card>
         ) : (
           <div className="space-y-3">
-            {(masters || []).map((master) => (
+            {(masters || []).map((master: any) => (
               <MobileYarnCard
                 key={master.id}
                 master={master}

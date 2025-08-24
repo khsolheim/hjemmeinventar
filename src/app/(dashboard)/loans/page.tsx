@@ -71,7 +71,7 @@ function CreateLoanDialog({ itemId, isOpen, onClose }: LoanDialogProps) {
       setNotes('')
       setSelectedItemId('')
     },
-    onError: (error) => {
+    onError: (error: any) => {
       toast.error(`Feil: ${error.message}`)
     }
   })
@@ -103,7 +103,7 @@ function CreateLoanDialog({ itemId, isOpen, onClose }: LoanDialogProps) {
             <Label htmlFor="item">Gjenstand *</Label>
             {itemId ? (
               <Input 
-                value={availableItems?.find(i => i.id === itemId)?.name || 'Laster...'}
+                value={availableItems?.find((i: any) => i.id === itemId)?.name || 'Laster...'}
                 disabled 
               />
             ) : (
@@ -114,7 +114,7 @@ function CreateLoanDialog({ itemId, isOpen, onClose }: LoanDialogProps) {
                 required
               >
                 <option value="">Velg gjenstand...</option>
-                {availableItems?.map(item => (
+                {availableItems?.map((item: any) => (
                   <option key={item.id} value={item.id}>
                     {item.name} - {item.location.name}
                   </option>
@@ -213,7 +213,7 @@ export default function LoansPage() {
       toast.success('Gjenstand markert som returnert')
       refetch()
     },
-    onError: (error) => {
+    onError: (error: any) => {
       toast.error(`Feil: ${error.message}`)
     }
   })
@@ -223,7 +223,7 @@ export default function LoansPage() {
       toast.success('Utlån slettet')
       refetch()
     },
-    onError: (error) => {
+    onError: (error: any) => {
       toast.error(`Feil: ${error.message}`)
     }
   })
@@ -277,7 +277,7 @@ export default function LoansPage() {
 
       {/* Stats Cards */}
       <div className="cq-grid dashboard-grid gap-6 mb-8" style={{"--card-min":"220px"} as any}>
-        {[0,1,2,3].map((i) => (
+        {[0,1,2,3].map((i: number) => (
           <Card key={i}>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">
@@ -327,7 +327,7 @@ export default function LoansPage() {
       {/* Loans List */}
       <div className="grid gap-4 cq">
         {isLoading ? (
-          [...Array(3)].map((_, idx) => (
+          [...Array(3)].map((_, idx: number) => (
             <Card key={idx}>
               <CardContent className="pt-6">
                 <div className="space-y-2">
@@ -361,7 +361,7 @@ export default function LoansPage() {
             </CardContent>
           </Card>
         ) : (
-          filteredLoans.map((loan) => {
+          filteredLoans.map((loan: any) => {
             const isOverdue = loan.expectedReturnDate && 
               isPast(new Date(loan.expectedReturnDate)) && 
               loan.status === 'OUT'

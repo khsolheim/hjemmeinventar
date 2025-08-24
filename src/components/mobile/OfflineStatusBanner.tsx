@@ -108,6 +108,7 @@ export function OfflineStatusBanner({
       const interval = setInterval(loadOfflineStats, 30000)
       return () => clearInterval(interval)
     }
+    return undefined
   }, [showDetailedStats])
 
   const loadOfflineStats = async () => {

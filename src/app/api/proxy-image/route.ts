@@ -25,7 +25,7 @@ export async function GET(request: NextRequest) {
         'Sec-Fetch-Mode': 'no-cors',
         'Sec-Fetch-Site': 'cross-site'
       },
-      timeout: 10000 // 10 sekunder timeout
+      // timeout: 10000 // 10 sekunder timeout - not supported in RequestInit
     })
 
     if (!response.ok) {

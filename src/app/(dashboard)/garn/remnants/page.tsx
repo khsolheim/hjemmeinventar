@@ -48,7 +48,7 @@ export default function RemnantsPage() {
   }
 
   const handleUseInProject = (id: string) => {
-    const remnant = remnantsData?.remnants.find(r => r.id === id)
+    const remnant = remnantsData?.remnants.find((r: any) => r.id === id)
     if (remnant) {
       setSelectedRemnant(remnant)
       setShowRemnantUsage(true)
@@ -87,7 +87,19 @@ export default function RemnantsPage() {
 
       {/* Main Content */}
       <RemnantGrid
-        remnants={remnantsData?.remnants || []}
+        remnants={(remnantsData?.remnants || []).map((r: any) => ({
+          ...r,
+          availableQuantity: Number(r.availableQuantity),
+          categoryData: typeof (r as any).categoryData === 'string' ? (r as any).categoryData : JSON.stringify((r as any).categoryData),
+          createdAt: new Date(r.createdAt),
+          itemRelationsFrom: r.itemRelationsFrom?.map((rel: any) => ({
+            toItem: {
+              id: rel.toItem.id,
+              name: rel.toItem.name,
+              category: rel.toItem.category ? { name: rel.toItem.category.name } : undefined
+            }
+          })) || []
+        }))}
         loading={isLoading}
         onCreateNew={handleCreateNew}
         onEdit={handleEdit}

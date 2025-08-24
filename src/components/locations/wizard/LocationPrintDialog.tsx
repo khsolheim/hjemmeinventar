@@ -366,9 +366,9 @@ export function LocationPrintDialog({
                       </div>
                       {locations.length === 1 && (
                         <div className="text-sm">
-                          <div className="font-medium">{locations[0].displayName || locations[0].name}</div>
-                          {includeAutoNumber && locations[0].autoNumber && (
-                            <div className="text-gray-500">{locations[0].autoNumber}</div>
+                          <div className="font-medium">{locations[0]?.displayName || locations[0]?.name}</div>
+                          {includeAutoNumber && locations[0]?.autoNumber && (
+                            <div className="text-gray-500">{locations[0]?.autoNumber}</div>
                           )}
                         </div>
                       )}

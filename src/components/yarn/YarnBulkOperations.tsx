@@ -156,7 +156,7 @@ export function YarnBulkOperations({ items, onRefresh, itemType }: YarnBulkOpera
     const selectedData = items.filter(item => selectedItems.has(item.id))
     
     const csvData = selectedData.map(item => {
-      const itemData = item.categoryData ? JSON.parse(item.categoryData) : {}
+      const itemData = item.categoryData || {}
       return {
         'Navn': item.name,
         'Produsent': itemData.producer || '',
@@ -187,7 +187,7 @@ export function YarnBulkOperations({ items, onRefresh, itemType }: YarnBulkOpera
 
   const selectedItemsData = items.filter(item => selectedItems.has(item.id))
   const totalValue = selectedItemsData.reduce((sum, item) => {
-    const itemData = item.categoryData ? JSON.parse(item.categoryData) : {}
+    const itemData = item.categoryData || {}
     const price = itemData.pricePerSkein || 0
     const quantity = item.totalQuantity || 0
     return sum + (price * quantity)
@@ -246,7 +246,7 @@ export function YarnBulkOperations({ items, onRefresh, itemType }: YarnBulkOpera
           <div className="max-h-64 overflow-y-auto border rounded-lg">
             <div className="space-y-1 p-2">
               {items.map((item) => {
-                const itemData = item.categoryData ? JSON.parse(item.categoryData) : {}
+                const itemData = item.categoryData || {}
                 return (
                   <div 
                     key={item.id}

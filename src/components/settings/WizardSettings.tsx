@@ -94,7 +94,7 @@ export function WizardSettings() {
     }
 
     // Initialize default colors
-    const defaultColors: Record<LocationType, string> = {}
+    const defaultColors: Record<LocationType, string> = {} as Record<LocationType, string>
     locationTypeOptions.forEach(option => {
       defaultColors[option.type] = option.defaultColor
     })

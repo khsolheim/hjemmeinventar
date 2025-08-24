@@ -248,7 +248,7 @@ export function ExportDialog({ trigger }: ExportDialogProps) {
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="all">Alle kategorier</SelectItem>
-                        {categories?.map(category => (
+                        {categories?.map((category: any) => (
                           <SelectItem key={category.id} value={category.id}>
                             {category.icon && <span className="mr-2">{category.icon}</span>}
                             {category.name}
@@ -343,22 +343,20 @@ export function ExportDialog({ trigger }: ExportDialogProps) {
                 <div className="space-y-2">
                   <Label>Datoperiode (opprettelsesdato)</Label>
                   <div className="flex gap-2 items-center">
-                    <DatePicker
-                      value={filters.dateRange.start}
-                      onChange={(date) => setFilters(prev => ({ 
+                                        <DatePicker
+                      date={filters.dateRange.start}
+                      onDateChange={(date) => setFilters(prev => ({
                         ...prev, 
-                        dateRange: { ...prev.dateRange, start: date } 
+                        dateRange: { ...prev.dateRange, start: date }
                       }))}
-                      placeholder="Fra dato"
                     />
                     <span>til</span>
-                    <DatePicker
-                      value={filters.dateRange.end}
-                      onChange={(date) => setFilters(prev => ({ 
+                                        <DatePicker
+                      date={filters.dateRange.end}
+                      onDateChange={(date) => setFilters(prev => ({
                         ...prev, 
-                        dateRange: { ...prev.dateRange, end: date } 
+                        dateRange: { ...prev.dateRange, end: date }
                       }))}
-                      placeholder="Til dato"
                     />
                   </div>
                 </div>

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -288,10 +288,18 @@ export function FieldSchemaBuilder({
   const [hasInitialized, setHasInitialized] = useState(false)
   const [isLoadingInitialFields, setIsLoadingInitialFields] = useState(false)
   
+  // Use refs to track previous values and prevent infinite loops
+  const lastOnChangeSchemaRef = useRef<string>('')
+  const initialSchemaStringRef = useRef<string>('')
+  
   // Reset initialization when initialSchema changes
   useEffect(() => {
-    setHasInitialized(false)
-    setIsLoadingInitialFields(true)
+    const newInitialSchemaString = JSON.stringify(initialSchema)
+    if (newInitialSchemaString !== initialSchemaStringRef.current) {
+      initialSchemaStringRef.current = newInitialSchemaString
+      setHasInitialized(false)
+      setIsLoadingInitialFields(true)
+    }
   }, [initialSchema])
   
   // Debounce fields changes to avoid too many server calls
@@ -349,10 +357,8 @@ export function FieldSchemaBuilder({
     const hasCurrentProperties = Object.keys(properties).length > 0
     
     if (!hasCurrentProperties && hasInitialFields && hasInitialized) {
-      // Only warn in development mode to avoid console spam
-      if (process.env.NODE_ENV === 'development') {
-        console.warn('FieldSchemaBuilder: Preventing empty schema generation when initialSchema had fields')
-      }
+      // Return initialSchema to prevent data loss - warning disabled to prevent console spam
+      // The useEffect above now properly handles this case to prevent infinite loops
       return initialSchema
     }
 
@@ -368,10 +374,20 @@ export function FieldSchemaBuilder({
     // Only call onChange if we have been initialized AND we're not loading initial fields
     if (hasInitialized && !isLoadingInitialFields && debouncedFields.length >= 0) {
       const newSchema = generateSchema(debouncedFields)
+      const newSchemaString = JSON.stringify(newSchema)
       
-      // Additional safeguard: Don't call onChange if we would be sending back the same initialSchema
-      // This prevents infinite loops when the safeguard in generateSchema kicks in
-      if (newSchema !== initialSchema) {
+      // Critical: Don't call onChange if generateSchema returned the initialSchema unchanged
+      // This prevents infinite feedback loops
+      const isReturningSameInitialSchema = newSchema === initialSchema
+      
+      // Only call onChange if:
+      // 1. We haven't sent this exact schema before, AND
+      // 2. It's different from the current initialSchema, AND 
+      // 3. generateSchema created a new schema (didn't return initialSchema as safety fallback)
+      if (!isReturningSameInitialSchema &&
+          newSchemaString !== lastOnChangeSchemaRef.current && 
+          newSchemaString !== initialSchemaStringRef.current) {
+        lastOnChangeSchemaRef.current = newSchemaString
         onChange(newSchema)
       }
     }
@@ -421,10 +437,13 @@ export function FieldSchemaBuilder({
 
   const duplicateField = (index: number) => {
     const fieldToDuplicate = fields[index]
+    if (!fieldToDuplicate) return
     const duplicatedField: FieldDefinition = {
       ...fieldToDuplicate,
       id: `field_${Date.now()}`,
-      label: `${fieldToDuplicate.label} (kopi)`
+      label: `${fieldToDuplicate.label} (kopi)`,
+      type: fieldToDuplicate.type || 'text',
+      required: fieldToDuplicate.required || false
     }
     setFields(prev => [...prev, duplicatedField])
   }

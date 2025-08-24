@@ -38,12 +38,12 @@ export class SystemHealthService {
       // Check 3: User exists and is active
       const user = await this.db.user.findUnique({
         where: { id: userId },
-        select: { isActive: true, email: true }
+        select: { email: true } // isActive removed from schema
       })
       if (!user) {
         issues.push('Bruker ikke funnet')
         fixes.push('Kontakt systemadministrator')
-      } else if (!user.isActive) {
+      } else if (false) { // isActive field removed from schema
         issues.push('Brukerkonto er deaktivert')
         fixes.push('Kontakt systemadministrator')
       }

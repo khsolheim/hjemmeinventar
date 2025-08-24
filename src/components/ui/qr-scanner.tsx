@@ -103,6 +103,13 @@ export function QRScanner({ onScan, onError, className = '' }: QRScannerProps) {
     }
   }, [stream])
 
+  // Handle scan result
+  const handleScanResult = useCallback((result: string) => {
+    onScan(result)
+    stopScanning()
+    toast.success(`QR-kode skannet: ${result}`)
+  }, [onScan, stopScanning])
+
   // Simple QR code detection (in real app, you'd use a proper QR detection library)
   const detectQRCode = useCallback(() => {
     if (!videoRef.current || !canvasRef.current) return
@@ -128,7 +135,9 @@ export function QRScanner({ onScan, onError, className = '' }: QRScannerProps) {
       const mockResults = ['KJK-0001', 'SOV-0001', 'BOD-0001', 'ITEM-001']
       const randomResult = mockResults[Math.floor(Math.random() * mockResults.length)]
       
-      handleScanResult(randomResult)
+      if (randomResult) {
+        handleScanResult(randomResult)
+      }
     }
   }, [handleScanResult])
 
@@ -139,8 +148,8 @@ export function QRScanner({ onScan, onError, className = '' }: QRScannerProps) {
     let whitePixels = 0
     
     // Sample every 10th pixel to check for high contrast patterns
-    for (let i = 0; i < data.length; i += 40) {
-      const brightness = (data[i] + data[i + 1] + data[i + 2]) / 3
+    for (let i = 0; i < data.length - 2; i += 40) {
+      const brightness = (data[i]! + data[i + 1]! + data[i + 2]!) / 3
       if (brightness < 128) {
         blackPixels++
       } else {
@@ -154,13 +163,6 @@ export function QRScanner({ onScan, onError, className = '' }: QRScannerProps) {
     // If we have good contrast and some pattern, simulate QR detection
     return contrastRatio > 0.2 && Math.random() > 0.98 // Low probability to simulate detection
   }
-
-  // Handle scan result
-  const handleScanResult = useCallback((result: string) => {
-    onScan(result)
-    stopScanning()
-    toast.success(`QR-kode skannet: ${result}`)
-  }, [onScan, stopScanning])
 
   // Handle manual input
   const handleManualSubmit = (e: React.FormEvent) => {

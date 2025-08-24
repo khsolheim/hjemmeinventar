@@ -60,7 +60,7 @@ export default function DashboardPage() {
   const totalItems = items.length
   const totalLocations = locations.length
   const totalQRCodes = locations.length // Each location has a QR code
-  const thisMonthItems = items.filter(item => {
+  const thisMonthItems = items.filter((item: any) => {
     const createdDate = new Date(item.createdAt)
     const now = new Date()
     return createdDate.getMonth() === now.getMonth() && createdDate.getFullYear() === now.getFullYear()
@@ -407,7 +407,7 @@ export default function DashboardPage() {
               </div>
             ) : items.length > 0 ? (
               <div className="space-y-3">
-                {items.slice(0, 5).map((item) => (
+                {items.slice(0, 5).map((item: any) => (
                   <div key={item.id} className="flex items-center gap-3 p-2 rounded hover:bg-muted/50">
                     <div className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center">
                       <span className="text-sm">

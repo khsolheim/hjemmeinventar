@@ -126,9 +126,10 @@ export function PrivacySettingsModal({
   const typeLabel = locationTypeLabels[location.type]
 
   useEffect(() => {
-    if (location.allowedUsers) {
-      setAllowedUsers(location.allowedUsers)
-    }
+    // TODO: Implement allowedUsers when added to WizardLocation type
+    // if (location.allowedUsers) {
+    //   setAllowedUsers(location.allowedUsers)
+    // }
   }, [location])
 
   const handleAddUser = () => {

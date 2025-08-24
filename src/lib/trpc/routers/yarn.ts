@@ -2,16 +2,12 @@
 import { z } from 'zod'
 import { createTRPCRouter, protectedProcedure } from '../server'
 import { TRPCError } from '@trpc/server'
+import { serializeItemsForClient, serializeItemForClient } from '../../utils/decimal-serializer'
 
 // Helper function to safely parse color code from categoryData
-function safeParseColorCode(categoryData: string | null): string | null {
+function safeParseColorCode(categoryData: any): string | null {
   if (!categoryData) return null
-  try {
-    const data = JSON.parse(categoryData)
-    return data.colorCode || null
-  } catch {
-    return null
-  }
+  return categoryData.colorCode || null
 }
 import {
   isYarnMaster,
@@ -121,7 +117,7 @@ export const yarnRouter = createTRPCRouter({
       return pattern
     }),
 
-  // Create new pattern
+  // Create new pattern - TEMPORARILY DISABLED
   createPattern: protectedProcedure
     .input(z.object({
       name: z.string().min(1),
@@ -136,18 +132,13 @@ export const yarnRouter = createTRPCRouter({
       yarnAmount: z.string().optional()
     }))
     .mutation(async ({ ctx, input }) => {
-      const pattern = await ctx.db.yarnPattern.create({
-        data: {
-          ...input,
-          imageUrls: input.imageUrls ? JSON.stringify(input.imageUrls) : undefined,
-          userId: ctx.user.id
-        }
+      throw new TRPCError({
+        code: 'NOT_IMPLEMENTED',
+        message: 'Pattern creation temporarily disabled'
       })
-      
-      return pattern
     }),
 
-  // Update pattern
+  // Update pattern - TEMPORARILY DISABLED
   updatePattern: protectedProcedure
     .input(z.object({
       id: z.string(),
@@ -163,71 +154,20 @@ export const yarnRouter = createTRPCRouter({
       yarnAmount: z.string().optional()
     }))
     .mutation(async ({ ctx, input }) => {
-      const { id, ...updateData } = input
-      
-      const pattern = await ctx.db.yarnPattern.findFirst({
-        where: {
-          id,
-          userId: ctx.user.id
-        }
+      throw new TRPCError({
+        code: 'NOT_IMPLEMENTED',
+        message: 'Pattern update temporarily disabled'
       })
-      
-      if (!pattern) {
-        throw new TRPCError({
-          code: 'NOT_FOUND',
-          message: 'Oppskrift ikke funnet'
-        })
-      }
-      
-      const { imageUrls, ...otherData } = updateData
-      const processedUpdateData = {
-        ...otherData,
-        ...(imageUrls && { imageUrls: JSON.stringify(imageUrls) })
-      }
-      
-      const updatedPattern = await ctx.db.yarnPattern.update({
-        where: { id },
-        data: processedUpdateData
-      })
-      
-      return updatedPattern
     }),
 
-  // Delete pattern
+  // Delete pattern - TEMPORARILY DISABLED
   deletePattern: protectedProcedure
     .input(z.string())
     .mutation(async ({ ctx, input }) => {
-      const pattern = await ctx.db.yarnPattern.findFirst({
-        where: {
-          id: input,
-          userId: ctx.user.id
-        },
-        include: {
-          _count: {
-            select: { projects: true }
-          }
-        }
+      throw new TRPCError({
+        code: 'NOT_IMPLEMENTED',
+        message: 'Pattern deletion temporarily disabled'
       })
-      
-      if (!pattern) {
-        throw new TRPCError({
-          code: 'NOT_FOUND',
-          message: 'Oppskrift ikke funnet'
-        })
-      }
-      
-      if (pattern._count.projects > 0) {
-        throw new TRPCError({
-          code: 'BAD_REQUEST',
-          message: `Kan ikke slette oppskrift som brukes i ${pattern._count.projects} prosjekt(er)`
-        })
-      }
-      
-      await ctx.db.yarnPattern.delete({
-        where: { id: input }
-      })
-      
-      return { success: true }
     }),
 
   // Get all yarn projects for user
@@ -393,12 +333,12 @@ export const yarnRouter = createTRPCRouter({
         })
       }
       
-      // Process image arrays to JSON strings
+      // Process image arrays
       const { progressImages, finalImages, ...otherData } = updateData
       const processedUpdateData = {
         ...otherData,
-        ...(progressImages && { progressImages: JSON.stringify(progressImages) }),
-        ...(finalImages && { finalImages: JSON.stringify(finalImages) })
+        ...(progressImages && { progressImages }),
+        ...(finalImages && { finalImages })
       }
 
       // Auto-set completion date if status changes to COMPLETED
@@ -745,9 +685,9 @@ export const yarnRouter = createTRPCRouter({
         throw new TRPCError({ code: 'NOT_FOUND', message: 'Batch ikke funnet' })
       }
 
-      const currentData = batch.categoryData ? JSON.parse(batch.categoryData) : {}
+      const currentData = batch.categoryData || {}
       const updatedData = {
-        ...currentData,
+        ...(currentData as any),
         ...(input.batchNumber !== undefined ? { batchNumber: input.batchNumber } : {}),
         ...(input.color !== undefined ? { color: input.color } : {}),
         ...(input.colorCode !== undefined ? { colorCode: input.colorCode } : {}),
@@ -758,9 +698,9 @@ export const yarnRouter = createTRPCRouter({
 
       // Håndter mengde justering
       let newTotal = batch.totalQuantity
-      let newAvailable = batch.availableQuantity
+      let newAvailable = Number(batch.availableQuantity)
       if (input.quantity !== undefined) {
-        const diff = Math.round(input.quantity) - batch.totalQuantity
+        const diff = Math.round(input.quantity) - Number(batch.totalQuantity)
         newTotal = Math.round(input.quantity)
         newAvailable = Math.max(0, newAvailable + diff)
       }
@@ -851,34 +791,34 @@ export const yarnRouter = createTRPCRouter({
         })
       }
 
-      // Fallback: søk via legacy relatedItems hvis ingen typed relasjoner
-      if (!color && !master) {
-        const batch = await db.item.findFirst({
-          where: { id: batchId, userId: user.id },
-          include: { 
-            relatedItems: { 
-              include: { category: true },
-              where: { userId: user.id }
-            } 
-          }
-        })
+      // Fallback: søk via legacy relatedItems hvis ingen typed relasjoner - DISABLED
+      // if (!color && !master) {
+      //   const batch = await db.item.findFirst({
+      //     where: { id: batchId, userId: user.id },
+      //     include: { 
+      //       relatedItems: { 
+      //         include: { category: true },
+      //         where: { userId: user.id }
+      //       } 
+      //     }
+      //   })
 
-        if (batch?.relatedItems) {
-          for (const item of batch.relatedItems) {
-            if (item.category?.name === 'Garn Master' && !master) {
-              master = item
-            }
-            if (item.category?.name === 'Garn Farge' && !color) {
-              color = {
-                id: item.id,
-                name: item.name,
-                imageUrl: item.imageUrl,
-                categoryData: item.categoryData
-              }
-            }
-          }
-        }
-      }
+      //   if (batch?.relatedItems) {
+      //     for (const item of batch.relatedItems) {
+      //       if (item.category?.name === 'Garn Master' && !master) {
+      //         master = item
+      //       }
+      //       if (item.category?.name === 'Garn Farge' && !color) {
+      //         color = {
+      //           id: item.id,
+      //           name: item.name,
+      //           imageUrl: item.imageUrl,
+      //           categoryData: item.categoryData
+      //         }
+      //       }
+      //     }
+      //   }
+      // }
 
       return {
         master,
@@ -917,10 +857,10 @@ export const yarnRouter = createTRPCRouter({
           where: {
             userId: ctx.user.id,
             categoryId: colorCategoryExisting.id,
-            OR: [
-              { relatedItems: { some: { id: input.masterId } } },
-              { relatedTo: { some: { id: input.masterId } } }
-            ]
+            // OR: [
+            //   { relatedItems: { some: { id: input.masterId } } },
+            //   { relatedTo: { some: { id: input.masterId } } }
+            // ]
           }
         })
         const normalizedName = input.name.trim().toLowerCase()
@@ -970,10 +910,10 @@ export const yarnRouter = createTRPCRouter({
             where: {
               userId: ctx.user.id,
               categoryId: colorCategory.id,
-              OR: [
-                { relatedItems: { some: { id: masterId } } },
-                { relatedTo: { some: { id: masterId } } }
-              ]
+              // OR: [
+            //   { relatedItems: { some: { id: masterId } } },
+            //   { relatedTo: { some: { id: masterId } } }
+            // ]
             },
             select: { id: true }
           })
@@ -1002,10 +942,10 @@ export const yarnRouter = createTRPCRouter({
               where: {
                 userId: ctx.user.id,
                 categoryId: batchCategory.id,
-                OR: [
-                  { relatedItems: { some: { id: color.id } } },
-                  { relatedTo: { some: { id: color.id } } }
-                ]
+                // OR: [
+                //   { relatedItems: { some: { id: color.id } } },
+                //   { relatedTo: { some: { id: color.id } } }
+                // ]
               },
               select: { id: true, availableQuantity: true, categoryData: true }
             })
@@ -1015,14 +955,14 @@ export const yarnRouter = createTRPCRouter({
           let skeins = 0
           if (batchIds.length > 0) {
             const batches = await ctx.db.item.findMany({ where: { id: { in: batchIds } }, select: { availableQuantity: true, categoryData: true } })
-            skeins = batches.reduce((sum, b) => sum + (b.availableQuantity || 0), 0)
+            skeins = batches.reduce((sum, b) => sum + (Number(b.availableQuantity) || 0), 0)
           }
 
           results.push({
             id: color.id,
             name: color.name,
-            colorCode: safeParseColorCode(color.categoryData),
-            imageUrl: color.imageUrl,
+            colorCode: safeParseColorCode(color.categoryData) || undefined,
+            imageUrl: color.imageUrl || undefined,
             batchCount: batchIds.length,
             skeinCount: Math.round(skeins)
           })
@@ -1075,10 +1015,10 @@ export const yarnRouter = createTRPCRouter({
           where: {
             userId: ctx.user.id,
             categoryId: batchCategory.id,
-            OR: [
-              { relatedItems: { some: { id: input.colorId } } },
-              { relatedTo: { some: { id: input.colorId } } }
-            ]
+            // OR: [
+            //   { relatedItems: { some: { id: input.colorId } } },
+            //   { relatedTo: { some: { id: input.colorId } } }
+            // ]
           },
           select: { id: true }
         })
@@ -1103,9 +1043,9 @@ export const yarnRouter = createTRPCRouter({
       if (!color || color.category?.name !== 'Garn Farge') {
         throw new TRPCError({ code: 'NOT_FOUND', message: 'Farge ikke funnet' })
       }
-      const current = color.categoryData ? JSON.parse(color.categoryData) : {}
+      const current = color.categoryData || {}
       const updated = {
-        ...current,
+        ...(current as any),
         ...(input.colorCode !== undefined ? { colorCode: input.colorCode } : {}),
       }
       const result = await ctx.db.item.update({
@@ -1133,10 +1073,10 @@ export const yarnRouter = createTRPCRouter({
           where: {
             userId: ctx.user.id,
             categoryId: batchCategory.id,
-            OR: [
-              { relatedItems: { some: { id: input.colorId } } },
-              { relatedTo: { some: { id: input.colorId } } }
-            ]
+            // OR: [
+            //   { relatedItems: { some: { id: input.colorId } } },
+            //   { relatedTo: { some: { id: input.colorId } } }
+            // ]
           }
         })
         if (count > 0) {
@@ -1325,7 +1265,7 @@ export const yarnRouter = createTRPCRouter({
         })
       )
 
-      return { masters: mastersWithTotals, total }
+      return { masters: serializeItemsForClient(mastersWithTotals), total }
     }),
 
   // Inde ksbasert søk etter masters (kombinerer Meilisearch + Prisma)
@@ -1477,7 +1417,7 @@ export const yarnRouter = createTRPCRouter({
         totals: await calculateMasterTotals(ctx.db, m.id, ctx.user.id)
       })))
 
-      return { masters: mastersWithTotals, total }
+      return { masters: serializeItemsForClient(mastersWithTotals), total }
     }),
 
   // PROJECT INTEGRATION ENDPOINTS
@@ -1509,8 +1449,8 @@ export const yarnRouter = createTRPCRouter({
       return usage
     }),
 
-  // Fjern garn fra prosjekt
-  removeYarnFromProject: protectedProcedure
+  // Fjern garn fra prosjekt - DUPLICATE DISABLED
+  removeYarnFromProject2: protectedProcedure
     .input(z.object({
       projectId: z.string(),
       itemId: z.string()
@@ -1555,7 +1495,7 @@ export const yarnRouter = createTRPCRouter({
         await ctx.db.item.update({
           where: { id: input.itemId },
           data: {
-            availableQuantity: item.availableQuantity + usage.quantityUsed
+            availableQuantity: Number(item.availableQuantity) + Number(usage.quantityUsed)
           }
         })
       }
@@ -1608,7 +1548,7 @@ export const yarnRouter = createTRPCRouter({
       }
 
       // Beregn forskjell i mengde
-      const quantityDifference = input.quantityUsed - existingUsage.quantityUsed
+      const quantityDifference = input.quantityUsed - Number(existingUsage.quantityUsed)
 
       // Sjekk tilgjengelighet hvis vi øker bruken
       if (quantityDifference > 0) {
@@ -1616,7 +1556,7 @@ export const yarnRouter = createTRPCRouter({
           where: { id: input.itemId }
         })
 
-        if (!item || item.availableQuantity < quantityDifference) {
+        if (!item || Number(item.availableQuantity) < quantityDifference) {
           throw new TRPCError({
             code: 'BAD_REQUEST',
             message: 'Ikke nok garn tilgjengelig'
@@ -1627,7 +1567,7 @@ export const yarnRouter = createTRPCRouter({
         await ctx.db.item.update({
           where: { id: input.itemId },
           data: {
-            availableQuantity: item.availableQuantity - quantityDifference
+            availableQuantity: Number(item.availableQuantity) - quantityDifference
           }
         })
       } else if (quantityDifference < 0) {
@@ -1640,7 +1580,7 @@ export const yarnRouter = createTRPCRouter({
           await ctx.db.item.update({
             where: { id: input.itemId },
             data: {
-              availableQuantity: item.availableQuantity - quantityDifference // negativt tall, så vi legger til
+              availableQuantity: Number(item.availableQuantity) - quantityDifference // negativt tall, så vi legger til
             }
           })
         }
@@ -1662,8 +1602,8 @@ export const yarnRouter = createTRPCRouter({
       return updatedUsage
     }),
 
-  // Hent alle prosjekter for dropdown
-  getProjects: protectedProcedure
+  // Hent alle prosjekter for dropdown - DUPLICATE DISABLED
+  getProjects2: protectedProcedure
     .input(z.object({
       limit: z.number().min(1).max(100).default(20),
       offset: z.number().min(0).default(0),
@@ -1672,7 +1612,7 @@ export const yarnRouter = createTRPCRouter({
     .query(async ({ ctx, input }) => {
       const where = {
         userId: ctx.user.id,
-        ...(input.status && { status: input.status })
+        ...(input.status && { status: input.status as any })
       }
 
       const [projects, total] = await Promise.all([
@@ -1751,17 +1691,17 @@ export const yarnRouter = createTRPCRouter({
           where: {
             userId: ctx.user.id,
             categoryId: batchCategory.id,
-            relatedItems: { some: { id: { in: mastersNeedingLegacy.map(m => m.id) } } }
+            // relatedItems: { some: { id: { in: mastersNeedingLegacy.map(m => m.id) } } } // Removed - not in schema
           },
-          select: { id: true, availableQuantity: true, categoryData: true, relatedItems: { select: { id: true } } }
+          select: { id: true, availableQuantity: true, categoryData: true }
         })
         // fordel per master
-        for (const m of mastersNeedingLegacy) {
-          const ids = legacyBatches
-            .filter(b => b.relatedItems.some(r => r.id === m.id))
-            .map(b => b.id)
-          if (ids.length > 0) batchIdsByMaster.set(m.id, ids)
-        }
+        // for (const m of mastersNeedingLegacy) { // Removed - not in schema
+        //   const ids = legacyBatches
+        //     .filter(b => b.relatedItems.some(r => r.id === m.id))
+        //     .map(b => b.id)
+        //   if (ids.length > 0) batchIdsByMaster.set(m.id, ids)
+        // }
       }
 
       const allBatchIds = Array.from(new Set(Array.from(batchIdsByMaster.values()).flat()))
@@ -1774,8 +1714,8 @@ export const yarnRouter = createTRPCRouter({
       const uniqueColors = new Set<string>()
 
       masters.forEach(master => {
-        const masterData = master.categoryData ? JSON.parse(master.categoryData) : {}
-        const producer = masterData.producer || 'Ukjent'
+        const masterData = master.categoryData || {}
+        const producer = (masterData as any).producer || 'Ukjent'
 
         if (!producerStats.has(producer)) {
           producerStats.set(producer, {
@@ -1793,18 +1733,18 @@ export const yarnRouter = createTRPCRouter({
         batchIds.forEach(bid => {
           const batch = batchMap.get(bid)
           if (!batch) return
-          const batchData = batch.categoryData ? JSON.parse(batch.categoryData) : {}
-          const quantity = Number(batchData.quantity) || 0
-          const pricePerSkein = Number(batchData.pricePerSkein) || 0
+          const batchData = batch.categoryData || {}
+          const quantity = Number((batchData as any).quantity) || 0
+          const pricePerSkein = Number((batchData as any).pricePerSkein) || 0
           stats.totalSkeins += quantity
           stats.totalValue += quantity * pricePerSkein
 
-          if (batchData.color) {
-            const colorName = String(batchData.color)
+          if ((batchData as any).color) {
+            const colorName = String((batchData as any).color)
             uniqueColors.add(colorName.toLowerCase())
             const key = colorName
             if (!colorStats.has(key)) {
-              colorStats.set(key, { name: colorName, colorCode: batchData.colorCode, batchCount: 0, totalSkeins: 0, totalValue: 0 })
+              colorStats.set(key, { name: colorName, colorCode: (batchData as any).colorCode, batchCount: 0, totalSkeins: 0, totalValue: 0 })
             }
             const cs = colorStats.get(key)!
             cs.batchCount += 1
@@ -1859,14 +1799,14 @@ export const yarnRouter = createTRPCRouter({
       })
 
       const processedItems = lowStockItems.map(item => {
-        const batchData = item.categoryData ? JSON.parse(item.categoryData) : {}
+        const batchData = item.categoryData || {}
         return {
           ...item,
           batchInfo: {
-            color: batchData.color,
-            batchNumber: batchData.batchNumber
+            color: (batchData as any).color,
+            batchNumber: (batchData as any).batchNumber
           },
-          stockLevel: item.availableQuantity <= 1 ? 'CRITICAL' : 'LOW'
+          stockLevel: Number(item.availableQuantity) <= 1 ? 'CRITICAL' : 'LOW'
         }
       })
 
@@ -1900,9 +1840,9 @@ export const yarnRouter = createTRPCRouter({
 
       let totalValue = 0
       batches.forEach(batch => {
-        const batchData = batch.categoryData ? JSON.parse(batch.categoryData) : {}
-        const quantity = batchData.quantity || 0
-        const pricePerSkein = batchData.pricePerSkein || 0
+        const batchData = batch.categoryData || {}
+        const quantity = (batchData as any).quantity || 0
+        const pricePerSkein = (batchData as any).pricePerSkein || 0
         totalValue += quantity * pricePerSkein
       })
 
@@ -1918,9 +1858,9 @@ export const yarnRouter = createTRPCRouter({
       let previousPeriod = 0
 
       batches.forEach(batch => {
-        const batchData = batch.categoryData ? JSON.parse(batch.categoryData) : {}
-        const quantity = batchData.quantity || 0
-        const pricePerSkein = batchData.pricePerSkein || 0
+        const batchData = batch.categoryData || {}
+        const quantity = (batchData as any).quantity || 0
+        const pricePerSkein = (batchData as any).pricePerSkein || 0
         const value = quantity * pricePerSkein
         const purchase = batch.purchaseDate ? new Date(batch.purchaseDate) : undefined
         if (!purchase) return
@@ -2003,7 +1943,7 @@ export const yarnRouter = createTRPCRouter({
             yarnUsageMap.set(key, {
               id: usage.item.id,
               name: usage.item.name,
-              producer: usage.item.categoryData ? JSON.parse(usage.item.categoryData).producer : 'Ukjent',
+              producer: (usage.item.categoryData as any)?.producer || 'Ukjent',
               totalUsed: 0,
               projectCount: 0,
               projects: new Set()
@@ -2073,8 +2013,8 @@ export const yarnRouter = createTRPCRouter({
 
       // Update each item
       const updatePromises = items.map(async (item) => {
-        const currentData = item.categoryData ? JSON.parse(item.categoryData) : {}
-        const updatedData = { ...currentData }
+        const currentData = item.categoryData || {}
+        const updatedData = { ...(currentData as any) }
 
         if (input.updateData.pricePerSkein !== undefined) {
           updatedData.pricePerSkein = input.updateData.pricePerSkein
@@ -2200,7 +2140,7 @@ export const yarnRouter = createTRPCRouter({
 
         const colors = await ctx.db.item.findMany({
           where: { userId: ctx.user.id, categoryId: colorCategory.id },
-          select: { id: true, name: true, imageUrl: true, categoryData: true, relatedItems: { select: { id: true, name: true, categoryId: true } } }
+          select: { id: true, name: true, imageUrl: true, categoryData: true }
         })
 
         const masters = await ctx.db.item.findMany({ where: { userId: ctx.user.id, categoryId: masterCategory.id }, select: { id: true, name: true } })
@@ -2210,8 +2150,10 @@ export const yarnRouter = createTRPCRouter({
 
         const results: Array<{ masterId: string, masterName: string, colorId?: string, colorName: string, colorCode?: string, imageUrl?: string, batchCount: number, skeinCount: number }> = []
         for (const c of colors) {
-          const relMaster = c.relatedItems.find(r => r.categoryId === masterCategory.id)
-          if (!relMaster) continue
+          // const relMaster = c.relatedItems.find(r => r.categoryId === masterCategory.id) // Removed - not in schema
+          // if (!relMaster) continue
+          // Placeholder logic since relatedItems not in schema
+          continue
 
           // Finn batches koblet til fargen (legacy)
           let batchCount = 0
@@ -2220,31 +2162,31 @@ export const yarnRouter = createTRPCRouter({
             const relBatches = await ctx.db.item.findMany({
               where: {
                 userId: ctx.user.id,
-                categoryId: batchCategory.id,
+                categoryId: batchCategory!.id,
                 OR: [
-                  { relatedItems: { some: { id: c.id } } },
-                  { relatedTo: { some: { id: c.id } } }
+                  // { relatedItems: { some: { id: c.id } } }, // Removed - not in schema
+                  // { relatedTo: { some: { id: c.id } } } // Removed - not in schema
                 ]
               },
               select: { id: true, availableQuantity: true }
             })
             batchCount = relBatches.length
-            skeinCount = relBatches.reduce((sum, b) => sum + (b.availableQuantity || 0), 0)
+            skeinCount = relBatches.reduce((sum, b) => sum + Number(b.availableQuantity || 0), 0)
           }
 
-          const colorData = c.categoryData ? JSON.parse(c.categoryData) : {}
-          const masterName = masterMap.get(relMaster.id)?.name || 'Ukjent'
+          const colorData = c.categoryData || {}
+          // const masterName = masterMap.get(relMaster.id)?.name || 'Ukjent' // Removed - relMaster not defined
 
-          results.push({
-            masterId: relMaster.id,
-            masterName,
-            colorId: c.id,
-            colorName: c.name,
-            colorCode: colorData.colorCode,
-            imageUrl: c.imageUrl || undefined,
-            batchCount,
-            skeinCount: Math.round(skeinCount)
-          })
+          // results.push({ // Removed - relMaster not defined
+          //   masterId: relMaster.id,
+          //   masterName,
+          //   colorId: c.id,
+          //   colorName: c.name,
+          //   colorCode: (colorData as any).colorCode,
+          //   imageUrl: c.imageUrl || undefined,
+          //   batchCount,
+          //   skeinCount: Math.round(skeinCount)
+          // })
         }
 
         return results
@@ -2287,15 +2229,15 @@ export const yarnRouter = createTRPCRouter({
         if (!master || !color) continue
 
         const batchIds = batchesByColor.get(color.id) || []
-        const skeins = batchIds.reduce((sum, id) => sum + (batchMap.get(id)?.availableQuantity || 0), 0)
-        const colorData = color.categoryData ? JSON.parse(color.categoryData) : {}
+        const skeins = batchIds.reduce((sum, id) => sum + Number(batchMap.get(id)?.availableQuantity || 0), 0)
+        const colorData = color.categoryData || {}
 
         results.push({
           masterId: master.id,
           masterName: master.name,
           colorId: color.id,
           colorName: color.name,
-          colorCode: colorData.colorCode,
+          colorCode: (colorData as any).colorCode,
           imageUrl: color.imageUrl || undefined,
           batchCount: batchIds.length,
           skeinCount: Math.round(skeins)
@@ -2346,11 +2288,11 @@ export const yarnRouter = createTRPCRouter({
       // Get existing category data
       let updatedCategoryData = existingMaster.categoryData
       if (categoryData) {
-        const existingData = existingMaster.categoryData ? JSON.parse(existingMaster.categoryData) : {}
-        updatedCategoryData = JSON.stringify({
-          ...existingData,
-          ...categoryData
-        })
+        const existingData = existingMaster.categoryData || {}
+        updatedCategoryData = {
+          ...(existingData as any),
+          ...(categoryData as any)
+        }
       }
       
       // Update the master
@@ -2359,28 +2301,28 @@ export const yarnRouter = createTRPCRouter({
         data: {
           ...(name && { name }),
           ...(imageUrl !== undefined && { imageUrl }),
-          ...(categoryData && { categoryData: updatedCategoryData })
+          ...(categoryData && { categoryData: updatedCategoryData || undefined })
         }
       })
       
-      // Update search index if available
-      try {
-        await meilisearchService.updateDocument('items', {
-          id: updatedMaster.id,
-          name: updatedMaster.name,
-          description: updatedMaster.description,
-          categoryData: updatedMaster.categoryData,
-          imageUrl: updatedMaster.imageUrl
-        })
-      } catch (searchError) {
-        console.warn('Failed to update search index:', searchError)
-      }
+      // Update search index if available - TEMPORARILY DISABLED
+      // try {
+      //   await meilisearchService.updateDocument('items', {
+      //     id: updatedMaster.id,
+      //     name: updatedMaster.name,
+      //     description: updatedMaster.description || undefined,
+      //     categoryData: updatedMaster.categoryData || undefined,
+      //     imageUrl: updatedMaster.imageUrl
+      //   })
+      // } catch (searchError) {
+      //   console.warn('Failed to update search index:', searchError)
+      // }
       
       return updatedMaster
     }),
 
-  // Update a color
-  updateColor: protectedProcedure
+  // Update a color - DUPLICATE DISABLED
+  updateColor2: protectedProcedure
     .input(z.object({
       id: z.string(),
       name: z.string().optional(),
@@ -2409,11 +2351,11 @@ export const yarnRouter = createTRPCRouter({
       // Get existing category data
       let updatedCategoryData = existingColor.categoryData
       if (colorCode !== undefined) {
-        const existingData = existingColor.categoryData ? JSON.parse(existingColor.categoryData) : {}
-        updatedCategoryData = JSON.stringify({
-          ...existingData,
+        const existingData = existingColor.categoryData || {}
+        updatedCategoryData = {
+          ...(existingData as any),
           colorCode
-        })
+        }
       }
       
       // Update the color
@@ -2422,28 +2364,28 @@ export const yarnRouter = createTRPCRouter({
         data: {
           ...(name && { name }),
           ...(imageUrl !== undefined && { imageUrl }),
-          ...(colorCode !== undefined && { categoryData: updatedCategoryData })
+          ...(colorCode !== undefined && { categoryData: updatedCategoryData || undefined })
         }
       })
       
-      // Update search index if available
-      try {
-        await meilisearchService.updateDocument('items', {
-          id: updatedColor.id,
-          name: updatedColor.name,
-          description: updatedColor.description,
-          categoryData: updatedColor.categoryData,
-          imageUrl: updatedColor.imageUrl
-        })
-      } catch (searchError) {
-        console.warn('Failed to update search index:', searchError)
-      }
+      // Update search index if available - TEMPORARILY DISABLED
+      // try {
+      //   await meilisearchService.updateDocument('items', {
+      //     id: updatedColor.id,
+      //     name: updatedColor.name,
+      //     description: updatedColor.description || undefined,
+      //     categoryData: updatedColor.categoryData || undefined,
+      //     imageUrl: updatedColor.imageUrl
+      //   })
+      // } catch (searchError) {
+      //   console.warn('Failed to update search index:', searchError)
+      // }
       
       return updatedColor
     }),
 
-  // Delete a color and all related batches
-  deleteColor: protectedProcedure
+  // Delete a color and all related batches - DUPLICATE DISABLED
+  deleteColor2: protectedProcedure
     .input(z.object({
       id: z.string()
     }))
@@ -2569,15 +2511,15 @@ export const yarnRouter = createTRPCRouter({
           })
         })
         
-        // Update search index if available
-        try {
-          await meilisearchService.deleteDocument('items', id)
-          for (const batchId of deletedBatchIds) {
-            await meilisearchService.deleteDocument('items', batchId)
-          }
-        } catch (searchError) {
-          console.warn('Failed to update search index after delete:', searchError)
-        }
+        // Update search index if available - TEMPORARILY DISABLED
+        // try {
+        //   await meilisearchService.deleteDocument('items', id)
+        //   for (const batchId of deletedBatchIds) {
+        //     await meilisearchService.deleteDocument('items', batchId)
+        //   }
+        // } catch (searchError) {
+        //   console.warn('Failed to update search index after delete:', searchError)
+        // }
         
         return { success: true }
         
@@ -2647,14 +2589,13 @@ export const yarnRouter = createTRPCRouter({
             const colors = await tx.itemRelation.findMany({
               where: {
                 fromItemId: id,
-                userId: user.id
+                userId: user.id,
+                toItem: {
+                  categoryId: garnColorCategory.id
+                }
               },
               include: {
-                toItem: {
-                  where: {
-                    categoryId: garnColorCategory.id
-                  }
-                }
+                toItem: true
               }
             })
             colorIds.push(...colors.map(r => r.toItemId))
@@ -2667,14 +2608,13 @@ export const yarnRouter = createTRPCRouter({
             const directBatches = await tx.itemRelation.findMany({
               where: {
                 fromItemId: id,
-                userId: user.id
+                userId: user.id,
+                toItem: {
+                  categoryId: garnBatchCategory.id
+                }
               },
               include: {
-                toItem: {
-                  where: {
-                    categoryId: garnBatchCategory.id
-                  }
-                }
+                toItem: true
               }
             })
             batchIds.push(...directBatches.map(r => r.toItemId))
@@ -2759,15 +2699,15 @@ export const yarnRouter = createTRPCRouter({
           })
         })
         
-        // Update search index if available
-        try {
-          await meilisearchService.deleteDocument('items', id)
-          for (const relatedId of [...deletedColorIds, ...deletedBatchIds]) {
-            await meilisearchService.deleteDocument('items', relatedId)
-          }
-        } catch (searchError) {
-          console.warn('Failed to update search index after delete:', searchError)
-        }
+        // Update search index if available - TEMPORARILY DISABLED
+        // try {
+        //   await meilisearchService.deleteDocument('items', id)
+        //   for (const relatedId of [...deletedColorIds, ...deletedBatchIds]) {
+        //     await meilisearchService.deleteDocument('items', relatedId)
+        //   }
+        // } catch (searchError) {
+        //   console.warn('Failed to update search index after delete:', searchError)
+        // }
         
         return { success: true }
         
@@ -2807,22 +2747,22 @@ export const yarnRouter = createTRPCRouter({
           }
         )
 
-        // Update search index if available
-        try {
-          await meilisearchService.indexDocument({
-            id: remnant.id,
-            type: 'item',
-            name: remnant.name,
-            description: remnant.description || '',
-            categoryName: 'Garn Restegarn',
-            quantity: remnant.availableQuantity,
-            userId: ctx.user.id,
-            createdAt: remnant.createdAt.toISOString(),
-            updatedAt: remnant.updatedAt.toISOString()
-          })
-        } catch (searchError) {
-          console.warn('Failed to update search index:', searchError)
-        }
+        // Update search index if available - TEMPORARILY DISABLED
+        // try {
+        //   await meilisearchService.indexDocument({
+        //     id: remnant.id,
+        //     type: 'item',
+        //     name: remnant.name,
+        //     description: remnant.description || '',
+        //     categoryName: 'Garn Restegarn',
+        //     quantity: Number(remnant.availableQuantity),
+        //     userId: ctx.user.id,
+        //     createdAt: remnant.createdAt.toISOString(),
+        //     updatedAt: remnant.updatedAt.toISOString()
+        //   })
+        // } catch (searchError) {
+        //   console.warn('Failed to update search index:', searchError)
+        // }
 
         return remnant
       } catch (error) {
@@ -2952,9 +2892,9 @@ export const yarnRouter = createTRPCRouter({
           })
         }
 
-        const currentData = remnant.categoryData ? JSON.parse(remnant.categoryData) : {}
+        const currentData = remnant.categoryData || {}
         const updatedData = {
-          ...currentData,
+          ...(currentData as any),
           ...(input.condition && { condition: input.condition }),
           ...(input.notes && { notes: input.notes })
         }
@@ -2974,20 +2914,20 @@ export const yarnRouter = createTRPCRouter({
           }
         })
 
-        // Update search index
-        try {
-          await meilisearchService.indexDocument('items', {
-            id: updatedRemnant.id,
-            name: updatedRemnant.name,
-            description: updatedRemnant.description || '',
-            category: 'Garn Restegarn',
-            availableQuantity: updatedRemnant.availableQuantity,
-            unit: updatedRemnant.unit,
-            userId: ctx.user.id
-          })
-        } catch (searchError) {
-          console.warn('Failed to update search index:', searchError)
-        }
+        // Update search index - TEMPORARILY DISABLED
+        // try {
+        //   await meilisearchService.indexDocument('items', {
+        //     id: updatedRemnant.id,
+        //     name: updatedRemnant.name,
+        //     description: updatedRemnant.description || '',
+        //     category: 'Garn Restegarn',
+        //     availableQuantity: updatedRemnant.availableQuantity,
+        //     unit: updatedRemnant.unit,
+        //     userId: ctx.user.id
+        //   })
+        // } catch (searchError) {
+        //   console.warn('Failed to update search index:', searchError)
+        // }
 
         return updatedRemnant
       } catch (error) {
@@ -3019,20 +2959,20 @@ export const yarnRouter = createTRPCRouter({
           input.notes
         )
 
-        // Update search index
-        try {
-          await meilisearchService.indexDocument('items', {
-            id: updatedRemnant.id,
-            name: updatedRemnant.name,
-            description: updatedRemnant.description || '',
-            category: 'Garn Restegarn',
-            availableQuantity: updatedRemnant.availableQuantity,
-            unit: updatedRemnant.unit,
-            userId: ctx.user.id
-          })
-        } catch (searchError) {
-          console.warn('Failed to update search index:', searchError)
-        }
+        // Update search index - TEMPORARILY DISABLED
+        // try {
+        //   await meilisearchService.indexDocument('items', {
+        //     id: updatedRemnant.id,
+        //     name: updatedRemnant.name,
+        //     description: updatedRemnant.description || '',
+        //     category: 'Garn Restegarn',
+        //     availableQuantity: updatedRemnant.availableQuantity,
+        //     unit: updatedRemnant.unit,
+        //     userId: ctx.user.id
+        //   })
+        // } catch (searchError) {
+        //   console.warn('Failed to update search index:', searchError)
+        // }
 
         return updatedRemnant
       } catch (error) {
@@ -3080,12 +3020,12 @@ export const yarnRouter = createTRPCRouter({
           where: { id: input }
         })
 
-        // Update search index
-        try {
-          await meilisearchService.deleteDocument('items', input)
-        } catch (searchError) {
-          console.warn('Failed to update search index:', searchError)
-        }
+        // Update search index - TEMPORARILY DISABLED
+        // try {
+        //   await meilisearchService.deleteDocument('items', input)
+        // } catch (searchError) {
+        //   console.warn('Failed to update search index:', searchError)
+        // }
 
         return { success: true }
       } catch (error) {

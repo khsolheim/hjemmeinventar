@@ -116,7 +116,19 @@ export const authConfig = {
     strategy: 'jwt'
   },
   secret: process.env.NEXTAUTH_SECRET,
-  trustHost: true
+  trustHost: true,
+  useSecureCookies: process.env.NODE_ENV === 'production',
+  cookies: {
+    sessionToken: {
+      name: process.env.NODE_ENV === 'production' ? '__Secure-next-auth.session-token' : 'next-auth.session-token',
+      options: {
+        httpOnly: true,
+        sameSite: 'lax',
+        path: '/',
+        secure: process.env.NODE_ENV === 'production'
+      }
+    }
+  }
 } satisfies NextAuthConfig
 
 // Type definitions for enhanced session

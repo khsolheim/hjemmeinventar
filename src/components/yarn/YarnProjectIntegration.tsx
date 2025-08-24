@@ -55,7 +55,7 @@ export function YarnProjectIntegration({
       setUsageNotes('')
       toast.success('Garn lagt til prosjekt!')
     },
-    onError: (error) => {
+    onError: (error: any) => {
       toast.error(`Feil: ${error.message}`)
     }
   })
@@ -65,13 +65,13 @@ export function YarnProjectIntegration({
       refetchUsage()
       toast.success('Garn fjernet fra prosjekt')
     },
-    onError: (error) => {
+    onError: (error: any) => {
       toast.error(`Feil: ${error.message}`)
     }
   })
 
   const createProjectMutation = trpc.yarn.createProject.useMutation({
-    onSuccess: async (project) => {
+    onSuccess: async (project: any) => {
       toast.success('Prosjekt opprettet')
       setIsCreateProjectOpen(false)
       setSelectedProjectId(project.id)
@@ -80,7 +80,7 @@ export function YarnProjectIntegration({
       setNewProjectStatus('PLANNED')
       await utils.yarn.getProjects.invalidate()
     },
-    onError: (error) => {
+    onError: (error: any) => {
       toast.error(`Kunne ikke opprette prosjekt: ${error.message}`)
     }
   })
@@ -186,7 +186,7 @@ export function YarnProjectIntegration({
                       <SelectValue placeholder="Velg et prosjekt" />
                     </SelectTrigger>
                     <SelectContent>
-                      {(allProjects?.projects || []).map((project) => (
+                      {(allProjects?.projects || []).map((project: any) => (
                         <SelectItem key={project.id} value={project.id}>
                           <div className="flex items-center gap-2">
                             {getStatusIcon(project.status)}
@@ -309,7 +309,7 @@ export function YarnProjectIntegration({
           </div>
         ) : (
           <div className="space-y-3">
-            {(yarnUsage || []).map((usage) => (
+            {(yarnUsage || []).map((usage: any) => (
               <div 
                 key={usage.id} 
                 className="flex items-center justify-between p-3 border rounded-lg"
@@ -318,7 +318,7 @@ export function YarnProjectIntegration({
                   <div className="flex items-center gap-2 mb-1">
                     {getStatusIcon(usage.project.status)}
                     <h4 className="font-medium">{usage.project.name}</h4>
-                    <Badge variant={getStatusBadgeVariant(usage.project.status)}>
+                    <Badge variant={getStatusBadgeVariant(usage.project.status) as any}>
                       {usage.project.status}
                     </Badge>
                   </div>

@@ -93,9 +93,8 @@ export function RemnantCreator({
   })
 
   // Get yarn batches for selection
-  const { data: yarnData } = trpc.yarn.getYarns.useQuery({
-    limit: 100,
-    includeEmptyBatches: true
+  const { data: yarnData } = trpc.yarn.getAllMasters.useQuery({
+    limit: 100
   })
 
   // Get projects for selection
@@ -110,7 +109,7 @@ export function RemnantCreator({
       onOpenChange(false)
       onSuccess?.()
     },
-    onError: (error) => {
+    onError: (error: any) => {
       toast.error(`Feil ved opprettelse: ${error.message}`)
     }
   })
@@ -126,9 +125,9 @@ export function RemnantCreator({
 
   // Get selected batch info
   const selectedBatchId = form.watch('originalBatchId')
-  const selectedBatch = yarnData?.items.find(item => item.id === selectedBatchId)
+  const selectedBatch = yarnData?.masters?.find((item: any) => item.id === selectedBatchId) as any
   const selectedBatchData = selectedBatch?.categoryData 
-    ? JSON.parse(selectedBatch.categoryData) 
+    ? (selectedBatch.categoryData as any)
     : null
 
   return (
@@ -160,8 +159,8 @@ export function RemnantCreator({
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      {yarnData?.items.map((item) => {
-                        const data = item.categoryData ? JSON.parse(item.categoryData) : null
+                      {yarnData?.masters?.map((item: any) => {
+                        const data = (item.categoryData as any) || null
                         return (
                           <SelectItem key={item.id} value={item.id}>
                             <div className="flex items-center gap-2">
@@ -270,7 +269,7 @@ export function RemnantCreator({
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      {Object.entries(conditionLabels).map(([value, label]) => (
+                      {Object.entries(conditionLabels).map(([value, label]: [string, string]) => (
                         <SelectItem key={value} value={value}>
                           <div className="flex flex-col">
                             <span>{label}</span>
@@ -302,7 +301,7 @@ export function RemnantCreator({
                     </FormControl>
                     <SelectContent>
                       <SelectItem value="">Ingen prosjekt</SelectItem>
-                      {projectsData?.projects.map((project) => (
+                      {projectsData?.projects.map((project: any) => (
                         <SelectItem key={project.id} value={project.id}>
                           <div className="flex items-center gap-2">
                             <span>{project.name}</span>

@@ -128,7 +128,7 @@ export function MobileYarnStats() {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
-            {(stockAlerts?.lowStockItems || []).slice(0, 5).map((item) => (
+            {(stockAlerts?.lowStockItems || []).slice(0, 5).map((item: any) => (
               <div key={item.id} className="flex items-center justify-between">
                 <div className="flex-1">
                   <div className="font-medium text-sm">{item.name}</div>

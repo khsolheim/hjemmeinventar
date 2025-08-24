@@ -330,7 +330,7 @@ class AdvancedBarcodeScanner {
     
     let sum = 0
     for (let i = 0; i < 12; i++) {
-      sum += digits[i] * (i % 2 === 0 ? 1 : 3)
+      sum += (digits[i] || 0) * (i % 2 === 0 ? 1 : 3)
     }
     
     const calculatedChecksum = (10 - (sum % 10)) % 10
@@ -345,7 +345,7 @@ class AdvancedBarcodeScanner {
     
     let sum = 0
     for (let i = 0; i < 7; i++) {
-      sum += digits[i] * (i % 2 === 0 ? 3 : 1)
+      sum += (digits[i] || 0) * (i % 2 === 0 ? 3 : 1)
     }
     
     const calculatedChecksum = (10 - (sum % 10)) % 10
@@ -360,7 +360,7 @@ class AdvancedBarcodeScanner {
     
     let sum = 0
     for (let i = 0; i < 11; i++) {
-      sum += digits[i] * (i % 2 === 0 ? 3 : 1)
+      sum += (digits[i] || 0) * (i % 2 === 0 ? 3 : 1)
     }
     
     const calculatedChecksum = (10 - (sum % 10)) % 10

@@ -23,9 +23,9 @@ async function main() {
           userId,
           categoryId: batchCategory.id,
           OR: [
-            { relatedItems: { some: { id: m.id } } },
-            { relatedTo: { some: { id: m.id } } },
-            { categoryData: { contains: `"masterItemId":"${m.id}"` } }
+            // { relatedItems: { some: { id: m.id } } }, // Removed - not in schema
+            // { relatedTo: { some: { id: m.id } } }, // Removed - not in schema
+            // { categoryData: { contains: `"masterItemId":"${m.id}"` } } // Removed - contains not in schema
           ]
         },
         select: { id: true }
@@ -49,8 +49,8 @@ async function main() {
             userId,
             categoryId: batchCategory.id,
             OR: [
-              { relatedItems: { some: { id: c.id } } },
-              { relatedTo: { some: { id: c.id } } }
+              // { relatedItems: { some: { id: c.id } } }, // Removed - not in schema
+              // { relatedTo: { some: { id: c.id } } } // Removed - not in schema
             ]
           },
           select: { id: true }

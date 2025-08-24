@@ -89,7 +89,7 @@ class AdlibrsScraper implements Scraper {
     const images = imageService.extractImagesFromHtml($, url)
     
     // Legacy imageUrl for bakoverkompatibilitet
-    const imageUrl = images.length > 0 ? images[0].url : undefined
+    const imageUrl = images.length > 0 && images[0] ? images[0].url : undefined
     
     return {
       name,
@@ -140,7 +140,7 @@ class AdlibrsScraper implements Scraper {
     
     for (const selector of adlibrisSelectors) {
       const elements = $(selector)
-      elements.each((i, elem) => {
+      elements.each((i: any, elem: any) => {
         const priceText = $(elem).text().trim()
         const parentText = $(elem).parent().text().trim().toLowerCase()
         
@@ -193,20 +193,27 @@ class AdlibrsScraper implements Scraper {
     }
     
     // Søk i strukturert JSON-LD data
-    $('script[type="application/ld+json"]').each((i, script) => {
+    let foundJsonPrice: number | null = null
+    $('script[type="application/ld+json"]').each((i: any, script: any) => {
       try {
         const jsonData = JSON.parse($(script).html() || '{}')
         if (jsonData.offers && jsonData.offers.price) {
           const price = parseFloat(jsonData.offers.price)
           if (price >= 1 && price <= 1000) { // Justert tilbake til 1
             console.log(`Found price from JSON-LD: ${price}`)
-            return price
+            foundJsonPrice = price
+            return false // Stop iterating
           }
         }
       } catch (e) {
         // Ignorer JSON parsing feil
       }
+      return true // Continue iterating
     })
+    
+    if (foundJsonPrice) {
+      return foundJsonPrice
+    }
     
     // Søk etter spesifikke norske pris-mønstre i hele dokumentet
     const allText = $('body').text()
@@ -233,7 +240,7 @@ class AdlibrsScraper implements Scraper {
     for (const pattern of pricePatterns) {
       const matches = allText.match(pattern)
       if (matches) {
-        matches.forEach(match => {
+        matches.forEach((match: any) => {
           const priceMatch = match.match(/(\d+[\.,]?\d*)/)
           if (priceMatch) {
             const price = parseFloat(priceMatch[1].replace(',', '.'))
@@ -286,8 +293,8 @@ class AdlibrsScraper implements Scraper {
           return parseFloat(priceB) - parseFloat(priceA)
         })
       
-      const selectedPrice = parseFloat(sortedPrices[0][0])
-      console.log(`Selected price: ${selectedPrice} (frequency: ${sortedPrices[0][1]}) from prices:`, foundPrices)
+      const selectedPrice = parseFloat(sortedPrices[0]?.[0] || '0')
+      console.log(`Selected price: ${selectedPrice} (frequency: ${sortedPrices[0]?.[1]}) from prices:`, foundPrices)
       return selectedPrice
     }
     
@@ -300,7 +307,7 @@ class AdlibrsScraper implements Scraper {
     console.log('Extracting producer from:', name)
     
     // Først, sjekk JSON-LD strukturert data
-    $('script[type="application/ld+json"]').each((i, script) => {
+    $('script[type="application/ld+json"]').each((i: any, script: any) => {
       try {
         const jsonData = JSON.parse($(script).html() || '{}')
         if (jsonData.brand) {
@@ -432,7 +439,7 @@ class AdlibrsScraper implements Scraper {
     }
     
     // Søk etter andre fargevalg i linker som refererer til samme produkt
-    $('a').each((i, elem) => {
+    $('a').each((i: any, elem: any) => {
       const href = $(elem).attr('href') || ''
       const linkText = $(elem).text().trim()
       
@@ -478,7 +485,7 @@ class AdlibrsScraper implements Scraper {
             name: colorName,
             colorCode: colorCode || undefined,
             available: isAvailable,
-            sku: colorSku
+            // sku: colorSku // Removed - not in type definition
           })
         }
       }
@@ -486,7 +493,7 @@ class AdlibrsScraper implements Scraper {
     
     // Fallback: Standard fargevalg selektorer
     if (colors.length === 0) {
-      $('.color-option, .colour-option, [class*="color"]').each((i, elem) => {
+      $('.color-option, .colour-option, [class*="color"]').each((i: any, elem: any) => {
         const colorName = $(elem).text().trim() || $(elem).attr('title') || $(elem).attr('alt')
         if (colorName && colorName.length > 1 && colorName.length < 30) {
           colors.push({
@@ -538,7 +545,7 @@ class AdlibrsScraper implements Scraper {
     // Fallback: Søk etter tekst som inneholder produktdetaljer
     if (!description || description.length < 50) {
       // Finn tekst blokker som ser ut som produktbeskrivelser
-      $('p, div').each((i, elem) => {
+      $('p, div').each((i: any, elem: any) => {
         const text = $(elem).text().trim()
         
         // Sjekk om teksten inneholder garnrelaterte nøkkelord
@@ -660,7 +667,7 @@ class AdlibrsScraper implements Scraper {
       for (const pattern of needlePatterns) {
         const match = textSource.match(pattern)
         if (match) {
-          info.needleSize = `${match[1].replace(',', '.')}mm`
+          info.needleSize = `${(match[1] || '').replace(',', '.')}mm`
           console.log(`Found needle size: ${info.needleSize} using pattern: ${pattern}`)
           break
         }
@@ -684,7 +691,7 @@ class AdlibrsScraper implements Scraper {
       for (const pattern of compositionPatterns) {
         const match = textSource.match(pattern)
         if (match) {
-          info.composition = match[1].trim()
+          info.composition = (match[1] || '').trim()
             .replace(/\s+/g, ' ')
             .replace(/,\s*/g, ', ')
             .replace(/\n.*/, '') // Fjern alt etter første linjeskift
@@ -753,7 +760,7 @@ class AdlibrsScraper implements Scraper {
           // Stopp ved første punktum hvis det ikke er del av temperatur
           if (care.includes('.')) {
             const sentences = care.split('.')
-            care = sentences[0]
+            care = sentences[0] || ''
             // Legg til andre setning kun hvis det er relatert til tørking
             if (sentences[1] && sentences[1].trim().match(/^\s*(plantørking|tørking|ikke|aldri)/i)) {
               care += '. ' + sentences[1].trim()
@@ -795,7 +802,7 @@ class AdlibrsScraper implements Scraper {
       for (const pattern of weightCategoryPatterns) {
         const match = textSource.match(pattern)
         if (match) {
-          info.weightCategory = match[1].trim()
+          info.weightCategory = (match[1] || '').trim()
           console.log(`Found weight category: ${info.weightCategory} using pattern: ${pattern}`)
           break
         }
@@ -869,7 +876,7 @@ class AdlibrsScraper implements Scraper {
     for (const pattern of certificationPatterns) {
       const matches = pageText.match(pattern)
       if (matches) {
-        certifications.push(...matches.map(m => m.trim()))
+        certifications.push(...matches.map((m: any) => m.trim()))
       }
     }
     
@@ -917,7 +924,7 @@ class AdlibrsScraper implements Scraper {
     
     // Hent lenker til oppskrifter/mønstre
     const patternLinks: string[] = []
-    $('a[href*="oppskrift"], a[href*="pattern"], a[href*="drops"], a:contains("oppskrift"), a:contains("pattern")').each((i, elem) => {
+    $('a[href*="oppskrift"], a[href*="pattern"], a[href*="drops"], a:contains("oppskrift"), a:contains("pattern")').each((i: any, elem: any) => {
       const href = $(elem).attr('href')
       const text = $(elem).text().toLowerCase()
       
@@ -935,7 +942,7 @@ class AdlibrsScraper implements Scraper {
     const specifications: Record<string, string> = {}
     
     // Søk etter strukturerte produktdetaljer
-    $('.product-details dl dt, .specifications dt, .tech-specs dt').each((i, elem) => {
+    $('.product-details dl dt, .specifications dt, .tech-specs dt').each((i: any, elem: any) => {
       const key = $(elem).text().trim().replace(':', '')
       const value = $(elem).next('dd').text().trim()
       
@@ -945,7 +952,7 @@ class AdlibrsScraper implements Scraper {
     })
     
     // Søk etter andre strukturerte data
-    $('*:contains(":")').each((i, elem) => {
+    $('*:contains(":")').each((i: any, elem: any) => {
       const text = $(elem).text().trim()
       const colonMatch = text.match(/^([^:]+):\s*([^:]+)$/)
       
@@ -995,7 +1002,7 @@ class HobbiiScraper implements Scraper {
     
     // Hent alle produktbilder
     const images = imageService.extractImagesFromHtml($, url)
-    const imageUrl = images.length > 0 ? images[0].url : undefined
+    const imageUrl = images.length > 0 && images[0] ? images[0].url : undefined
     
     return {
       name,
@@ -1022,7 +1029,7 @@ class HobbiiScraper implements Scraper {
     const specs: Partial<YarnProductData> = {}
     
     // Hobbii bruker ofte dl/dt struktur for specs
-    $('dl dt').each((i, elem) => {
+    $('dl dt').each((i: any, elem: any) => {
       const label = $(elem).text().toLowerCase()
       const value = $(elem).next('dd').text().trim()
       
@@ -1060,7 +1067,7 @@ class GenericScraper implements Scraper {
     // Prøv å finne pris
     const priceElements = $('[class*="price"], [id*="price"]')
     let price: number | undefined
-    priceElements.each((i, elem) => {
+    priceElements.each((i: any, elem: any) => {
       const text = $(elem).text()
       const match = text.match(/(\d+[\.,]?\d*)/)?.[1]
       if (match && !price) {
@@ -1070,7 +1077,7 @@ class GenericScraper implements Scraper {
     
     // Hent alle produktbilder
     const images = imageService.extractImagesFromHtml($, url)
-    const imageUrl = images.length > 0 ? images[0].url : undefined
+    const imageUrl = images.length > 0 && images[0] ? images[0].url : undefined
 
     return {
       name,
@@ -1161,7 +1168,7 @@ Svar kun med tallet eller null:
         return null
       }
 
-      console.log(`AI valgte bilde ${selectedIndex}: ${images[selectedIndex].url}`)
+      console.log(`AI valgte bilde ${selectedIndex}: ${images[selectedIndex]?.url}`)
       return selectedIndex
 
     } catch (error) {
@@ -1265,15 +1272,15 @@ Returner svaret som gyldig JSON uten ekstra tekst.
         }
         
         if (aiData.yardage !== null && !isNaN(parseFloat(aiData.yardage))) {
-          cleaned.yardage = parseFloat(aiData.yardage)
+          cleaned.yardage = aiData.yardage
         }
         
         if (aiData.weight !== null && !isNaN(parseFloat(aiData.weight))) {
-          cleaned.weight = parseFloat(aiData.weight)
+          cleaned.weight = aiData.weight
         }
         
         if (aiData.needleSize !== null && !isNaN(parseFloat(aiData.needleSize))) {
-          cleaned.needleSize = parseFloat(aiData.needleSize)
+          cleaned.needleSize = aiData.needleSize
         }
         
         if (aiData.gauge && typeof aiData.gauge === 'string') {
@@ -1375,7 +1382,7 @@ Returner svaret som gyldig JSON uten ekstra tekst.
         weightCategory: aiData.weightCategory || data.weightCategory,
         description: data.description, // Behold original beskrivelse
         images: data.images, // Behold bilder fra tradisjonell scraping
-        extendedInfo: data.extendedInfo,
+        // extendedInfo: data.extendedInfo, // Removed - not in type definition
         source: data.source // Behold source-informasjon fra original data
       }
       

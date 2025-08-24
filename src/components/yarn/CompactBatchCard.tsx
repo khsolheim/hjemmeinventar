@@ -26,12 +26,24 @@ interface CompactBatchCardProps {
 }
 
 // Helper function to parse batch category data
-function getBatchData(categoryData?: string) {
-  try {
-    return categoryData ? JSON.parse(categoryData) : {}
-  } catch {
-    return {}
+function getBatchData(categoryData?: any) {
+  if (!categoryData) return {}
+  
+  // If it's already an object, return it directly
+  if (typeof categoryData === 'object') {
+    return categoryData
   }
+  
+  // If it's a string, try to parse it as JSON
+  if (typeof categoryData === 'string') {
+    try {
+      return JSON.parse(categoryData)
+    } catch {
+      return {}
+    }
+  }
+  
+  return {}
 }
 
 export function CompactBatchCard({ 
@@ -63,7 +75,7 @@ export function CompactBatchCard({
       return
     }
     
-    if (batches.length === 1) {
+    if (batches.length === 1 && batches[0]) {
       router.push(`/garn/batch/${batches[0].id}`)
     }
     // For flere batches, la kortet være klikkbart men ikke navigere automatisk
@@ -101,7 +113,7 @@ export function CompactBatchCard({
           <div className="flex gap-1">
             {batches.length === 1 && (
               <>
-                <Link href={`/garn/batch/${batches[0].id}`} className="inline-flex">
+                <Link href={`/garn/batch/${batches[0]?.id}`} className="inline-flex">
                   <Button variant="ghost" size="sm" title="Åpne detaljer">
                     <QrCode className="h-3 w-3" />
                   </Button>
@@ -112,7 +124,9 @@ export function CompactBatchCard({
                     size="sm" 
                     onClick={(e) => {
                       e.stopPropagation()
-                      onEdit(batches[0].id)
+                      if (batches[0]?.id) {
+                        onEdit(batches[0].id)
+                      }
                     }}
                   >
                     <Edit className="h-3 w-3" />
@@ -125,7 +139,9 @@ export function CompactBatchCard({
                     className="text-red-600 hover:text-red-700"
                     onClick={(e) => {
                       e.stopPropagation()
-                      onDelete(batches[0].id, batches[0].name)
+                      if (batches[0]?.id && batches[0]?.name) {
+                        onDelete(batches[0].id, batches[0].name)
+                      }
                     }}
                   >
                     <Trash2 className="h-3 w-3" />

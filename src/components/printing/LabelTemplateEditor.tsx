@@ -33,9 +33,14 @@ import {
   AlignRight,
   Bold,
   Italic,
-  Underline
+  Underline,
+  Database,
+  Plus,
+  Settings
 } from 'lucide-react'
 import Link from 'next/link'
+import { trpc } from '@/lib/trpc/client'
+import { LabelSizeSelector } from './LabelSizeSelector'
 
 // Template element types
 interface TemplateElement {
@@ -62,7 +67,7 @@ interface Template {
   name: string
   description: string
   type: 'QR' | 'BARCODE' | 'CUSTOM'
-  size: 'SMALL' | 'STANDARD' | 'LARGE'
+  size: string // Now uses LabelSize ID
   category: string
   elements: TemplateElement[]
   variables: string[]
@@ -76,8 +81,17 @@ interface Template {
   }
 }
 
-// Size presets in pixels (300 DPI)
-const sizePresets = {
+// Props for the component
+interface LabelTemplateEditorProps {
+  initialName?: string
+  initialType?: 'QR' | 'BARCODE' | 'CUSTOM'
+  initialSize?: string
+  mode?: 'new' | 'edit' | 'quick'
+  quickTemplate?: string
+}
+
+// Fallback size presets (for backward compatibility)
+const fallbackSizePresets = {
   SMALL: { width: 354, height: 177, label: '30x15mm' },
   STANDARD: { width: 638, height: 295, label: '54x25mm' },
   LARGE: { width: 1051, height: 425, label: '89x36mm' }
@@ -121,30 +135,43 @@ const quickTemplateData = {
   }
 }
 
-export function LabelTemplateEditorWireframe() {
+export function LabelTemplateEditor({
+  initialName = 'Ny etikettmal',
+  initialType = 'CUSTOM',
+  initialSize = '',
+  mode = 'new',
+  quickTemplate = ''
+}: LabelTemplateEditorProps) {
   const router = useRouter()
-  const searchParams = useSearchParams()
   const canvasRef = useRef<HTMLDivElement>(null)
   
-  // Initialize template from URL params
+  // Get label sizes from database
+  const { data: labelSizes } = trpc.labelSizes.getAll.useQuery()
+  
+  // Initialize template from props
   const [template, setTemplate] = useState<Template>(() => {
-    const name = searchParams.get('name') || 'Ny mal'
-    const type = (searchParams.get('type') as Template['type']) || 'QR'
-    const size = (searchParams.get('size') as Template['size']) || 'STANDARD'
-    const quickTemplate = searchParams.get('template')
+    const name = initialName
+    const type = initialType
+    const sizeParam = initialSize || 'STANDARD'
     
-    const preset = sizePresets[size]
+    // Find default size from database or use fallback
+    const defaultSize = labelSizes?.find(s => s.isDefault) || 
+                       labelSizes?.[0] || 
+                       { id: 'STANDARD', width: 638, height: 295 }
+    
+    const selectedSize = sizeParam === 'STANDARD' ? defaultSize.id : sizeParam
+    
     const baseTemplate: Template = {
       name,
       description: '',
       type,
-      size,
+      size: selectedSize,
       category: '',
       elements: [],
       variables: [],
       canvasSettings: {
-        width: preset.width,
-        height: preset.height,
+        width: defaultSize.width,
+        height: defaultSize.height,
         backgroundColor: '#ffffff',
         gridEnabled: true,
         snapToGrid: true,
@@ -166,9 +193,30 @@ export function LabelTemplateEditorWireframe() {
   const [zoom, setZoom] = useState(100)
   const [isDragging, setIsDragging] = useState(false)
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 })
+  const [dragStart, setDragStart] = useState({ x: 0, y: 0 })
+
+  // Update template when labelSizes are loaded
+  useEffect(() => {
+    if (labelSizes && labelSizes.length > 0) {
+      const currentSize = labelSizes.find(s => s.id === template.size)
+      const defaultSize = labelSizes.find(s => s.isDefault) || labelSizes[0]
+      
+      if (!currentSize && defaultSize) {
+        setTemplate(prev => ({
+          ...prev,
+          size: defaultSize.id,
+          canvasSettings: {
+            ...prev.canvasSettings,
+            width: defaultSize.width,
+            height: defaultSize.height
+          }
+        }))
+      }
+    }
+  }, [labelSizes, template.size])
 
   // Element manipulation functions
-  const addElement = (type: TemplateElement['type']) => {
+  const addElement = (type: TemplateElement['type'], content?: string) => {
     const newElement: TemplateElement = {
       id: Date.now().toString(),
       type,
@@ -176,7 +224,7 @@ export function LabelTemplateEditorWireframe() {
       y: 50,
       width: type === 'text' ? 150 : 80,
       height: type === 'text' ? 30 : 80,
-      content: type === 'text' ? 'Tekst' : type === 'qr' ? '{{item.qrCode}}' : '{{item.barcode}}',
+      content: content || (type === 'text' ? 'Tekst' : type === 'qr' ? '{{item.qrCode}}' : '{{item.barcode}}'),
       style: type === 'text' ? { fontSize: 14, color: '#000000' } : {}
     }
     
@@ -223,6 +271,102 @@ export function LabelTemplateEditorWireframe() {
   const selectedElementData = selectedElement ? 
     template.elements.find(el => el.id === selectedElement) : null
 
+  // Drag & Drop handlers
+  const handleMouseDown = (e: React.MouseEvent, elementId: string) => {
+    e.preventDefault()
+    e.stopPropagation()
+    
+    const element = template.elements.find(el => el.id === elementId)
+    if (!element) return
+    
+    setSelectedElement(elementId)
+    setIsDragging(true)
+    setDragStart({ x: e.clientX, y: e.clientY })
+    setDragOffset({ 
+      x: e.clientX - element.x * (zoom / 100), 
+      y: e.clientY - element.y * (zoom / 100) 
+    })
+  }
+
+  const handleMouseMove = (e: React.MouseEvent) => {
+    if (!isDragging || !selectedElement) return
+    
+    const canvasRect = canvasRef.current?.getBoundingClientRect()
+    if (!canvasRect) return
+    
+    const scale = zoom / 100
+    const newX = Math.max(0, (e.clientX - dragOffset.x) / scale)
+    const newY = Math.max(0, (e.clientY - dragOffset.y) / scale)
+    
+    // Snap to grid if enabled
+    const snapX = template.canvasSettings.snapToGrid ? 
+      Math.round(newX / template.canvasSettings.gridSize) * template.canvasSettings.gridSize : newX
+    const snapY = template.canvasSettings.snapToGrid ? 
+      Math.round(newY / template.canvasSettings.gridSize) * template.canvasSettings.gridSize : newY
+    
+    updateElement(selectedElement, { x: snapX, y: snapY })
+  }
+
+  const handleMouseUp = () => {
+    setIsDragging(false)
+  }
+
+  // Handle size change
+  const handleSizeChange = (sizeId: string) => {
+    const newSize = labelSizes?.find(s => s.id === sizeId)
+    if (newSize) {
+      setTemplate(prev => ({
+        ...prev,
+        size: sizeId,
+        canvasSettings: {
+          ...prev.canvasSettings,
+          width: newSize.width,
+          height: newSize.height
+        }
+      }))
+    }
+  }
+
+  // Get current size info
+  const currentSize = labelSizes?.find(s => s.id === template.size)
+  const sizeLabel = currentSize ? `${currentSize.widthMm}×${currentSize.heightMm}mm` : 'Standard'
+
+  // Global mouse event listeners for better drag experience
+  useEffect(() => {
+    const handleGlobalMouseMove = (e: MouseEvent) => {
+      if (isDragging && selectedElement) {
+        const canvasRect = canvasRef.current?.getBoundingClientRect()
+        if (!canvasRect) return
+        
+        const scale = zoom / 100
+        const newX = Math.max(0, (e.clientX - dragOffset.x) / scale)
+        const newY = Math.max(0, (e.clientY - dragOffset.y) / scale)
+        
+        // Snap to grid if enabled
+        const snapX = template.canvasSettings.snapToGrid ? 
+          Math.round(newX / template.canvasSettings.gridSize) * template.canvasSettings.gridSize : newX
+        const snapY = template.canvasSettings.snapToGrid ? 
+          Math.round(newY / template.canvasSettings.gridSize) * template.canvasSettings.gridSize : newY
+        
+        updateElement(selectedElement, { x: snapX, y: snapY })
+      }
+    }
+
+    const handleGlobalMouseUp = () => {
+      setIsDragging(false)
+    }
+
+    if (isDragging) {
+      document.addEventListener('mousemove', handleGlobalMouseMove)
+      document.addEventListener('mouseup', handleGlobalMouseUp)
+    }
+
+    return () => {
+      document.removeEventListener('mousemove', handleGlobalMouseMove)
+      document.removeEventListener('mouseup', handleGlobalMouseUp)
+    }
+  }, [isDragging, selectedElement, dragOffset, zoom, template.canvasSettings.snapToGrid, template.canvasSettings.gridSize])
+
   const handleSave = async () => {
     // TODO: Implement save to database
     console.log('Saving template:', template)
@@ -250,8 +394,19 @@ export function LabelTemplateEditorWireframe() {
           <div>
             <h1 className="text-2xl font-bold">{template.name}</h1>
             <p className="text-muted-foreground">
-              {sizePresets[template.size].label} • {template.type} etikett
+              {template.type} etikett
             </p>
+          </div>
+        </div>
+        
+        <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2">
+            <Label htmlFor="size-selector" className="text-sm">Størrelse:</Label>
+            <LabelSizeSelector
+              value={template.size}
+              onValueChange={handleSizeChange}
+              placeholder="Velg størrelse"
+            />
           </div>
         </div>
         
@@ -315,6 +470,198 @@ export function LabelTemplateEditorWireframe() {
 
             <Separator />
 
+            {/* Database Fields Section */}
+            <div>
+              <Label className="text-sm font-medium mb-2 flex items-center gap-2">
+                <Database className="h-4 w-4" />
+                Fra databasen
+              </Label>
+              <div className="space-y-2">
+                {/* Item Fields */}
+                <div>
+                  <Label className="text-xs text-muted-foreground">Gjenstand</Label>
+                  <div className="grid grid-cols-1 gap-1 mt-1">
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      onClick={() => addElement('text', '{{item.name}}')}
+                      className="justify-start text-xs h-7"
+                    >
+                      <Plus className="h-3 w-3 mr-1" />
+                      Navn
+                    </Button>
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      onClick={() => addElement('text', '{{item.description}}')}
+                      className="justify-start text-xs h-7"
+                    >
+                      <Plus className="h-3 w-3 mr-1" />
+                      Beskrivelse
+                    </Button>
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      onClick={() => addElement('qr', '{{item.qrCode}}')}
+                      className="justify-start text-xs h-7"
+                    >
+                      <Plus className="h-3 w-3 mr-1" />
+                      QR-kode
+                    </Button>
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      onClick={() => addElement('barcode', '{{item.barcode}}')}
+                      className="justify-start text-xs h-7"
+                    >
+                      <Plus className="h-3 w-3 mr-1" />
+                      Strekkode
+                    </Button>
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      onClick={() => addElement('text', '{{item.brand}}')}
+                      className="justify-start text-xs h-7"
+                    >
+                      <Plus className="h-3 w-3 mr-1" />
+                      Merke
+                    </Button>
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      onClick={() => addElement('text', '{{item.price}} kr')}
+                      className="justify-start text-xs h-7"
+                    >
+                      <Plus className="h-3 w-3 mr-1" />
+                      Pris
+                    </Button>
+                  </div>
+                </div>
+                
+                {/* Location Fields */}
+                <div>
+                  <Label className="text-xs text-muted-foreground">Lokasjon</Label>
+                  <div className="grid grid-cols-1 gap-1 mt-1">
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      onClick={() => addElement('text', '{{location.name}}')}
+                      className="justify-start text-xs h-7"
+                    >
+                      <Plus className="h-3 w-3 mr-1" />
+                      Lokasjon
+                    </Button>
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      onClick={() => addElement('text', '{{location.description}}')}
+                      className="justify-start text-xs h-7"
+                    >
+                      <Plus className="h-3 w-3 mr-1" />
+                      Beskrivelse
+                    </Button>
+                  </div>
+                </div>
+                
+                {/* Yarn Specific Fields */}
+                <div>
+                  <Label className="text-xs text-muted-foreground">Garn (hvis aktuelt)</Label>
+                  <div className="grid grid-cols-1 gap-1 mt-1">
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      onClick={() => addElement('text', '{{yarn.color}}')}
+                      className="justify-start text-xs h-7"
+                    >
+                      <Plus className="h-3 w-3 mr-1" />
+                      Farge navn
+                    </Button>
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      onClick={() => addElement('text', '{{yarn.colorCode}}')}
+                      className="justify-start text-xs h-7"
+                    >
+                      <Plus className="h-3 w-3 mr-1" />
+                      Farge ID
+                    </Button>
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      onClick={() => addElement('text', '{{yarn.batchNumber}}')}
+                      className="justify-start text-xs h-7"
+                    >
+                      <Plus className="h-3 w-3 mr-1" />
+                      Batch nummer
+                    </Button>
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      onClick={() => addElement('text', '{{yarn.quantity}} nøster')}
+                      className="justify-start text-xs h-7"
+                    >
+                      <Plus className="h-3 w-3 mr-1" />
+                      Antall i posen
+                    </Button>
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      onClick={() => addElement('text', '{{yarn.producer}}')}
+                      className="justify-start text-xs h-7"
+                    >
+                      <Plus className="h-3 w-3 mr-1" />
+                      Produsent
+                    </Button>
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      onClick={() => addElement('text', '{{yarn.composition}}')}
+                      className="justify-start text-xs h-7"
+                    >
+                      <Plus className="h-3 w-3 mr-1" />
+                      Sammensetning
+                    </Button>
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      onClick={() => addElement('text', '{{yarn.pricePerSkein}} kr/nøste')}
+                      className="justify-start text-xs h-7"
+                    >
+                      <Plus className="h-3 w-3 mr-1" />
+                      Pris per nøste
+                    </Button>
+                  </div>
+                </div>
+                
+                {/* Category Fields */}
+                <div>
+                  <Label className="text-xs text-muted-foreground">Kategori</Label>
+                  <div className="grid grid-cols-1 gap-1 mt-1">
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      onClick={() => addElement('text', '{{category.name}}')}
+                      className="justify-start text-xs h-7"
+                    >
+                      <Plus className="h-3 w-3 mr-1" />
+                      Kategori navn
+                    </Button>
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      onClick={() => addElement('text', '{{category.icon}}')}
+                      className="justify-start text-xs h-7"
+                    >
+                      <Plus className="h-3 w-3 mr-1" />
+                      Kategori ikon
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <Separator />
+
             {/* Element List */}
             <div className="space-y-2">
               <Label className="text-sm font-medium">Lag ({template.elements.length})</Label>
@@ -373,13 +720,21 @@ export function LabelTemplateEditorWireframe() {
         <Card className="lg:col-span-2">
           <CardHeader>
             <div className="flex items-center justify-between">
-              <CardTitle className="text-lg">Design</CardTitle>
+              <CardTitle className="text-lg flex items-center gap-2">
+                Design
+                {isDragging && (
+                  <Badge variant="secondary" className="text-xs">
+                    <Move className="h-3 w-3 mr-1" />
+                    Dragging
+                  </Badge>
+                )}
+              </CardTitle>
               <div className="flex items-center gap-2">
                 <Label className="text-sm">Zoom:</Label>
                 <div className="flex items-center gap-2 w-24">
                   <Slider
                     value={[zoom]}
-                    onValueChange={(value) => setZoom(value[0])}
+                    onValueChange={(value) => setZoom(value[0] || 100)}
                     min={25}
                     max={200}
                     step={25}
@@ -400,6 +755,9 @@ export function LabelTemplateEditorWireframe() {
                 backgroundSize: template.canvasSettings.gridEnabled ? 
                   `${template.canvasSettings.gridSize}px ${template.canvasSettings.gridSize}px` : 'auto'
               }}
+              onMouseMove={handleMouseMove}
+              onMouseUp={handleMouseUp}
+              onMouseLeave={handleMouseUp}
             >
               <div
                 className="relative mx-auto my-8 border shadow-sm"
@@ -416,7 +774,9 @@ export function LabelTemplateEditorWireframe() {
                     key={element.id}
                     className={`absolute cursor-move border-2 transition-colors ${
                       selectedElement === element.id 
-                        ? 'border-blue-500 bg-blue-50/20' 
+                        ? isDragging 
+                          ? 'border-blue-600 bg-blue-100/30 shadow-lg' 
+                          : 'border-blue-500 bg-blue-50/20' 
                         : 'border-transparent hover:border-gray-300'
                     }`}
                     style={{
@@ -437,7 +797,12 @@ export function LabelTemplateEditorWireframe() {
                                    element.style?.textAlign === 'right' ? 'flex-end' : 'flex-start',
                       padding: element.type === 'text' ? '4px' : '0'
                     }}
-                    onClick={() => setSelectedElement(element.id)}
+                    onMouseDown={(e) => handleMouseDown(e, element.id)}
+                    onClick={(e) => {
+                      if (!isDragging) {
+                        setSelectedElement(element.id)
+                      }
+                    }}
                   >
                     {element.type === 'text' && (
                       <span style={{ 
@@ -656,6 +1021,79 @@ export function LabelTemplateEditorWireframe() {
             )}
           </CardContent>
         </Card>
+
+        {/* Settings Panel */}
+        <Card className="lg:col-span-1">
+          <CardHeader>
+            <CardTitle className="text-lg">Innstillinger</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div>
+              <Label className="text-sm font-medium">Canvas</Label>
+              <div className="space-y-3 mt-2">
+                <div>
+                  <Label className="text-xs">Bakgrunnsfarge</Label>
+                  <Input
+                    type="color"
+                    value={template.canvasSettings.backgroundColor}
+                    onChange={(e) => setTemplate(prev => ({
+                      ...prev,
+                      canvasSettings: {
+                        ...prev.canvasSettings,
+                        backgroundColor: e.target.value
+                      }
+                    }))}
+                  />
+                </div>
+                
+                <div className="flex items-center space-x-2">
+                  <Switch
+                    checked={template.canvasSettings.gridEnabled}
+                    onCheckedChange={(checked) => setTemplate(prev => ({
+                      ...prev,
+                      canvasSettings: {
+                        ...prev.canvasSettings,
+                        gridEnabled: checked
+                      }
+                    }))}
+                  />
+                  <Label className="text-xs">Vis rutenett</Label>
+                </div>
+                
+                <div className="flex items-center space-x-2">
+                  <Switch
+                    checked={template.canvasSettings.snapToGrid}
+                    onCheckedChange={(checked) => setTemplate(prev => ({
+                      ...prev,
+                      canvasSettings: {
+                        ...prev.canvasSettings,
+                        snapToGrid: checked
+                      }
+                    }))}
+                  />
+                  <Label className="text-xs">Snap til rutenett</Label>
+                </div>
+                
+                <div>
+                  <Label className="text-xs">Rutenett-størrelse (px)</Label>
+                  <Input
+                    type="number"
+                    min="5"
+                    max="50"
+                    value={template.canvasSettings.gridSize}
+                    onChange={(e) => setTemplate(prev => ({
+                      ...prev,
+                      canvasSettings: {
+                        ...prev.canvasSettings,
+                        gridSize: parseInt(e.target.value) || 10
+                      }
+                    }))}
+                  />
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
       {/* Template Variables */}
@@ -681,3 +1119,6 @@ export function LabelTemplateEditorWireframe() {
     </div>
   )
 }
+
+// Default export for backward compatibility
+export default LabelTemplateEditor

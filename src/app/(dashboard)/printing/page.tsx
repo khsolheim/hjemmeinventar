@@ -23,7 +23,8 @@ import {
   Calendar,
   Target,
   Archive,
-  Sparkles
+  Sparkles,
+  Ruler
 } from 'lucide-react'
 import Link from 'next/link'
 
@@ -72,6 +73,13 @@ const quickActions = [
     icon: Plus,
     href: '/printing/templates/new',
     color: 'bg-green-500'
+  },
+  {
+    title: 'Etikett størrelser',
+    description: 'Administrer størrelser for etiketter',
+    icon: Ruler,
+    href: '/printing/sizes',
+    color: 'bg-indigo-500'
   },
   {
     title: 'Administrer skrivere',
