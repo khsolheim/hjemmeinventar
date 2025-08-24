@@ -573,7 +573,7 @@ export const locationsRouter = createTRPCRouter({
 
       // Log wizard activity
       await logActivity({
-        type: 'WIZARD_LOCATION_CREATED' as any,
+        type: 'WIZARD_LOCATION_CREATED',
         description: `Opprettet ${input.type.toLowerCase()} "${input.name}" via wizard`,
         userId: ctx.user.id,
         locationId: location.id,

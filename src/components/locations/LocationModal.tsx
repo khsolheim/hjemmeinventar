@@ -27,14 +27,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { QRCodeCard } from '@/components/ui/qr-code'
 import { 
   Save, 
   Loader2, 
-  QrCode, 
   Info, 
   Settings,
-  BarChart3,
   MapPin,
   Home,
   Package,
@@ -240,18 +237,10 @@ export function LocationModal({
         </DialogHeader>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="mt-4">
-          <TabsList className="grid w-full grid-cols-3">
+          <TabsList className="grid w-full grid-cols-1">
             <TabsTrigger value="basic" className="flex items-center gap-2">
               <Info className="w-4 h-4" />
               Grunnleggende
-            </TabsTrigger>
-            <TabsTrigger value="qr" className="flex items-center gap-2">
-              <QrCode className="w-4 h-4" />
-              QR-kode
-            </TabsTrigger>
-            <TabsTrigger value="stats" className="flex items-center gap-2">
-              <BarChart3 className="w-4 h-4" />
-              Statistikk
             </TabsTrigger>
           </TabsList>
 
@@ -389,84 +378,7 @@ export function LocationModal({
             )}
           </TabsContent>
 
-          <TabsContent value="qr" className="space-y-4 mt-6">
-            <div className="text-center">
-              {mode === 'edit' && location?.qrCode ? (
-                <div className="space-y-4">
-                  <QRCodeCard 
-                    value={location.qrCode} 
-                    title={`Lokasjon: ${location.name}`}
-                    description="Skann denne koden for å finne lokasjonen"
-                  />
-                  <div className="flex items-center justify-center gap-2">
-                    <Badge variant="outline" className="flex items-center gap-1">
-                      <QrCode className="w-3 h-3" />
-                      {location.qrCode}
-                    </Badge>
-                  </div>
-                </div>
-              ) : (
-                <div className="py-12 text-center text-muted-foreground">
-                  <QrCode className="w-16 h-16 mx-auto mb-4 opacity-30" />
-                  <p>QR-kode vil bli generert automatisk når lokasjonen opprettes</p>
-                </div>
-              )}
-            </div>
-          </TabsContent>
 
-          <TabsContent value="stats" className="space-y-4 mt-6">
-            {mode === 'edit' && location ? (
-              <div className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="p-4 bg-muted rounded-lg text-center">
-                    <div className="text-2xl font-bold">{location._count?.items || 0}</div>
-                    <div className="text-sm text-muted-foreground">Gjenstander</div>
-                  </div>
-                  <div className="p-4 bg-muted rounded-lg text-center">
-                    <div className="text-2xl font-bold">{location.children?.length || 0}</div>
-                    <div className="text-sm text-muted-foreground">Underlokasjoner</div>
-                  </div>
-                </div>
-                
-                {location.children && location.children.length > 0 && (
-                  <div>
-                    <h4 className="text-sm font-medium mb-3">Underlokasjoner:</h4>
-                    <div className="space-y-2 max-h-32 overflow-y-auto">
-                      {location.children.map((child: any) => (
-                        <div key={child.id} className="flex items-center justify-between p-2 bg-muted rounded">
-                          <div className="flex items-center gap-2">
-                            <LocationIcon type={child.type} />
-                            <span className="text-sm">{child.name}</span>
-                          </div>
-                          <Badge variant="outline" className="text-xs">
-                            {child._count?.items || 0} ting
-                          </Badge>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                <div className="p-4 bg-muted rounded-lg">
-                  <h4 className="text-sm font-medium mb-2">Opprettet:</h4>
-                  <p className="text-sm text-muted-foreground">
-                    {new Date(location.createdAt).toLocaleDateString('no-NO', {
-                      year: 'numeric',
-                      month: 'long',
-                      day: 'numeric',
-                      hour: '2-digit',
-                      minute: '2-digit'
-                    })}
-                  </p>
-                </div>
-              </div>
-            ) : (
-              <div className="py-12 text-center text-muted-foreground">
-                <BarChart3 className="w-16 h-16 mx-auto mb-4 opacity-30" />
-                <p>Statistikk vil være tilgjengelig etter at lokasjonen er opprettet</p>
-              </div>
-            )}
-          </TabsContent>
         </Tabs>
 
         <div className="dialog-actions flex justify-end gap-2 mt-6 pt-4 border-t">

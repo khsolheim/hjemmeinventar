@@ -1,25 +1,60 @@
 'use client'
 
+import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { AccessibleButton } from '@/components/ui/accessible-button'
-import { Plus, Package, MapPin, Search, QrCode, TrendingUp, Loader2 } from 'lucide-react'
+import { 
+  Plus, 
+  Package, 
+  MapPin, 
+  Search, 
+  QrCode, 
+  TrendingUp, 
+  Loader2, 
+  ChevronRight, 
+  ArrowLeft,
+  FolderOpen,
+  Box,
+  Home,
+  Building,
+  Grid3x3
+} from 'lucide-react'
 import { trpc } from '@/lib/trpc/client'
 import Link from 'next/link'
 import { NotificationSummary } from '@/components/notifications/NotificationCenter'
 import { InstallPrompt } from '@/components/pwa/InstallPrompt'
 import { NotificationTest } from '@/components/notifications/NotificationTest'
+import { Badge } from '@/components/ui/badge'
+
+type Location = {
+  id: string
+  name: string
+  description?: string | null
+  type: string
+  children?: Location[]
+  _count: { items: number }
+}
+
+type BreadcrumbItem = {
+  id: string
+  name: string
+  type: string
+}
 
 export default function DashboardPage() {
-  // Fetch dashboard data with error handling
-  const { data: itemsData, isLoading: itemsLoading, error: itemsError } = trpc.items.getAll.useQuery({ limit: 10 })
+  const [currentLocationId, setCurrentLocationId] = useState<string | null>(null)
+  const [breadcrumbs, setBreadcrumbs] = useState<BreadcrumbItem[]>([])
+
+  // Fetch dashboard data
+  const { data: itemsData, isLoading: itemsLoading, error: itemsError } = trpc.items.getAll.useQuery({ limit: 1000 })
   const { data: locations = [], isLoading: locationsLoading, error: locationsError } = trpc.locations.getAll.useQuery()
   const { data: activities = [], isLoading: activitiesLoading, error: activitiesError } = trpc.activities.getRecent.useQuery({ limit: 5 })
 
   const isLoading = itemsLoading || locationsLoading
   const hasErrors = itemsError || locationsError || activitiesError
 
-  // Check if user needs to login (auth error)
+  // Check if user needs to login
   const needsAuth = itemsError?.message?.includes('UNAUTHORIZED') || 
                    locationsError?.message?.includes('UNAUTHORIZED') ||
                    activitiesError?.message?.includes('UNAUTHORIZED')
@@ -59,48 +94,79 @@ export default function DashboardPage() {
   // Calculate stats
   const totalItems = items.length
   const totalLocations = locations.length
-  const totalQRCodes = locations.length // Each location has a QR code
+  const totalQRCodes = locations.length
   const thisMonthItems = items.filter((item: any) => {
     const createdDate = new Date(item.createdAt)
     const now = new Date()
     return createdDate.getMonth() === now.getMonth() && createdDate.getFullYear() === now.getFullYear()
   }).length
 
-  // Check if onboarding is completed
-  // Create a flat list of all locations including children
-  const allLocations = locations.reduce((acc: any[], location: any) => {
-    acc.push(location)
-    if (location.children) {
-      const flattenChildren = (children: any[]): any[] => {
-        return children.reduce((childAcc: any[], child: any) => {
-          childAcc.push(child)
-          if (child.children) {
-            childAcc.push(...flattenChildren(child.children))
-          }
-          return childAcc
-        }, [])
+  // Helper function to find location by ID (including nested)
+  const findLocationById = (locations: Location[], id: string): Location | null => {
+    for (const location of locations) {
+      if (location.id === id) return location
+      if (location.children) {
+        const found = findLocationById(location.children, id)
+        if (found) return found
       }
-      acc.push(...flattenChildren(location.children))
     }
-    return acc
-  }, [])
+    return null
+  }
 
-  const hasRooms = allLocations.some(location => location.type === 'ROOM')
-  const hasStorageLocations = allLocations.some(location => location.type !== 'ROOM')
-  const hasItems = totalItems > 0
-  const isOnboardingCompleted = hasRooms && hasStorageLocations && hasItems
+  // Get current location and its children
+  const currentLocation = currentLocationId ? findLocationById(locations, currentLocationId) : null
+  const currentLocationChildren = currentLocation?.children || []
+  
+  // Get items for current location
+  const currentLocationItems = currentLocationId 
+    ? items.filter((item: any) => item.locationId === currentLocationId)
+    : []
 
-  // Debug: Console log for troubleshooting (remove in production)
-  if (typeof window !== 'undefined') {
-    console.log('Dashboard Debug:', {
-      totalLocations: locations.length,
-      allLocationsCount: allLocations.length,
-      locationTypes: allLocations.map(loc => ({ name: loc.name, type: loc.type })),
-      hasRooms,
-      hasStorageLocations,
-      hasItems,
-      isOnboardingCompleted
-    })
+  // Navigation functions
+  const navigateToLocation = (location: Location) => {
+    setCurrentLocationId(location.id)
+    setBreadcrumbs(prev => [...prev, { id: location.id, name: location.name, type: location.type }])
+  }
+
+  const navigateBack = () => {
+    const newBreadcrumbs = breadcrumbs.slice(0, -1)
+    setBreadcrumbs(newBreadcrumbs)
+    const previousLocationId = newBreadcrumbs.length > 0 ? newBreadcrumbs[newBreadcrumbs.length - 1]?.id || null : null
+    setCurrentLocationId(previousLocationId)
+  }
+
+  const navigateToBreadcrumb = (index: number) => {
+    const newBreadcrumbs = breadcrumbs.slice(0, index + 1)
+    setBreadcrumbs(newBreadcrumbs)
+    const breadcrumb = newBreadcrumbs[index]
+    if (breadcrumb) {
+      setCurrentLocationId(breadcrumb.id)
+    }
+  }
+
+  const resetToRoot = () => {
+    setCurrentLocationId(null)
+    setBreadcrumbs([])
+  }
+
+  // Get location icon based on type
+  const getLocationIcon = (type: string) => {
+    switch (type) {
+      case 'ROOM': return <Home className="w-5 h-5" />
+      case 'BUILDING': return <Building className="w-5 h-5" />
+      case 'STORAGE': return <Box className="w-5 h-5" />
+      default: return <MapPin className="w-5 h-5" />
+    }
+  }
+
+  // Get location type label
+  const getLocationTypeLabel = (type: string) => {
+    switch (type) {
+      case 'ROOM': return 'Rom'
+      case 'BUILDING': return 'Bygning'
+      case 'STORAGE': return 'Oppbevaring'
+      default: return 'Lokasjon'
+    }
   }
 
   return (
@@ -132,82 +198,106 @@ export default function DashboardPage() {
       )}
 
       {/* Header */}
-      <div className="flex justify-between items-center mb-8 cq">
+      <div className="flex justify-between items-center mb-8">
         <div>
-          <h1 className="text-3xl font-bold title">Dashboard</h1>
-          <p className="text-muted-foreground secondary-text">
-            Velkommen tilbake! Her er en oversikt over inventaret ditt.
+          <h1 className="text-3xl font-bold">Dashboard</h1>
+          <p className="text-muted-foreground">
+            {currentLocationId ? `Lokasjon: ${currentLocation?.name}` : 'Velkommen tilbake! Her er en oversikt over inventaret ditt.'}
           </p>
         </div>
-        <Link href="/items">
-          <AccessibleButton aria-label="Legg til ny gjenstand" className="cta-button">
-            <Plus className="w-4 h-4 mr-2" />
-            Legg til gjenstand
-          </AccessibleButton>
-        </Link>
+        <div className="flex gap-2">
+          {currentLocationId && (
+            <Button variant="outline" onClick={resetToRoot}>
+              <Home className="w-4 h-4 mr-2" />
+              Tilbake til hovedoversikt
+            </Button>
+          )}
+          <Link href="/items">
+            <AccessibleButton aria-label="Legg til ny gjenstand" className="cta-button">
+              <Plus className="w-4 h-4 mr-2" />
+              Legg til gjenstand
+            </AccessibleButton>
+          </Link>
+        </div>
       </div>
+
+      {/* Breadcrumbs */}
+      {breadcrumbs.length > 0 && (
+        <div className="flex items-center gap-2 mb-6 text-sm">
+          <Button variant="ghost" size="sm" onClick={resetToRoot}>
+            <Home className="w-4 h-4" />
+          </Button>
+          {breadcrumbs.map((crumb, index) => (
+            <div key={crumb.id} className="flex items-center gap-2">
+              <ChevronRight className="w-4 h-4 text-muted-foreground" />
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                onClick={() => navigateToBreadcrumb(index)}
+                className="text-muted-foreground hover:text-foreground"
+              >
+                {crumb.name}
+              </Button>
+            </div>
+          ))}
+        </div>
+      )}
 
       {/* PWA Install Prompt */}
       <InstallPrompt />
 
       {/* Quick Stats */}
-      <div className="cq-grid dashboard-grid gap-6 mb-8" style={{"--card-min":"220px"} as any}>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
         <Card className="stat-card">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium title">
+            <CardTitle className="text-sm font-medium">
               Totale gjenstander
             </CardTitle>
             <Package className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
-          <CardContent className="min-h-[84px]">
+          <CardContent>
             <div className="text-2xl font-bold">
               {isLoading ? (
                 <Loader2 className="w-6 h-6 animate-spin" />
               ) : (
-                totalItems
+                currentLocationId ? currentLocationItems.length : totalItems
               )}
             </div>
             <p className="text-xs text-muted-foreground">
-              {totalItems === 0 
-                ? 'Start med å legge til dine første gjenstander'
-                : `${totalItems} gjenstander registrert`
-              }
+              {currentLocationId ? 'gjenstander på denne lokasjonen' : 'gjenstander totalt'}
             </p>
           </CardContent>
         </Card>
 
         <Card className="stat-card">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium title">
+            <CardTitle className="text-sm font-medium">
               Lokasjoner
             </CardTitle>
             <MapPin className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
-          <CardContent className="min-h-[84px]">
+          <CardContent>
             <div className="text-2xl font-bold">
               {isLoading ? (
                 <Loader2 className="w-6 h-6 animate-spin" />
               ) : (
-                totalLocations
+                currentLocationId ? currentLocationChildren.length : totalLocations
               )}
             </div>
             <p className="text-xs text-muted-foreground">
-              {totalLocations === 0 
-                ? 'Opprett rom og oppbevaringssteder'
-                : `${totalLocations} lokasjoner opprettet`
-              }
+              {currentLocationId ? 'underlokasjoner' : 'lokasjoner totalt'}
             </p>
           </CardContent>
         </Card>
 
         <Card className="stat-card">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium title">
-              QR-koder generert
+            <CardTitle className="text-sm font-medium">
+              QR-koder
             </CardTitle>
             <QrCode className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
-          <CardContent className="min-h-[84px]">
+          <CardContent>
             <div className="text-2xl font-bold">
               {isLoading ? (
                 <Loader2 className="w-6 h-6 animate-spin" />
@@ -216,22 +306,19 @@ export default function DashboardPage() {
               )}
             </div>
             <p className="text-xs text-muted-foreground">
-              {totalQRCodes === 0 
-                ? 'QR-etiketter for enkel skanning'
-                : `${totalQRCodes} QR-koder tilgjengelig`
-              }
+              QR-koder tilgjengelig
             </p>
           </CardContent>
         </Card>
 
         <Card className="stat-card">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium title">
+            <CardTitle className="text-sm font-medium">
               Denne måneden
             </CardTitle>
             <TrendingUp className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
-          <CardContent className="min-h-[84px]">
+          <CardContent>
             <div className="text-2xl font-bold">
               {isLoading ? (
                 <Loader2 className="w-6 h-6 animate-spin" />
@@ -240,219 +327,249 @@ export default function DashboardPage() {
               )}
             </div>
             <p className="text-xs text-muted-foreground">
-              {thisMonthItems === 0 
-                ? 'Gjenstander lagt til'
-                : `${thisMonthItems} nye gjenstander`
-              }
+              nye gjenstander
             </p>
           </CardContent>
         </Card>
       </div>
 
-      {/* Notifications Summary */}
-      <NotificationSummary className="mb-8" />
-
-      {/* Quick Actions */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6 mb-8 cq">
+      {/* Main Content */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        {/* Locations Section */}
         <Card>
           <CardHeader>
-            <CardTitle className="title">Kom i gang</CardTitle>
+            <CardTitle className="flex items-center gap-2">
+              {currentLocationId ? (
+                <>
+                  <ArrowLeft className="w-5 h-5" />
+                  <span>Underlokasjoner i {currentLocation?.name}</span>
+                </>
+              ) : (
+                <>
+                  <Grid3x3 className="w-5 h-5" />
+                  <span>Lokasjoner</span>
+                </>
+              )}
+            </CardTitle>
             <CardDescription>
-              Sett opp ditt første inventar på noen enkle steg
+              {currentLocationId 
+                ? 'Klikk på en underlokasjon for å se innholdet'
+                : 'Klikk på en lokasjon for å se innholdet og underlokasjoner'
+              }
             </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4 min-h-[240px]">
-            {isOnboardingCompleted ? (
-              <div className="text-sm text-muted-foreground">
-                Alt er klart! Du har rom, oppbevaringssteder og gjenstander.
-              </div>
-            ) : (
-              <>
-              <div className="flex items-center space-x-4">
-                <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
-                  hasRooms ? 'bg-green-500 text-white' : 'bg-primary text-primary-foreground'
-                }`}>
-                  {hasRooms ? '✓' : '1'}
-                </div>
-                <div>
-                  <h3 className="font-medium">Opprett ditt første rom</h3>
-                  <p className="text-sm text-muted-foreground">
-                    Start med å lage rom som kjøkken, soverom eller bod
-                  </p>
-                </div>
-                {!hasRooms && (
-                  <Link href="/locations">
-                    <Button variant="outline" size="sm" className="cta-button">
-                      Opprett rom
-                    </Button>
-                  </Link>
-                )}
-              </div>
-
-              <div className="flex items-center space-x-4">
-                <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
-                  hasStorageLocations ? 'bg-green-500 text-white' : hasRooms ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'
-                }`}>
-                  {hasStorageLocations ? '✓' : '2'}
-                </div>
-                <div>
-                  <h3 className="font-medium">Legg til oppbevaringssteder</h3>
-                  <p className="text-sm text-muted-foreground">
-                    Lag hyller, bokser og skuffer i rommene dine
-                  </p>
-                </div>
-                {!hasStorageLocations && hasRooms && (
-                  <Link href="/locations">
-                    <Button variant="outline" size="sm" className="cta-button">
-                      Legg til hyller
-                    </Button>
-                  </Link>
-                )}
-              </div>
-
-              <div className="flex items-center space-x-4">
-                <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
-                  hasItems ? 'bg-green-500 text-white' : hasStorageLocations ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'
-                }`}>
-                  {hasItems ? '✓' : '3'}
-                </div>
-                <div>
-                  <h3 className="font-medium">Registrer dine første gjenstander</h3>
-                  <p className="text-sm text-muted-foreground">
-                    Ta bilder og legg til beskrivelser av tingene dine
-                  </p>
-                </div>
-                {!hasItems && hasStorageLocations && (
-                  <Link href="/items">
-                    <Button variant="outline" size="sm" className="cta-button">
-                      Legg til gjenstander
-                    </Button>
-                  </Link>
-                )}
-              </div>
-              </>
-            )}
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="title">Nylige aktiviteter</CardTitle>
-            <CardDescription>
-              Oversikt over dine siste handlinger
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="min-h-[240px]">
-            {activitiesLoading ? (
+          <CardContent>
+            {isLoading ? (
               <div className="flex items-center justify-center py-8">
                 <Loader2 className="w-6 h-6 animate-spin" />
-                <span className="ml-2">Laster aktiviteter...</span>
+                <span className="ml-2">Laster lokasjoner...</span>
               </div>
-            ) : activities && 'activities' in activities && activities.activities?.length > 0 ? (
-              <div className="activity-list space-y-3">
-                {activities.activities.slice(0, 5).map((activity: any) => (
-                  <div key={activity.id} className="activity-item flex items-center gap-3 p-2 rounded hover:bg-muted/50">
-                    <div className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center">
-                      <Package className="w-4 h-4 text-primary" />
+            ) : (currentLocationId ? currentLocationChildren : locations).length > 0 ? (
+              <div className="space-y-3">
+                {(currentLocationId ? currentLocationChildren : locations).map((location: Location) => (
+                  <div 
+                    key={location.id}
+                    className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50 cursor-pointer transition-colors"
+                    onClick={() => navigateToLocation(location)}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center">
+                        {getLocationIcon(location.type)}
+                      </div>
+                      <div>
+                        <h3 className="font-medium">{location.name}</h3>
+                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                          <Badge variant="outline" className="text-xs">
+                            {getLocationTypeLabel(location.type)}
+                          </Badge>
+                          <span>•</span>
+                          <span>{location._count.items} gjenstander</span>
+                          {location.children && location.children.length > 0 && (
+                            <>
+                              <span>•</span>
+                              <span>{location.children.length} underlokasjoner</span>
+                            </>
+                          )}
+                        </div>
+                        {location.description && (
+                          <p className="text-sm text-muted-foreground mt-1 line-clamp-1">
+                            {location.description}
+                          </p>
+                        )}
+                      </div>
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="activity-content text-sm font-medium line-clamp-1">
-                        {activity.description}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        {new Date(activity.createdAt).toLocaleDateString('no-NO', {
-                          day: 'numeric',
-                          month: 'short',
-                          hour: '2-digit',
-                          minute: '2-digit'
-                        })}
-                      </p>
-                    </div>
+                    <ChevronRight className="w-5 h-5 text-muted-foreground" />
                   </div>
                 ))}
               </div>
             ) : (
               <div className="text-center py-8 text-muted-foreground">
-                <Package className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                <p>Ingen aktiviteter ennå</p>
-                <p className="text-sm">
-                  Aktiviteter vil vises her når du begynner å bruke systemet
+                <MapPin className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                <p>
+                  {currentLocationId ? 'Ingen underlokasjoner' : 'Ingen lokasjoner'}
                 </p>
+                <p className="text-sm">
+                  {currentLocationId 
+                    ? 'Denne lokasjonen har ingen underlokasjoner'
+                    : 'Opprett dine første lokasjoner for å komme i gang'
+                  }
+                </p>
+                {!currentLocationId && (
+                  <Button asChild className="mt-4">
+                    <Link href="/locations">
+                      <Plus className="w-4 h-4 mr-2" />
+                      Opprett lokasjon
+                    </Link>
+                  </Button>
+                )}
               </div>
             )}
           </CardContent>
         </Card>
 
-        {/* Recent Items */}
+        {/* Items Section */}
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between">
-            <div>
-              <CardTitle className="title">Nylig lagt til</CardTitle>
-              <CardDescription>
-                Dine sist registrerte gjenstander
-              </CardDescription>
-            </div>
-            <Link href="/items">
-              <Button variant="outline" size="sm" className="cta-button">
-                <Search className="w-4 h-4 mr-2" />
-                Søk i inventar
-              </Button>
-            </Link>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Package className="w-5 h-5" />
+              <span>
+                {currentLocationId ? `Gjenstander i ${currentLocation?.name}` : 'Alle gjenstander'}
+              </span>
+            </CardTitle>
+            <CardDescription>
+              {currentLocationId 
+                ? 'Gjenstander som er lagret på denne lokasjonen'
+                : 'Oversikt over alle gjenstander i inventaret'
+              }
+            </CardDescription>
           </CardHeader>
-          <CardContent className="min-h-[240px]">
+          <CardContent>
             {isLoading ? (
               <div className="flex items-center justify-center py-8">
                 <Loader2 className="w-6 h-6 animate-spin" />
                 <span className="ml-2">Laster gjenstander...</span>
               </div>
-            ) : items.length > 0 ? (
+            ) : (currentLocationId ? currentLocationItems : items).length > 0 ? (
               <div className="space-y-3">
-                {items.slice(0, 5).map((item: any) => (
-                  <div key={item.id} className="flex items-center gap-3 p-2 rounded hover:bg-muted/50">
-                    <div className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center">
+                {(currentLocationId ? currentLocationItems : items).slice(0, 10).map((item: any) => (
+                  <div key={item.id} className="flex items-center gap-3 p-3 border rounded-lg hover:bg-muted/50">
+                    <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center">
                       <span className="text-sm">
                         {item.category?.icon || '📦'}
                       </span>
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium line-clamp-1">{item.name}</p>
-                      <p className="text-xs text-muted-foreground line-clamp-1">
-                        {item.description || 'Ingen beskrivelse'}
-                      </p>
-                      <div className="flex items-center gap-2 mt-1">
-                        <span className="text-xs text-muted-foreground">
-                          {item.availableQuantity} {item.unit}
-                        </span>
-                        <span className="text-xs text-muted-foreground">•</span>
-                        <span className="text-xs text-muted-foreground">
-                          {item.location.name}
-                        </span>
+                      <h3 className="font-medium line-clamp-1">{item.name}</h3>
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground mt-1">
+                        <span>{item.availableQuantity} {item.unit}</span>
+                        {!currentLocationId && item.location && (
+                          <>
+                            <span>•</span>
+                            <span>{item.location.name}</span>
+                          </>
+                        )}
                       </div>
+                      {item.description && (
+                        <p className="text-sm text-muted-foreground mt-1 line-clamp-1">
+                          {item.description}
+                        </p>
+                      )}
                     </div>
-                    <div className="text-xs text-muted-foreground">
-                      {new Date(item.createdAt).toLocaleDateString('no-NO', { 
-                        day: 'numeric', 
-                        month: 'short' 
-                      })}
-                    </div>
+                    <Link href={`/items/${item.id}`}>
+                      <Button variant="ghost" size="sm">
+                        <ChevronRight className="w-4 h-4" />
+                      </Button>
+                    </Link>
                   </div>
                 ))}
+                {(currentLocationId ? currentLocationItems : items).length > 10 && (
+                  <div className="text-center pt-4">
+                    <Link href={currentLocationId ? `/items?location=${currentLocationId}` : '/items'}>
+                      <Button variant="outline">
+                        Vis alle gjenstander
+                      </Button>
+                    </Link>
+                  </div>
+                )}
               </div>
             ) : (
               <div className="text-center py-8 text-muted-foreground">
                 <Package className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                <p>Ingen gjenstander ennå</p>
-                <p className="text-sm">
-                  Gjenstander vil vises her når du legger dem til
+                <p>
+                  {currentLocationId ? 'Ingen gjenstander på denne lokasjonen' : 'Ingen gjenstander'}
                 </p>
+                <p className="text-sm">
+                  {currentLocationId 
+                    ? 'Denne lokasjonen har ingen gjenstander'
+                    : 'Legg til dine første gjenstander for å komme i gang'
+                  }
+                </p>
+                <Button asChild className="mt-4">
+                  <Link href="/items">
+                    <Plus className="w-4 h-4 mr-2" />
+                    Legg til gjenstand
+                  </Link>
+                </Button>
               </div>
             )}
           </CardContent>
         </Card>
-
-        {/* Notification Test */}
-        <NotificationTest />
       </div>
+
+      {/* Notifications Summary */}
+      <NotificationSummary className="mt-8" />
+
+      {/* Recent Activities */}
+      <Card className="mt-8">
+        <CardHeader>
+          <CardTitle>Nylige aktiviteter</CardTitle>
+          <CardDescription>
+            Oversikt over dine siste handlinger
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {activitiesLoading ? (
+            <div className="flex items-center justify-center py-8">
+              <Loader2 className="w-6 h-6 animate-spin" />
+              <span className="ml-2">Laster aktiviteter...</span>
+            </div>
+          ) : activities && 'activities' in activities && activities.activities?.length > 0 ? (
+            <div className="space-y-3">
+              {activities.activities.slice(0, 5).map((activity: any) => (
+                <div key={activity.id} className="flex items-center gap-3 p-3 rounded-lg hover:bg-muted/50">
+                  <div className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center">
+                    <Package className="w-4 h-4 text-primary" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium line-clamp-1">
+                      {activity.description}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {new Date(activity.createdAt).toLocaleDateString('no-NO', {
+                        day: 'numeric',
+                        month: 'short',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                      })}
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-8 text-muted-foreground">
+              <Package className="w-12 h-12 mx-auto mb-4 opacity-50" />
+              <p>Ingen aktiviteter ennå</p>
+              <p className="text-sm">
+                Aktiviteter vil vises her når du begynner å bruke systemet
+              </p>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Notification Test */}
+      <NotificationTest />
     </div>
   )
 }
