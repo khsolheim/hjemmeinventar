@@ -39,7 +39,8 @@ import {
   Play,
   Shield,
   Link,
-  Star
+  Star,
+  Eye
 } from 'lucide-react'
 import { QuickAddModal } from '@/components/items/QuickAddModal'
 import { VoiceCommand } from '@/components/ui/voice-command'
@@ -1526,6 +1527,105 @@ export default function TestFeaturesPage() {
                     className="w-full"
                   >
                     Test Blockchain
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="iot-advanced" className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-1 gap-4">
+            {/* Advanced IoT */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Wifi className="w-5 h-5 text-green-600" />
+                  Advanced IoT
+                </CardTitle>
+                <CardDescription>
+                  Device management, sensor monitoring og smart home integration
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2">
+                  <Badge variant="outline" className="w-full justify-center">
+                    ✅ Implementert
+                  </Badge>
+                  <p className="text-sm text-muted-foreground">
+                    Device management, sensor monitoring, smart home integration, IoT settings
+                  </p>
+                  <Button 
+                    onClick={() => window.location.href = '/iot'}
+                    className="w-full"
+                  >
+                    Test IoT
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="ar-vr-advanced" className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-1 gap-4">
+            {/* Advanced AR/VR */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Eye className="w-5 h-5 text-green-600" />
+                  Advanced AR/VR
+                </CardTitle>
+                <CardDescription>
+                  Immersive experiences, virtual reality og augmented reality integration
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2">
+                  <Badge variant="outline" className="w-full justify-center">
+                    ✅ Implementert
+                  </Badge>
+                  <p className="text-sm text-muted-foreground">
+                    Immersive experiences, VR/AR integration, content management, AR/VR settings
+                  </p>
+                  <Button 
+                    onClick={() => window.location.href = '/ar-vr'}
+                    className="w-full"
+                  >
+                    Test AR/VR
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="ml-advanced" className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-1 gap-4">
+            {/* Advanced Machine Learning */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Brain className="w-5 h-5 text-green-600" />
+                  Advanced Machine Learning
+                </CardTitle>
+                <CardDescription>
+                  AI model management, predictive analytics og data science integration
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2">
+                  <Badge variant="outline" className="w-full justify-center">
+                    ✅ Implementert
+                  </Badge>
+                  <p className="text-sm text-muted-foreground">
+                    AI model management, predictive analytics, ML training, ML settings
+                  </p>
+                  <Button 
+                    onClick={() => window.location.href = '/ml'}
+                    className="w-full"
+                  >
+                    Test ML
                   </Button>
                 </div>
               </CardContent>

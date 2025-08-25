@@ -1,11 +1,11 @@
 'use client'
 
-import { IoTDeviceIntegration } from '@/components/iot/IoTDeviceIntegration'
+import { AdvancedIoT } from '@/components/iot/AdvancedIoT'
 
 export default function IoTPage() {
   return (
     <div className="container mx-auto p-6">
-      <IoTDeviceIntegration />
+      <AdvancedIoT />
     </div>
   )
 }

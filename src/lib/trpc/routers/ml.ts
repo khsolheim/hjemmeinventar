@@ -417,6 +417,458 @@ export const mlRouter = createTRPCRouter({
           message: 'Kunne ikke hente ML-statistikk'
         })
       }
+    }),
+
+  // Get models data
+  getModelsData: protectedProcedure
+    .query(async ({ ctx }) => {
+      // Mock models data
+      const modelsData = {
+        activeModels: 6,
+        models: [
+          {
+            id: 'model_1',
+            name: 'Inventory Prediction Model',
+            description: 'Predict inventory needs and trends',
+            accuracy: 94,
+            version: 'v2.1.0',
+            lastUpdated: '2 hours ago',
+            status: 'deployed',
+            icon: 'MLModel'
+          },
+          {
+            id: 'model_2',
+            name: 'Item Classification Model',
+            description: 'Automatically classify inventory items',
+            accuracy: 89,
+            version: 'v1.8.2',
+            lastUpdated: '1 day ago',
+            status: 'deployed',
+            icon: 'MLModel'
+          },
+          {
+            id: 'model_3',
+            name: 'Demand Forecasting Model',
+            description: 'Forecast future demand patterns',
+            accuracy: 87,
+            version: 'v1.5.1',
+            lastUpdated: '3 days ago',
+            status: 'training',
+            icon: 'MLModel'
+          },
+          {
+            id: 'model_4',
+            name: 'Anomaly Detection Model',
+            description: 'Detect unusual inventory patterns',
+            accuracy: 92,
+            version: 'v1.2.0',
+            lastUpdated: '1 week ago',
+            status: 'draft',
+            icon: 'MLModel'
+          }
+        ],
+        modelAnalytics: [
+          {
+            id: 'model_accuracy',
+            name: 'Avg Model Accuracy',
+            value: '90.5%',
+            icon: 'Target'
+          },
+          {
+            id: 'predictions_made',
+            name: 'Predictions Made',
+            value: '1,234',
+            icon: 'MLAnalytics'
+          },
+          {
+            id: 'model_versions',
+            name: 'Model Versions',
+            value: '4',
+            icon: 'MLModel'
+          },
+          {
+            id: 'training_time',
+            name: 'Avg Training Time',
+            value: '2.3h',
+            icon: 'Timer'
+          }
+        ]
+      }
+
+      // Log activity
+      await ctx.db.activity.create({
+        data: {
+          userId: ctx.user.id,
+          type: 'ML_MODELS_VIEWED',
+          description: 'Viewed ML models data',
+          metadata: { activeModels: modelsData.activeModels }
+        }
+      })
+
+      return modelsData
+    }),
+
+  // Get analytics data
+  getAnalyticsData: protectedProcedure
+    .query(async ({ ctx }) => {
+      // Mock analytics data
+      const analyticsData = {
+        totalPredictions: 1234,
+        analytics: [
+          {
+            id: 'analytic_1',
+            name: 'Inventory Trend Analysis',
+            description: 'Analyze inventory trends over time',
+            type: 'Time Series',
+            lastRun: '1 hour ago',
+            duration: '15 min',
+            status: 'completed',
+            icon: 'MLAnalytics'
+          },
+          {
+            id: 'analytic_2',
+            name: 'Demand Pattern Recognition',
+            description: 'Identify demand patterns and cycles',
+            type: 'Pattern Recognition',
+            lastRun: '3 hours ago',
+            duration: '25 min',
+            status: 'completed',
+            icon: 'MLAnalytics'
+          },
+          {
+            id: 'analytic_3',
+            name: 'Cost Optimization Analysis',
+            description: 'Optimize inventory costs and efficiency',
+            type: 'Optimization',
+            lastRun: '6 hours ago',
+            duration: '30 min',
+            status: 'completed',
+            icon: 'MLAnalytics'
+          },
+          {
+            id: 'analytic_4',
+            name: 'Risk Assessment Model',
+            description: 'Assess inventory risks and vulnerabilities',
+            type: 'Risk Analysis',
+            lastRun: '12 hours ago',
+            duration: '20 min',
+            status: 'running',
+            icon: 'MLAnalytics'
+          }
+        ],
+        analyticsResults: [
+          {
+            id: 'prediction_accuracy',
+            name: 'Prediction Accuracy',
+            value: '94%',
+            percentage: 94
+          },
+          {
+            id: 'data_quality',
+            name: 'Data Quality',
+            value: '96%',
+            percentage: 96
+          },
+          {
+            id: 'processing_speed',
+            name: 'Processing Speed',
+            value: '2.3s',
+            percentage: 85
+          },
+          {
+            id: 'model_performance',
+            name: 'Model Performance',
+            value: '91%',
+            percentage: 91
+          }
+        ]
+      }
+
+      // Log activity
+      await ctx.db.activity.create({
+        data: {
+          userId: ctx.user.id,
+          type: 'ML_ANALYTICS_VIEWED',
+          description: 'Viewed ML analytics data',
+          metadata: { totalPredictions: analyticsData.totalPredictions }
+        }
+      })
+
+      return analyticsData
+    }),
+
+  // Get training data
+  getTrainingData: protectedProcedure
+    .query(async ({ ctx }) => {
+      // Mock training data
+      const trainingData = {
+        activeJobs: 3,
+        trainingJobs: [
+          {
+            id: 'job_1',
+            name: 'Inventory Prediction Model Training',
+            description: 'Training new prediction model',
+            progress: 75,
+            eta: '2 hours',
+            dataset: 'Inventory Dataset v3',
+            status: 'running',
+            icon: 'MLWorkflow'
+          },
+          {
+            id: 'job_2',
+            name: 'Classification Model Update',
+            description: 'Updating classification model',
+            progress: 45,
+            eta: '4 hours',
+            dataset: 'Item Classification v2',
+            status: 'running',
+            icon: 'MLWorkflow'
+          },
+          {
+            id: 'job_3',
+            name: 'Anomaly Detection Training',
+            description: 'Training anomaly detection model',
+            progress: 90,
+            eta: '30 min',
+            dataset: 'Anomaly Dataset v1',
+            status: 'running',
+            icon: 'MLWorkflow'
+          },
+          {
+            id: 'job_4',
+            name: 'Demand Forecasting Update',
+            description: 'Updating demand forecasting model',
+            progress: 0,
+            eta: '6 hours',
+            dataset: 'Demand Dataset v4',
+            status: 'queued',
+            icon: 'MLWorkflow'
+          }
+        ],
+        trainingAnalytics: [
+          {
+            id: 'training_jobs',
+            name: 'Active Jobs',
+            value: '3',
+            icon: 'MLWorkflow'
+          },
+          {
+            id: 'avg_training_time',
+            name: 'Avg Training Time',
+            value: '4.2h',
+            icon: 'Timer'
+          },
+          {
+            id: 'success_rate',
+            name: 'Success Rate',
+            value: '92%',
+            icon: 'CheckCircle'
+          },
+          {
+            id: 'gpu_utilization',
+            name: 'GPU Utilization',
+            value: '78%',
+            icon: 'Cpu'
+          }
+        ]
+      }
+
+      // Log activity
+      await ctx.db.activity.create({
+        data: {
+          userId: ctx.user.id,
+          type: 'ML_TRAINING_VIEWED',
+          description: 'Viewed ML training data',
+          metadata: { activeJobs: trainingData.activeJobs }
+        }
+      })
+
+      return trainingData
+    }),
+
+  // Get ML settings
+  getMLSettings: protectedProcedure
+    .query(async ({ ctx }) => {
+      // Mock ML settings
+      const settingsData = {
+        mlScore: 91,
+        settings: [
+          {
+            id: 'ml_enabled',
+            key: 'mlEnabled',
+            name: 'Machine Learning System',
+            enabled: true,
+            icon: 'MLSystem'
+          },
+          {
+            id: 'auto_training',
+            key: 'autoTraining',
+            name: 'Auto Training',
+            enabled: true,
+            icon: 'MLWorkflow'
+          },
+          {
+            id: 'predictive_analytics',
+            key: 'predictiveAnalytics',
+            name: 'Predictive Analytics',
+            enabled: true,
+            icon: 'MLAnalytics'
+          },
+          {
+            id: 'model_monitoring',
+            key: 'modelMonitoring',
+            name: 'Model Monitoring',
+            enabled: false,
+            icon: 'MLModel'
+          }
+        ],
+        mlGoals: [
+          {
+            id: 'model_accuracy',
+            name: 'Model Accuracy',
+            current: 91,
+            target: 95
+          },
+          {
+            id: 'training_efficiency',
+            name: 'Training Efficiency',
+            current: 85,
+            target: 90
+          },
+          {
+            id: 'prediction_speed',
+            name: 'Prediction Speed',
+            current: 88,
+            target: 92
+          },
+          {
+            id: 'data_quality',
+            name: 'Data Quality',
+            current: 94,
+            target: 98
+          }
+        ]
+      }
+
+      // Log activity
+      await ctx.db.activity.create({
+        data: {
+          userId: ctx.user.id,
+          type: 'ML_SETTINGS_VIEWED',
+          description: 'Viewed ML settings',
+          metadata: { mlScore: settingsData.mlScore }
+        }
+      })
+
+      return settingsData
+    }),
+
+  // Deploy model
+  deployModel: protectedProcedure
+    .input(z.object({
+      modelId: z.string(),
+      action: z.string()
+    }))
+    .mutation(async ({ ctx, input }) => {
+      // Log activity
+      await ctx.db.activity.create({
+        data: {
+          userId: ctx.user.id,
+          type: 'ML_MODEL_DEPLOYED',
+          description: `Deployed model: ${input.modelId}`,
+          metadata: { modelId: input.modelId, action: input.action }
+        }
+      })
+
+      return { success: true, message: 'Model deployed successfully' }
+    }),
+
+  // Run analytics
+  runAnalytics: protectedProcedure
+    .input(z.object({
+      analyticId: z.string(),
+      action: z.string()
+    }))
+    .mutation(async ({ ctx, input }) => {
+      // Log activity
+      await ctx.db.activity.create({
+        data: {
+          userId: ctx.user.id,
+          type: 'ML_ANALYTICS_RUN',
+          description: `Ran analytics: ${input.analyticId}`,
+          metadata: { analyticId: input.analyticId, action: input.action }
+        }
+      })
+
+      return { success: true, message: 'Analytics run successfully' }
+    }),
+
+  // Start training
+  startTraining: protectedProcedure
+    .input(z.object({
+      jobId: z.string(),
+      action: z.string()
+    }))
+    .mutation(async ({ ctx, input }) => {
+      // Log activity
+      await ctx.db.activity.create({
+        data: {
+          userId: ctx.user.id,
+          type: 'ML_TRAINING_STARTED',
+          description: `Started training: ${input.jobId}`,
+          metadata: { jobId: input.jobId, action: input.action }
+        }
+      })
+
+      return { success: true, message: 'Training started successfully' }
+    }),
+
+  // Update ML settings
+  updateSettings: protectedProcedure
+    .input(z.object({
+      mlEnabled: z.boolean().optional(),
+      autoTraining: z.boolean().optional(),
+      predictiveAnalytics: z.boolean().optional(),
+      modelMonitoring: z.boolean().optional()
+    }))
+    .mutation(async ({ ctx, input }) => {
+      // Log activity
+      await ctx.db.activity.create({
+        data: {
+          userId: ctx.user.id,
+          type: 'ML_SETTINGS_UPDATED',
+          description: 'Updated ML settings',
+          metadata: input
+        }
+      })
+
+      return { success: true, message: 'ML settings updated successfully' }
+    }),
+
+  // Get ML statistics
+  getMLStats: protectedProcedure
+    .query(async ({ ctx }) => {
+      // Mock ML statistics
+      const stats = {
+        activeModels: 6,
+        totalPredictions: 1234,
+        activeJobs: 3,
+        mlScore: 91,
+        avgAccuracy: 90.5,
+        trainingSuccessRate: 92
+      }
+
+      // Log activity
+      await ctx.db.activity.create({
+        data: {
+          userId: ctx.user.id,
+          type: 'ML_STATS_VIEWED',
+          description: 'Viewed ML statistics',
+          metadata: stats
+        }
+      })
+
+      return stats
     })
 })
 

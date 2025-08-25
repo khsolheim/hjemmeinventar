@@ -24,6 +24,9 @@ import { integrationRouter } from './integration'
 import { performanceRouter } from './performance'
 import { reportingRouter } from './reporting'
 import { blockchainRouter } from './blockchain'
+import { iotRouter } from './iot'
+import { arVrRouter } from './ar-vr'
+import { mlRouter } from './ml'
 
 export const appRouter = createTRPCRouter({
   items: itemsRouter,
@@ -51,4 +54,7 @@ export const appRouter = createTRPCRouter({
   performance: performanceRouter,
   reporting: reportingRouter,
   blockchain: blockchainRouter,
+  iot: iotRouter,
+  arVr: arVrRouter,
+  ml: mlRouter,
 })

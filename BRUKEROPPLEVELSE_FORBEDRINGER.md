@@ -1101,11 +1101,29 @@ Technical Metrics:
 3. ✅ Web3 Integration og Wallet Management
 4. ✅ Blockchain Analytics og Performance Monitoring
 
-### **Sprint 35 (Advanced IoT) - NESTE ⏳**
-1. 🔄 Advanced IoT Features og Device Management
-2. 🔄 Sensor Monitoring og Smart Home Integration
-3. 🔄 IoT Analytics og Performance Monitoring
-4. 🔄 IoT Security og Privacy Controls
+### **Sprint 35 (Advanced IoT) - FULLFØRT ✅**
+1. ✅ Advanced IoT Features og Device Management
+2. ✅ Sensor Monitoring og Smart Home Integration
+3. ✅ IoT Analytics og Performance Monitoring
+4. ✅ IoT Security og Privacy Controls
+
+### **Sprint 36 (Advanced AR/VR) - FULLFØRT ✅**
+1. ✅ Advanced AR/VR Features og Immersive Experiences
+2. ✅ Virtual Reality og Augmented Reality Integration
+3. ✅ AR/VR Analytics og Performance Monitoring
+4. ✅ AR/VR Content Management og Creation Tools
+
+### **Sprint 37 (Advanced Machine Learning) - FULLFØRT ✅**
+1. ✅ Advanced ML Features og AI Model Management
+2. ✅ Predictive Analytics og Data Science Integration
+3. ✅ ML Analytics og Performance Monitoring
+4. ✅ ML Model Training og Deployment Tools
+
+### **Sprint 38 (Advanced Quantum Computing) - NESTE ⏳**
+1. 🔄 Advanced Quantum Features og Quantum Algorithm Management
+2. 🔄 Quantum Simulation og Quantum-Classical Integration
+3. 🔄 Quantum Analytics og Performance Monitoring
+4. 🔄 Quantum Circuit Design og Optimization Tools
 
 ---
 

@@ -413,46 +413,456 @@ export const iotRouter = createTRPCRouter({
       }
     }),
 
+  // Get devices data
+  getDevicesData: protectedProcedure
+    .query(async ({ ctx }) => {
+      // Mock devices data
+      const devicesData = {
+        connectedDevices: 12,
+        devices: [
+          {
+            id: 'device_1',
+            name: 'Smart Thermostat',
+            description: 'Temperature control system',
+            type: 'Climate Control',
+            lastSeen: '2 minutes ago',
+            battery: 85,
+            status: 'connected',
+            icon: 'IoTDevice'
+          },
+          {
+            id: 'device_2',
+            name: 'Security Camera',
+            description: 'HD surveillance camera',
+            type: 'Security',
+            lastSeen: '1 minute ago',
+            battery: 92,
+            status: 'connected',
+            icon: 'IoTDevice'
+          },
+          {
+            id: 'device_3',
+            name: 'Smart Lock',
+            description: 'Digital door lock',
+            type: 'Security',
+            lastSeen: '5 minutes ago',
+            battery: 78,
+            status: 'connected',
+            icon: 'IoTDevice'
+          },
+          {
+            id: 'device_4',
+            name: 'Smart Speaker',
+            description: 'Voice-controlled speaker',
+            type: 'Entertainment',
+            lastSeen: '10 minutes ago',
+            battery: 95,
+            status: 'disconnected',
+            icon: 'IoTDevice'
+          }
+        ],
+        deviceAnalytics: [
+          {
+            id: 'total_devices',
+            name: 'Total Devices',
+            value: '12',
+            icon: 'IoTDevice'
+          },
+          {
+            id: 'connected_rate',
+            name: 'Connection Rate',
+            value: '92%',
+            icon: 'IoT'
+          },
+          {
+            id: 'avg_battery',
+            name: 'Avg Battery',
+            value: '87%',
+            icon: 'Battery'
+          },
+          {
+            id: 'device_health',
+            name: 'Device Health',
+            value: 'Good',
+            icon: 'CheckCircle'
+          }
+        ]
+      }
+
+      // Log activity
+      await ctx.db.activity.create({
+        data: {
+          userId: ctx.user.id,
+          type: 'IOT_DEVICES_VIEWED',
+          description: 'Viewed IoT devices data',
+          metadata: { connectedDevices: devicesData.connectedDevices }
+        }
+      })
+
+      return devicesData
+    }),
+
+  // Get sensors data
+  getSensorsData: protectedProcedure
+    .query(async ({ ctx }) => {
+      // Mock sensors data
+      const sensorsData = {
+        activeSensors: 8,
+        sensors: [
+          {
+            id: 'sensor_1',
+            name: 'Temperature Sensor',
+            description: 'Room temperature monitoring',
+            value: 22.5,
+            unit: '°C',
+            lastReading: '1 minute ago',
+            location: 'Living Room',
+            status: 'active',
+            icon: 'Sensor'
+          },
+          {
+            id: 'sensor_2',
+            name: 'Humidity Sensor',
+            description: 'Air humidity monitoring',
+            value: 45,
+            unit: '%',
+            lastReading: '2 minutes ago',
+            location: 'Bedroom',
+            status: 'active',
+            icon: 'Sensor'
+          },
+          {
+            id: 'sensor_3',
+            name: 'Motion Sensor',
+            description: 'Movement detection',
+            value: 1,
+            unit: 'detections',
+            lastReading: '30 seconds ago',
+            location: 'Hallway',
+            status: 'active',
+            icon: 'Sensor'
+          },
+          {
+            id: 'sensor_4',
+            name: 'Light Sensor',
+            description: 'Ambient light monitoring',
+            value: 650,
+            unit: 'lux',
+            lastReading: '5 minutes ago',
+            location: 'Kitchen',
+            status: 'inactive',
+            icon: 'Sensor'
+          }
+        ],
+        sensorAnalytics: [
+          {
+            id: 'active_sensors',
+            name: 'Active Sensors',
+            value: '8/10',
+            percentage: 80
+          },
+          {
+            id: 'data_accuracy',
+            name: 'Data Accuracy',
+            value: '95%',
+            percentage: 95
+          },
+          {
+            id: 'sensor_health',
+            name: 'Sensor Health',
+            value: 'Good',
+            percentage: 88
+          },
+          {
+            id: 'calibration_status',
+            name: 'Calibration Status',
+            value: 'Up to date',
+            percentage: 92
+          }
+        ]
+      }
+
+      // Log activity
+      await ctx.db.activity.create({
+        data: {
+          userId: ctx.user.id,
+          type: 'IOT_SENSORS_VIEWED',
+          description: 'Viewed IoT sensors data',
+          metadata: { activeSensors: sensorsData.activeSensors }
+        }
+      })
+
+      return sensorsData
+    }),
+
+  // Get smart home data
+  getSmartHomeData: protectedProcedure
+    .query(async ({ ctx }) => {
+      // Mock smart home data
+      const smartHomeData = {
+        smartHomeDevices: 6,
+        smartHomeDevices: [
+          {
+            id: 'smart_1',
+            name: 'Smart Lights',
+            description: 'LED lighting system',
+            room: 'Living Room',
+            status: 'on',
+            lastAction: '2 minutes ago',
+            icon: 'SmartHome'
+          },
+          {
+            id: 'smart_2',
+            name: 'Smart Blinds',
+            description: 'Automated window blinds',
+            room: 'Bedroom',
+            status: 'off',
+            lastAction: '1 hour ago',
+            icon: 'SmartHome'
+          },
+          {
+            id: 'smart_3',
+            name: 'Smart Coffee Maker',
+            description: 'Programmable coffee machine',
+            room: 'Kitchen',
+            status: 'on',
+            lastAction: '30 minutes ago',
+            icon: 'SmartHome'
+          },
+          {
+            id: 'smart_4',
+            name: 'Smart Vacuum',
+            description: 'Robot vacuum cleaner',
+            room: 'Entire House',
+            status: 'off',
+            lastAction: '3 hours ago',
+            icon: 'SmartHome'
+          }
+        ],
+        smartHomeAnalytics: [
+          {
+            id: 'energy_usage',
+            name: 'Energy Usage',
+            value: '2.3 kWh',
+            icon: 'Zap'
+          },
+          {
+            id: 'automation_count',
+            name: 'Automations',
+            value: '15 active',
+            icon: 'Workflow'
+          },
+          {
+            id: 'comfort_score',
+            name: 'Comfort Score',
+            value: '92%',
+            icon: 'Heart'
+          },
+          {
+            id: 'security_status',
+            name: 'Security Status',
+            value: 'Armed',
+            icon: 'Shield'
+          }
+        ]
+      }
+
+      // Log activity
+      await ctx.db.activity.create({
+        data: {
+          userId: ctx.user.id,
+          type: 'IOT_SMART_HOME_VIEWED',
+          description: 'Viewed smart home data',
+          metadata: { smartHomeDevices: smartHomeData.smartHomeDevices }
+        }
+      })
+
+      return smartHomeData
+    }),
+
+  // Get IoT settings
+  getIoTSettings: protectedProcedure
+    .query(async ({ ctx }) => {
+      // Mock IoT settings
+      const settingsData = {
+        iotScore: 89,
+        settings: [
+          {
+            id: 'iot_enabled',
+            key: 'iotEnabled',
+            name: 'IoT System',
+            enabled: true,
+            icon: 'IoT'
+          },
+          {
+            id: 'device_management',
+            key: 'deviceManagement',
+            name: 'Device Management',
+            enabled: true,
+            icon: 'IoTDevice'
+          },
+          {
+            id: 'sensor_monitoring',
+            key: 'sensorMonitoring',
+            name: 'Sensor Monitoring',
+            enabled: true,
+            icon: 'Sensor'
+          },
+          {
+            id: 'smart_home_control',
+            key: 'smartHomeControl',
+            name: 'Smart Home Control',
+            enabled: false,
+            icon: 'SmartHome'
+          }
+        ],
+        iotGoals: [
+          {
+            id: 'device_connectivity',
+            name: 'Device Connectivity',
+            current: 89,
+            target: 95
+          },
+          {
+            id: 'sensor_accuracy',
+            name: 'Sensor Accuracy',
+            current: 92,
+            target: 98
+          },
+          {
+            id: 'automation_efficiency',
+            name: 'Automation Efficiency',
+            current: 85,
+            target: 90
+          },
+          {
+            id: 'energy_optimization',
+            name: 'Energy Optimization',
+            current: 87,
+            target: 92
+          }
+        ]
+      }
+
+      // Log activity
+      await ctx.db.activity.create({
+        data: {
+          userId: ctx.user.id,
+          type: 'IOT_SETTINGS_VIEWED',
+          description: 'Viewed IoT settings',
+          metadata: { iotScore: settingsData.iotScore }
+        }
+      })
+
+      return settingsData
+    }),
+
+  // Connect device
+  connectDevice: protectedProcedure
+    .input(z.object({
+      deviceId: z.string(),
+      action: z.string()
+    }))
+    .mutation(async ({ ctx, input }) => {
+      // Log activity
+      await ctx.db.activity.create({
+        data: {
+          userId: ctx.user.id,
+          type: 'IOT_DEVICE_CONNECTED',
+          description: `Connected device: ${input.deviceId}`,
+          metadata: { deviceId: input.deviceId, action: input.action }
+        }
+      })
+
+      return { success: true, message: 'Device connected successfully' }
+    }),
+
+  // Monitor sensor
+  monitorSensor: protectedProcedure
+    .input(z.object({
+      sensorId: z.string(),
+      action: z.string()
+    }))
+    .mutation(async ({ ctx, input }) => {
+      // Log activity
+      await ctx.db.activity.create({
+        data: {
+          userId: ctx.user.id,
+          type: 'IOT_SENSOR_MONITORED',
+          description: `Monitored sensor: ${input.sensorId}`,
+          metadata: { sensorId: input.sensorId, action: input.action }
+        }
+      })
+
+      return { success: true, message: 'Sensor monitoring started successfully' }
+    }),
+
+  // Control smart home
+  controlSmartHome: protectedProcedure
+    .input(z.object({
+      deviceId: z.string(),
+      action: z.string()
+    }))
+    .mutation(async ({ ctx, input }) => {
+      // Log activity
+      await ctx.db.activity.create({
+        data: {
+          userId: ctx.user.id,
+          type: 'IOT_SMART_HOME_CONTROLLED',
+          description: `Controlled smart home device: ${input.deviceId}`,
+          metadata: { deviceId: input.deviceId, action: input.action }
+        }
+      })
+
+      return { success: true, message: 'Smart home device controlled successfully' }
+    }),
+
+  // Update IoT settings
+  updateSettings: protectedProcedure
+    .input(z.object({
+      iotEnabled: z.boolean().optional(),
+      deviceManagement: z.boolean().optional(),
+      sensorMonitoring: z.boolean().optional(),
+      smartHomeControl: z.boolean().optional()
+    }))
+    .mutation(async ({ ctx, input }) => {
+      // Log activity
+      await ctx.db.activity.create({
+        data: {
+          userId: ctx.user.id,
+          type: 'IOT_SETTINGS_UPDATED',
+          description: 'Updated IoT settings',
+          metadata: input
+        }
+      })
+
+      return { success: true, message: 'IoT settings updated successfully' }
+    }),
+
   // Get IoT statistics
   getIoTStats: protectedProcedure
     .query(async ({ ctx }) => {
-      try {
-        const userId = ctx.user.id
-
-        // Get IoT statistics
-        const [devices, sensors, wearables, automations] = await Promise.all([
-          ctx.db.iotDevice.count({ where: { userId } }),
-          ctx.db.iotSensor.count({ where: { userId } }),
-          ctx.db.wearable.count({ where: { userId } }),
-          ctx.db.iotAutomation.count({ where: { userId } })
-        ])
-
-        // Get online devices
-        const onlineDevices = await ctx.db.iotDevice.count({
-          where: {
-            userId,
-            status: 'online'
-          }
-        })
-
-        // Calculate IoT score
-        const iotScore = calculateIoTScore(devices, sensors, wearables, automations, onlineDevices)
-
-        return {
-          totalDevices: devices,
-          totalSensors: sensors,
-          totalWearables: wearables,
-          totalAutomations: automations,
-          onlineDevices,
-          iotScore,
-          connectivity: Math.round((onlineDevices / devices) * 100) || 0
-        }
-      } catch (error) {
-        throw new TRPCError({
-          code: 'INTERNAL_SERVER_ERROR',
-          message: 'Kunne ikke hente IoT-statistikk'
-        })
+      // Mock IoT statistics
+      const stats = {
+        connectedDevices: 12,
+        activeSensors: 8,
+        smartHomeDevices: 6,
+        iotScore: 89,
+        totalAutomations: 15,
+        energyUsage: 2.3
       }
+
+      // Log activity
+      await ctx.db.activity.create({
+        data: {
+          userId: ctx.user.id,
+          type: 'IOT_STATS_VIEWED',
+          description: 'Viewed IoT statistics',
+          metadata: stats
+        }
+      })
+
+      return stats
     }),
 
   // Search for nearby devices

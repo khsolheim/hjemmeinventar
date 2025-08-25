@@ -1,11 +1,11 @@
 'use client'
 
-import { MachineLearning } from '@/components/ml/MachineLearning'
+import { AdvancedML } from '@/components/ml/AdvancedML'
 
 export default function MLPage() {
   return (
     <div className="container mx-auto p-6">
-      <MachineLearning />
+      <AdvancedML />
     </div>
   )
 }
