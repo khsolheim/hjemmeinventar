@@ -1,24 +1,62 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
 import { Switch } from '@/components/ui/switch'
-import { 
-  Mic,
-  MicOff,
-  Volume2,
-  VolumeX,
+import {
+  BarChart3,
+  Settings,
+  TrendingUp,
+  Calendar,
+  Plus,
+  Edit,
+  Trash2,
   Play,
   Pause,
-  Square,
-  Settings,
+  Timer,
+  Users,
+  UserPlus,
+  UserMinus,
+  UserCheck,
+  UserX,
+  File,
+  Folder,
+  Database,
+  Server,
+  Cloud,
+  Globe,
+  MapPin,
+  Navigation,
+  Compass,
+  Bell,
+  Mail,
+  Smartphone,
+  Tablet,
+  Monitor,
+  Wifi,
+  Bluetooth,
+  Volume2,
+  VolumeX,
+  Mic,
+  MicOff,
+  Camera,
+  CameraOff,
+  Bookmark,
+  Tag,
+  Hash,
+  AtSign,
+  Search,
+  Filter,
+  Grid3x3,
+  List,
+  Layers,
+  Crosshair,
   RefreshCw,
   CheckCircle,
   XCircle,
-  AlertTriangle,
   Info,
   Star,
   Award,
@@ -26,48 +64,33 @@ import {
   Crown,
   Rocket,
   Sparkles,
-  Mic as Microphone,
-  MicOff as Mute,
-  Volume2 as Audio,
-  VolumeX as Silent,
-  Play as Start,
-  Pause as Stop,
-  Square as End,
-  Settings as Config,
-  RefreshCw as Update,
-  CheckCircle as Success,
-  XCircle as Error,
-  AlertTriangle as Warning,
-  Info as Details,
-  Star as Favorite,
-  Award as Prize,
-  Trophy as Victory,
-  Crown as King,
-  Rocket as Launch,
-  Sparkles as Magic,
-  Mic as Voice,
-  MicOff as Disabled,
-  Volume2 as Sound,
-  VolumeX as Quiet,
-  Play as Run,
-  Pause as Halt,
-  Square as Reset,
-  Settings as Setup,
-  RefreshCw as Reload,
-  CheckCircle as Done,
-  XCircle as Fail,
-  AlertTriangle as Notice,
-  Info as Help,
-  Star as Rate,
-  Award as Win,
-  Trophy as Success,
-  Crown as Leader,
-  Rocket as Boost,
-  Sparkles as Shine,
-  Brain,
+  CheckSquare,
+  Target,
   MessageSquare,
-  Languages,
-  Headphones
+  Phone,
+  FileText,
+  Music,
+  Video,
+  Gamepad2,
+  Workflow,
+  Cpu,
+  Code,
+  Terminal,
+  Clock,
+  Webhook,
+  Network,
+  Gauge,
+  HardDrive,
+  PieChart,
+  LineChart,
+  TrendingDown,
+  BarChart,
+  Link,
+  Wallet,
+  Coins,
+  Bitcoin,
+  Brain,
+  Zap
 } from 'lucide-react'
 import { trpc } from '@/lib/trpc/client'
 import { useHapticFeedback } from '@/lib/services/haptic-feedback'
@@ -77,121 +100,75 @@ interface AdvancedVoiceProps {
 }
 
 export function AdvancedVoice({ className }: AdvancedVoiceProps) {
-  const [selectedTab, setSelectedTab] = useState<'assistant' | 'commands' | 'analytics' | 'settings'>('assistant')
-  const [isListening, setIsListening] = useState(false)
-  const [isSpeaking, setIsSpeaking] = useState(false)
-  const [transcript, setTranscript] = useState('')
+  const [selectedTab, setSelectedTab] = useState<'commands' | 'processing' | 'integration' | 'settings'>('commands')
+  const [isRunning, setIsRunning] = useState(false)
   const [voiceEnabled, setVoiceEnabled] = useState(true)
-  const [recognition, setRecognition] = useState<any>(null)
-  const [synthesis, setSynthesis] = useState<any>(null)
+  const [selectedCommand, setSelectedCommand] = useState<string | null>(null)
+  const [selectedProcess, setSelectedProcess] = useState<string | null>(null)
   const haptic = useHapticFeedback()
 
   // Voice queries
-  const voiceQuery = trpc.voice.getVoiceStatus.useQuery()
-  const commandsQuery = trpc.voice.getVoiceCommands.useQuery()
-  const analyticsQuery = trpc.voice.getVoiceAnalytics.useQuery()
+  const commandsQuery = trpc.voice.getCommandsData.useQuery()
+  const processingQuery = trpc.voice.getProcessingData.useQuery()
+  const integrationQuery = trpc.voice.getIntegrationData.useQuery()
   const settingsQuery = trpc.voice.getVoiceSettings.useQuery()
 
-  const executeCommandMutation = trpc.voice.executeCommand.useMutation()
+  const deployCommandMutation = trpc.voice.deployCommand.useMutation()
+  const startProcessingMutation = trpc.voice.startProcessing.useMutation()
+  const syncVoiceMutation = trpc.voice.syncVoice.useMutation()
   const updateSettingsMutation = trpc.voice.updateSettings.useMutation()
-  const trainVoiceMutation = trpc.voice.trainVoice.useMutation()
 
-  useEffect(() => {
-    // Initialize speech recognition
-    if (typeof window !== 'undefined' && 'webkitSpeechRecognition' in window) {
-      const SpeechRecognition = (window as any).webkitSpeechRecognition || (window as any).SpeechRecognition
-      const recognition = new SpeechRecognition()
-      
-      recognition.continuous = true
-      recognition.interimResults = true
-      recognition.lang = 'nb-NO' // Norwegian
-      
-      recognition.onstart = () => {
-        setIsListening(true)
-        haptic.success()
-      }
-      
-      recognition.onresult = (event: any) => {
-        let finalTranscript = ''
-        let interimTranscript = ''
-        
-        for (let i = event.resultIndex; i < event.results.length; i++) {
-          const transcript = event.results[i][0].transcript
-          if (event.results[i].isFinal) {
-            finalTranscript += transcript
-          } else {
-            interimTranscript += transcript
-          }
-        }
-        
-        setTranscript(finalTranscript + interimTranscript)
-        
-        if (finalTranscript) {
-          handleVoiceCommand(finalTranscript)
-        }
-      }
-      
-      recognition.onerror = (event: any) => {
-        console.error('Speech recognition error:', event.error)
-        setIsListening(false)
-        haptic.error()
-      }
-      
-      recognition.onend = () => {
-        setIsListening(false)
-      }
-      
-      setRecognition(recognition)
-    }
-
-    // Initialize speech synthesis
-    if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
-      setSynthesis(window.speechSynthesis)
-    }
-  }, [haptic])
-
-  const handleVoiceCommand = async (command: string) => {
+  const handleDeployCommand = async (commandData: any) => {
     try {
-      const result = await executeCommandMutation.mutateAsync({ command })
-      
+      setIsRunning(true)
+      haptic.selection()
+
+      const result = await deployCommandMutation.mutateAsync(commandData)
+
       if (result.success) {
         haptic.success()
-        if (result.response && synthesis) {
-          speak(result.response)
-        }
       } else {
         haptic.error()
-        speak('Beklager, jeg forstod ikke kommandoen')
       }
     } catch (error) {
-      console.error('Voice command error:', error)
+      console.error('Failed to deploy command:', error)
+      haptic.error()
+    } finally {
+      setIsRunning(false)
+    }
+  }
+
+  const handleStartProcessing = async (processingData: any) => {
+    try {
+      haptic.selection()
+
+      const result = await startProcessingMutation.mutateAsync(processingData)
+
+      if (result.success) {
+        haptic.success()
+      } else {
+        haptic.error()
+      }
+    } catch (error) {
+      console.error('Failed to start processing:', error)
       haptic.error()
     }
   }
 
-  const speak = (text: string) => {
-    if (synthesis) {
-      const utterance = new SpeechSynthesisUtterance(text)
-      utterance.lang = 'nb-NO'
-      utterance.rate = 0.9
-      utterance.pitch = 1
-      
-      utterance.onstart = () => setIsSpeaking(true)
-      utterance.onend = () => setIsSpeaking(false)
-      
-      synthesis.speak(utterance)
-    }
-  }
+  const handleSyncVoice = async (syncData: any) => {
+    try {
+      haptic.selection()
 
-  const startListening = () => {
-    if (recognition && voiceEnabled) {
-      recognition.start()
-    }
-  }
+      const result = await syncVoiceMutation.mutateAsync(syncData)
 
-  const stopListening = () => {
-    if (recognition) {
-      recognition.stop()
+      if (result.success) {
+        haptic.success()
+      } else {
+        haptic.error()
+      }
+    } catch (error) {
+      console.error('Failed to sync voice:', error)
+      haptic.error()
     }
   }
 
@@ -200,29 +177,28 @@ export function AdvancedVoice({ className }: AdvancedVoiceProps) {
     try {
       await updateSettingsMutation.mutateAsync({ voiceEnabled: enabled })
       setVoiceEnabled(enabled)
-      if (!enabled && isListening) {
-        stopListening()
-      }
     } catch (error) {
       console.error('Failed to toggle voice:', error)
     }
   }
 
-  const handleTrainVoice = async () => {
-    haptic.selection()
-    try {
-      await trainVoiceMutation.mutateAsync()
-    } catch (error) {
-      console.error('Failed to train voice:', error)
+  const getCommandStatus = (status: string) => {
+    switch (status) {
+      case 'active': return { color: 'text-green-600', label: 'Active', icon: CheckCircle }
+      case 'deploying': return { color: 'text-blue-600', label: 'Deploying', icon: RefreshCw }
+      case 'failed': return { color: 'text-red-600', label: 'Failed', icon: XCircle }
+      case 'training': return { color: 'text-yellow-600', label: 'Training', icon: Clock }
+      default: return { color: 'text-gray-600', label: 'Unknown', icon: Info }
     }
   }
 
-  const getVoiceStatus = (status: string) => {
+  const getProcessingStatus = (status: string) => {
     switch (status) {
-      case 'listening': return { color: 'text-green-600', label: 'Lytter', icon: Mic }
-      case 'speaking': return { color: 'text-blue-600', label: 'Snakker', icon: Volume2 }
-      case 'idle': return { color: 'text-gray-600', label: 'Inaktiv', icon: MicOff }
-      default: return { color: 'text-gray-600', label: 'Ukjent', icon: AlertTriangle }
+      case 'running': return { color: 'text-green-600', label: 'Running', icon: CheckCircle }
+      case 'queued': return { color: 'text-yellow-600', label: 'Queued', icon: Clock }
+      case 'failed': return { color: 'text-red-600', label: 'Failed', icon: XCircle }
+      case 'completed': return { color: 'text-blue-600', label: 'Completed', icon: CheckSquare }
+      default: return { color: 'text-gray-600', label: 'Unknown', icon: Info }
     }
   }
 
@@ -231,19 +207,19 @@ export function AdvancedVoice({ className }: AdvancedVoiceProps) {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold">Advanced Voice Assistant</h2>
+          <h2 className="text-2xl font-bold">Advanced Voice</h2>
           <p className="text-muted-foreground">
-            Speech recognition, voice commands og voice analytics
+            Voice command management, voice processing og voice integration
           </p>
         </div>
         <div className="flex items-center gap-2">
           <Badge variant="outline" className="flex items-center gap-1">
             <Mic className="w-3 h-3" />
-            Voice Enabled
+            Voice Active
           </Badge>
           <Badge variant="outline" className="flex items-center gap-1">
-            <Brain className="w-3 h-3" />
-            AI Powered
+            <Volume2 className="w-3 h-3" />
+            Commands Ready
           </Badge>
         </div>
       </div>
@@ -252,60 +228,60 @@ export function AdvancedVoice({ className }: AdvancedVoiceProps) {
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Voice Status</CardTitle>
-            <Mic className="h-4 w-4 text-green-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-green-600">
-              {isListening ? 'Listening' : isSpeaking ? 'Speaking' : 'Idle'}
-            </div>
-            <p className="text-xs text-muted-foreground">
-              {getVoiceStatus(isListening ? 'listening' : isSpeaking ? 'speaking' : 'idle').label}
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Commands</CardTitle>
-            <MessageSquare className="h-4 w-4 text-blue-600" />
+            <CardTitle className="text-sm font-medium">Active Commands</CardTitle>
+            <Mic className="h-4 w-4 text-blue-600" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-blue-600">
-              {commandsQuery.data?.totalCommands || 0}
+              {commandsQuery.data?.activeCommands || 0}
             </div>
             <p className="text-xs text-muted-foreground">
-              Available commands
+              Deployed commands
             </p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Accuracy</CardTitle>
-            <Trophy className="h-4 w-4 text-purple-600" />
+            <CardTitle className="text-sm font-medium">Voice Processing</CardTitle>
+            <Volume2 className="h-4 w-4 text-green-600" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-green-600">
+              {processingQuery.data?.activeProcesses || 0}
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Running processes
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Voice Sync</CardTitle>
+            <Link className="h-4 w-4 text-purple-600" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-purple-600">
-              {analyticsQuery.data?.accuracy || 0}%
+              {integrationQuery.data?.voiceSyncs || 0}
             </div>
             <p className="text-xs text-muted-foreground">
-              Recognition accuracy
+              Active syncs
             </p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Usage</CardTitle>
-            <Rocket className="h-4 w-4 text-orange-600" />
+            <CardTitle className="text-sm font-medium">Voice Score</CardTitle>
+            <BarChart3 className="h-4 w-4 text-orange-600" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-orange-600">
-              {analyticsQuery.data?.totalUsage || 0}
+              {settingsQuery.data?.voiceScore || 0}%
             </div>
             <p className="text-xs text-muted-foreground">
-              Voice interactions
+              System performance
             </p>
           </CardContent>
         </Card>
@@ -314,31 +290,31 @@ export function AdvancedVoice({ className }: AdvancedVoiceProps) {
       {/* Tab Navigation */}
       <div className="flex space-x-1 bg-muted p-1 rounded-lg">
         <Button
-          variant={selectedTab === 'assistant' ? 'default' : 'ghost'}
-          size="sm"
-          onClick={() => setSelectedTab('assistant')}
-          className="flex-1"
-        >
-          <Mic className="w-4 h-4 mr-2" />
-          Assistant
-        </Button>
-        <Button
           variant={selectedTab === 'commands' ? 'default' : 'ghost'}
           size="sm"
           onClick={() => setSelectedTab('commands')}
           className="flex-1"
         >
-          <MessageSquare className="w-4 h-4 mr-2" />
+          <Mic className="w-4 h-4 mr-2" />
           Commands
         </Button>
         <Button
-          variant={selectedTab === 'analytics' ? 'default' : 'ghost'}
+          variant={selectedTab === 'processing' ? 'default' : 'ghost'}
           size="sm"
-          onClick={() => setSelectedTab('analytics')}
+          onClick={() => setSelectedTab('processing')}
           className="flex-1"
         >
-          <Brain className="w-4 h-4 mr-2" />
-          Analytics
+          <Volume2 className="w-4 h-4 mr-2" />
+          Processing
+        </Button>
+        <Button
+          variant={selectedTab === 'integration' ? 'default' : 'ghost'}
+          size="sm"
+          onClick={() => setSelectedTab('integration')}
+          className="flex-1"
+        >
+          <Link className="w-4 h-4 mr-2" />
+          Integration
         </Button>
         <Button
           variant={selectedTab === 'settings' ? 'default' : 'ghost'}
@@ -351,145 +327,18 @@ export function AdvancedVoice({ className }: AdvancedVoiceProps) {
         </Button>
       </div>
 
-      {/* Assistant Tab */}
-      {selectedTab === 'assistant' && (
+      {/* Commands Tab */}
+      {selectedTab === 'commands' && (
         <div className="space-y-4">
-          {/* Voice Assistant */}
+          {/* Voice Command Management */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Mic className="w-5 h-5" />
-                Voice Assistant
+                Voice Command Management
               </CardTitle>
               <CardDescription>
-                Interaktive voice commands og AI assistant
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {/* Voice Controls */}
-                <div className="flex items-center justify-center gap-4">
-                  <Button
-                    size="lg"
-                    variant={isListening ? 'destructive' : 'default'}
-                    onClick={isListening ? stopListening : startListening}
-                    disabled={!voiceEnabled}
-                    className="w-20 h-20 rounded-full"
-                  >
-                    {isListening ? (
-                      <MicOff className="w-8 h-8" />
-                    ) : (
-                      <Mic className="w-8 h-8" />
-                    )}
-                  </Button>
-                  
-                  <Button
-                    size="lg"
-                    variant={isSpeaking ? 'destructive' : 'outline'}
-                    onClick={() => isSpeaking ? synthesis?.cancel() : speak('Hei, hvordan kan jeg hjelpe deg?')}
-                    className="w-20 h-20 rounded-full"
-                  >
-                    {isSpeaking ? (
-                      <Square className="w-8 h-8" />
-                    ) : (
-                      <Volume2 className="w-8 h-8" />
-                    )}
-                  </Button>
-                </div>
-
-                {/* Transcript */}
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Transcript</label>
-                  <div className="p-4 border rounded-lg bg-muted min-h-20">
-                    {transcript || 'Start speaking to see transcript...'}
-                  </div>
-                </div>
-
-                {/* Quick Commands */}
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Quick Commands</label>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-                    {[
-                      'Legg til garn',
-                      'Vis lokasjoner',
-                      'Søk etter item',
-                      'Vis statistikk',
-                      'Sync data',
-                      'Backup',
-                      'Settings',
-                      'Help'
-                    ].map((command) => (
-                      <Button
-                        key={command}
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleVoiceCommand(command)}
-                        className="text-xs"
-                      >
-                        {command}
-                      </Button>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Voice Status */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Info className="w-5 h-5" />
-                Voice Status
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {voiceQuery.data?.voiceStatus?.map((status) => (
-                  <div key={status.id} className="flex items-center justify-between p-3 border rounded-lg">
-                    <div className="flex items-center gap-3">
-                      <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
-                        <Mic className="w-6 h-6 text-green-600" />
-                      </div>
-                      <div>
-                        <div className="font-medium">{status.name}</div>
-                        <div className="text-sm text-muted-foreground">
-                          {status.description}
-                        </div>
-                      </div>
-                    </div>
-                    
-                    <div className="flex items-center gap-3">
-                      <div className="text-right">
-                        <div className="text-sm font-medium">{status.status}</div>
-                        <div className="text-xs text-muted-foreground">
-                          {status.lastUpdate}
-                        </div>
-                      </div>
-                      
-                      <Badge variant={status.isActive ? 'default' : 'secondary'}>
-                        {status.isActive ? 'Active' : 'Inactive'}
-                      </Badge>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      )}
-
-      {/* Commands Tab */}
-      {selectedTab === 'commands' && (
-        <div className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <MessageSquare className="w-5 h-5" />
-                Voice Commands
-              </CardTitle>
-              <CardDescription>
-                Available voice commands og their functions
+                Deploy og manage voice commands
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -498,26 +347,34 @@ export function AdvancedVoice({ className }: AdvancedVoiceProps) {
                   <div key={command.id} className="flex items-center justify-between p-4 border rounded-lg">
                     <div className="flex items-center gap-3">
                       <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
-                        <MessageSquare className="w-6 h-6 text-blue-600" />
+                        <command.icon className="w-6 h-6 text-blue-600" />
                       </div>
                       <div>
                         <div className="font-medium">{command.name}</div>
                         <div className="text-sm text-muted-foreground">
-                          {command.description}
+                          {command.description} • {command.language}
                         </div>
                       </div>
                     </div>
-                    
+
                     <div className="flex items-center gap-3">
                       <div className="text-right">
-                        <div className="text-sm font-medium">{command.category}</div>
+                        <div className="text-sm font-medium">{command.accuracy}</div>
                         <div className="text-xs text-muted-foreground">
-                          {command.usageCount} uses
+                          {command.deployed}
                         </div>
                       </div>
-                      
-                      <Badge variant={command.isActive ? 'default' : 'secondary'}>
-                        {command.isActive ? 'Active' : 'Disabled'}
+
+                      <Button
+                        onClick={() => handleDeployCommand({ commandId: command.id, action: 'deploy' })}
+                        variant="outline"
+                        size="sm"
+                      >
+                        <Rocket className="w-4 h-4" />
+                      </Button>
+
+                      <Badge variant={command.status === 'active' ? 'default' : 'secondary'}>
+                        {command.status}
                       </Badge>
                     </div>
                   </div>
@@ -526,24 +383,24 @@ export function AdvancedVoice({ className }: AdvancedVoiceProps) {
             </CardContent>
           </Card>
 
-          {/* Command Categories */}
+          {/* Command Analytics */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <Languages className="w-5 h-5" />
-                Command Categories
+                <BarChart3 className="w-5 h-5" />
+                Command Analytics
               </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                {commandsQuery.data?.categories?.map((category) => (
-                  <div key={category.id} className="p-4 border rounded-lg text-center">
-                    <div className="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-2">
-                      <category.icon className="w-6 h-6 text-purple-600" />
+                {commandsQuery.data?.commandAnalytics?.map((analytic) => (
+                  <div key={analytic.id} className="p-4 border rounded-lg text-center">
+                    <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-2">
+                      <analytic.icon className="w-6 h-6 text-blue-600" />
                     </div>
-                    <div className="font-medium">{category.name}</div>
+                    <div className="font-medium">{analytic.name}</div>
                     <div className="text-sm text-muted-foreground">
-                      {category.commandCount} commands
+                      {analytic.value}
                     </div>
                   </div>
                 ))}
@@ -553,98 +410,159 @@ export function AdvancedVoice({ className }: AdvancedVoiceProps) {
         </div>
       )}
 
-      {/* Analytics Tab */}
-      {selectedTab === 'analytics' && (
+      {/* Processing Tab */}
+      {selectedTab === 'processing' && (
         <div className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* Voice Analytics */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Brain className="w-5 h-5" />
-                  Voice Analytics
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {analyticsQuery.data?.metrics?.map((metric) => (
-                    <div key={metric.id} className="space-y-2">
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm font-medium">{metric.name}</span>
-                        <span className="text-sm font-medium">{metric.value}</span>
-                      </div>
-                      <Progress value={metric.percentage} className="h-2" />
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Usage Trends */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Rocket className="w-5 h-5" />
-                  Usage Trends
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  {analyticsQuery.data?.trends?.map((trend) => (
-                    <div key={trend.id} className="flex items-start gap-2 p-3 border rounded-lg">
-                      <trend.icon className="w-4 h-4 text-blue-600 mt-0.5" />
-                      <div>
-                        <div className="text-sm font-medium">{trend.title}</div>
-                        <div className="text-xs text-muted-foreground">
-                          {trend.description}
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Voice Training */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <Headphones className="w-5 h-5" />
-                Voice Training
+                <Volume2 className="w-5 h-5" />
+                Voice Processing
+              </CardTitle>
+              <CardDescription>
+                Manage voice processing tasks og workflows
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                {processingQuery.data?.processes?.map((process) => (
+                  <div key={process.id} className="flex items-center justify-between p-4 border rounded-lg">
+                    <div className="flex items-center gap-3">
+                      <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
+                        <process.icon className="w-6 h-6 text-green-600" />
+                      </div>
+                      <div>
+                        <div className="font-medium">{process.name}</div>
+                        <div className="text-sm text-muted-foreground">
+                          {process.description} • {process.type}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-3">
+                      <div className="text-right">
+                        <div className="text-sm font-medium">{process.duration}</div>
+                        <div className="text-xs text-muted-foreground">
+                          {process.resources} resources
+                        </div>
+                      </div>
+
+                      <Button
+                        onClick={() => handleStartProcessing({ processId: process.id, action: 'start' })}
+                        variant="outline"
+                        size="sm"
+                      >
+                        <Play className="w-4 h-4" />
+                      </Button>
+
+                      <Badge variant={process.status === 'running' ? 'default' : 'secondary'}>
+                        {process.status}
+                      </Badge>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Processing Analytics */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <PieChart className="w-5 h-5" />
+                Processing Analytics
               </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {analyticsQuery.data?.trainingData?.map((training) => (
-                  <div key={training.id} className="flex items-center justify-between p-3 border rounded-lg">
+                {processingQuery.data?.processingAnalytics?.map((analytic) => (
+                  <div key={analytic.id} className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-medium">{analytic.name}</span>
+                      <span className="text-sm font-medium">{analytic.value}</span>
+                    </div>
+                    <Progress value={analytic.percentage} className="h-2" />
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {/* Integration Tab */}
+      {selectedTab === 'integration' && (
+        <div className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Link className="w-5 h-5" />
+                Voice Integration
+              </CardTitle>
+              <CardDescription>
+                Manage voice synchronization og data flow
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                {integrationQuery.data?.syncs?.map((sync) => (
+                  <div key={sync.id} className="flex items-center justify-between p-4 border rounded-lg">
                     <div className="flex items-center gap-3">
-                      <div className="w-12 h-12 bg-orange-100 rounded-full flex items-center justify-center">
-                        <Headphones className="w-6 h-6 text-orange-600" />
+                      <div className="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center">
+                        <sync.icon className="w-6 h-6 text-purple-600" />
                       </div>
                       <div>
-                        <div className="font-medium">{training.name}</div>
+                        <div className="font-medium">{sync.name}</div>
                         <div className="text-sm text-muted-foreground">
-                          {training.description}
+                          {sync.description} • {sync.frequency}
                         </div>
                       </div>
                     </div>
-                    
+
                     <div className="flex items-center gap-3">
                       <div className="text-right">
-                        <div className="text-sm font-medium">{training.progress}%</div>
+                        <div className="text-sm font-medium">{sync.dataSize}</div>
                         <div className="text-xs text-muted-foreground">
-                          {training.status}
+                          {sync.lastSync}
                         </div>
                       </div>
-                      
+
                       <Button
+                        onClick={() => handleSyncVoice({ syncId: sync.id, action: 'sync' })}
+                        variant="outline"
                         size="sm"
-                        onClick={handleTrainVoice}
-                        disabled={training.status === 'Completed'}
                       >
-                        {training.status === 'Completed' ? 'Completed' : 'Train'}
+                        <Link className="w-4 h-4" />
                       </Button>
+
+                      <Badge variant={sync.status === 'synced' ? 'default' : 'secondary'}>
+                        {sync.status}
+                      </Badge>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Integration Analytics */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <BarChart3 className="w-5 h-5" />
+                Integration Analytics
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                {integrationQuery.data?.integrationAnalytics?.map((analytic) => (
+                  <div key={analytic.id} className="p-4 border rounded-lg text-center">
+                    <div className="w-12 h-12 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-2">
+                      <analytic.icon className="w-6 h-6 text-orange-600" />
+                    </div>
+                    <div className="font-medium">{analytic.name}</div>
+                    <div className="text-sm text-muted-foreground">
+                      {analytic.value}
                     </div>
                   </div>
                 ))}
@@ -664,7 +582,7 @@ export function AdvancedVoice({ className }: AdvancedVoiceProps) {
                 Voice Settings
               </CardTitle>
               <CardDescription>
-                Configure voice assistant settings
+                Configure your voice preferences
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -689,23 +607,26 @@ export function AdvancedVoice({ className }: AdvancedVoiceProps) {
             </CardContent>
           </Card>
 
-          {/* Voice Preferences */}
+          {/* Voice Goals */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <Volume2 className="w-5 h-5" />
-                Voice Preferences
+                <Target className="w-5 h-5" />
+                Voice Goals
               </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {settingsQuery.data?.preferences?.map((preference) => (
-                  <div key={preference.id} className="space-y-2">
+                {settingsQuery.data?.voiceGoals?.map((goal) => (
+                  <div key={goal.id} className="space-y-2">
                     <div className="flex items-center justify-between">
-                      <span className="text-sm font-medium">{preference.name}</span>
-                      <span className="text-sm font-medium">{preference.value}</span>
+                      <span className="text-sm font-medium">{goal.name}</span>
+                      <span className="text-sm font-medium">{goal.current}%</span>
                     </div>
-                    <Progress value={preference.percentage} className="h-2" />
+                    <Progress value={goal.current} className="h-2" />
+                    <div className="text-xs text-muted-foreground">
+                      Target: {goal.target}%
+                    </div>
                   </div>
                 ))}
               </div>
@@ -726,15 +647,15 @@ export function AdvancedVoice({ className }: AdvancedVoiceProps) {
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             <Button variant="outline" className="h-auto p-4 flex flex-col gap-2">
               <Mic className="w-5 h-5" />
-              <span className="text-sm">Start Listening</span>
+              <span className="text-sm">Deploy Command</span>
             </Button>
             <Button variant="outline" className="h-auto p-4 flex flex-col gap-2">
               <Volume2 className="w-5 h-5" />
-              <span className="text-sm">Test Speech</span>
+              <span className="text-sm">Start Processing</span>
             </Button>
             <Button variant="outline" className="h-auto p-4 flex flex-col gap-2">
-              <Headphones className="w-5 h-5" />
-              <span className="text-sm">Train Voice</span>
+              <Link className="w-5 h-5" />
+              <span className="text-sm">Sync Voice</span>
             </Button>
             <Button variant="outline" className="h-auto p-4 flex flex-col gap-2">
               <Settings className="w-5 h-5" />

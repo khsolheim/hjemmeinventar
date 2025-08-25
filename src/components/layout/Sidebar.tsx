@@ -1,8 +1,9 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
+import { useActivePages } from '@/hooks/useActivePages'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { ScrollArea } from '@/components/ui/scroll-area'
@@ -60,6 +61,7 @@ interface NavigationItem {
   href: string
   icon: React.ComponentType<{ className?: string }>
   children?: NavigationItem[]
+  id?: string
 }
 
 interface SidebarProps {
@@ -78,6 +80,22 @@ export function Sidebar({ isOpen, onToggle, isMobile = false }: SidebarProps) {
     return []
   })
   
+  const { activePagesConfig, isPageActive } = useActivePages()
+  
+  // Listen for active pages configuration changes
+  useEffect(() => {
+    const handleActivePagesChange = () => {
+      // Force re-render when active pages config changes
+      // The useActivePages hook will handle the actual update
+    }
+    
+    window.addEventListener('active-pages-config-changed', handleActivePagesChange)
+    
+    return () => {
+      window.removeEventListener('active-pages-config-changed', handleActivePagesChange)
+    }
+  }, [])
+  
   const toggleExpanded = (itemName: string) => {
     setExpandedItems(prev => {
       const newExpanded = prev.includes(itemName) 
@@ -93,62 +111,84 @@ export function Sidebar({ isOpen, onToggle, isMobile = false }: SidebarProps) {
     })
   }
   
-  const navigation: NavigationItem[] = [
-    { name: 'Dashboard', href: '/dashboard', icon: Home },
+  const allNavigation: NavigationItem[] = [
+    { name: 'Dashboard', href: '/dashboard', icon: Home, id: 'dashboard' },
     { 
       name: 'Gjenstander', 
       href: '/items', 
       icon: Package,
+      id: 'items',
       children: [
-        { name: 'Garn', href: '/garn', icon: Palette },
-        { name: 'Mønstre', href: '/patterns', icon: FileText }
+        { name: 'Garn', href: '/garn', icon: Palette, id: 'garn' },
+        { name: 'Mønstre', href: '/patterns', icon: FileText, id: 'patterns' }
       ]
     },
-    { name: 'Quick Add', href: '/quick-add', icon: Plus },
-    { name: 'Smart Search', href: '/search', icon: Search },
-    { name: 'Personalization', href: '/personalization', icon: Settings },
-    { name: 'Advanced Analytics', href: '/advanced-analytics', icon: BarChart3 },
-    { name: 'Smart Inventory', href: '/smart-inventory', icon: Package },
-    { name: 'Gamification', href: '/gamification', icon: Trophy },
-    { name: 'Collaboration', href: '/collaboration', icon: Users },
-    { name: 'Integrations', href: '/integrations', icon: ExternalLink },
-    { name: 'Emergency', href: '/emergency', icon: AlertTriangle },
-    { name: 'Sustainability', href: '/sustainability', icon: Leaf },
-    { name: 'AI Assistant', href: '/ai', icon: Brain },
-    { name: 'IoT Devices', href: '/iot', icon: Wifi },
-    { name: 'Analytics', href: '/analytics', icon: BarChart3 },
-    { name: 'Machine Learning', href: '/ml', icon: Cpu },
-    { name: 'Security', href: '/security', icon: Shield },
-    { name: 'Blockchain', href: '/blockchain', icon: LinkIcon },
-    { name: 'Automation', href: '/automation', icon: Zap },
-    { name: 'Reporting', href: '/reporting', icon: BarChart3 },
-    { name: 'Mobile', href: '/mobile', icon: Smartphone },
-    { name: 'Voice', href: '/voice', icon: Mic },
-    { name: 'Camera', href: '/camera', icon: Camera },
-    { name: 'Location', href: '/location', icon: MapPin },
-    { name: 'Notifications', href: '/notifications', icon: Bell },
-    { name: 'Search', href: '/search', icon: Search },
-    { name: 'Test Features', href: '/test-features', icon: Sparkles },
-    { name: 'Printing', href: '/printing', icon: Printer },
-    { name: 'Utlån', href: '/loans', icon: UserCheck },
-    { name: 'Skann QR', href: '/scan', icon: QrCode },
+    { name: 'Quick Add', href: '/quick-add', icon: Plus, id: 'quick-add' },
+    { name: 'Smart Search', href: '/search', icon: Search, id: 'search' },
+    { name: 'Personalization', href: '/personalization', icon: Settings, id: 'personalization' },
+    { name: 'Advanced Analytics', href: '/advanced-analytics', icon: BarChart3, id: 'advanced-analytics' },
+    { name: 'Smart Inventory', href: '/smart-inventory', icon: Package, id: 'smart-inventory' },
+    { name: 'Gamification', href: '/gamification', icon: Trophy, id: 'gamification' },
+    { name: 'Collaboration', href: '/collaboration', icon: Users, id: 'collaboration' },
+    { name: 'Integrations', href: '/integrations', icon: ExternalLink, id: 'integrations' },
+    { name: 'Emergency', href: '/emergency', icon: AlertTriangle, id: 'emergency' },
+    { name: 'Sustainability', href: '/sustainability', icon: Leaf, id: 'sustainability' },
+    { name: 'AI Assistant', href: '/ai', icon: Brain, id: 'ai' },
+    { name: 'IoT Devices', href: '/iot', icon: Wifi, id: 'iot' },
+    { name: 'Analytics', href: '/analytics', icon: BarChart3, id: 'analytics' },
+    { name: 'Machine Learning', href: '/ml', icon: Cpu, id: 'ml' },
+    { name: 'Security', href: '/security', icon: Shield, id: 'security' },
+    { name: 'Blockchain', href: '/blockchain', icon: LinkIcon, id: 'blockchain' },
+    { name: 'Automation', href: '/automation', icon: Zap, id: 'automation' },
+    { name: 'Reporting', href: '/reporting', icon: BarChart3, id: 'reporting' },
+    { name: 'Mobile', href: '/mobile', icon: Smartphone, id: 'mobile' },
+    { name: 'Voice', href: '/voice', icon: Mic, id: 'voice' },
+    { name: 'Camera', href: '/camera', icon: Camera, id: 'camera' },
+    { name: 'Location', href: '/location', icon: MapPin, id: 'location' },
+    { name: 'Notifications', href: '/notifications', icon: Bell, id: 'notifications' },
+    { name: 'Test Features', href: '/test-features', icon: Sparkles, id: 'test-features' },
+    { name: 'Printing', href: '/printing', icon: Printer, id: 'printing' },
+    { name: 'Utlån', href: '/loans', icon: UserCheck, id: 'loans' },
+    { name: 'Skann QR', href: '/scan', icon: QrCode, id: 'scan' },
     { 
       name: 'Innstillinger', 
       href: '/settings', 
       icon: Settings,
+      id: 'settings',
       children: [
-        { name: 'Lokasjoner', href: '/locations', icon: MapPin },
-        { name: 'Kategorier', href: '/categories', icon: Grid3x3 },
-        { name: 'Husholdninger', href: '/households', icon: Users },
-        { name: 'Samarbeid', href: '/collaboration', icon: Activity },
-        { name: 'AI-Funksjoner', href: '/ai', icon: Brain },
-        { name: 'Import/Export', href: '/import-export', icon: Database },
-        { name: 'Mobile', href: '/mobile', icon: Smartphone },
-        { name: 'Analytics', href: '/analytics', icon: BarChart3 },
-        { name: 'Admin', href: '/admin', icon: Settings }
+        { name: 'Lokasjoner', href: '/locations', icon: MapPin, id: 'locations' },
+        { name: 'Kategorier', href: '/categories', icon: Grid3x3, id: 'categories' },
+        { name: 'Husholdninger', href: '/households', icon: Users, id: 'households' },
+        { name: 'Samarbeid', href: '/collaboration', icon: Activity, id: 'collaboration' },
+        { name: 'AI-Funksjoner', href: '/ai', icon: Brain, id: 'ai' },
+        { name: 'Import/Export', href: '/import-export', icon: Database, id: 'import-export' },
+        { name: 'Mobile', href: '/mobile', icon: Smartphone, id: 'mobile' },
+        { name: 'Analytics', href: '/analytics', icon: BarChart3, id: 'analytics' },
+        { name: 'Admin', href: '/admin', icon: Settings, id: 'admin' }
       ]
     }
   ]
+
+  // Filter navigation based on active pages configuration
+  const filterNavigation = (items: NavigationItem[]): NavigationItem[] => {
+    return items.filter(item => {
+      // Check if this item is active
+      const isActive = isPageActive(item.id || '')
+      
+      // Filter children if they exist
+      if (item.children) {
+        const filteredChildren = filterNavigation(item.children)
+        return isActive && filteredChildren.length > 0
+      }
+      
+      return isActive
+    }).map(item => ({
+      ...item,
+      children: item.children ? filterNavigation(item.children) : undefined
+    }))
+  }
+
+  const navigation = filterNavigation(allNavigation)
   
   const pathname = usePathname()
 

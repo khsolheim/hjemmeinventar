@@ -30,13 +30,13 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { AdvancedSearch, type SearchFilters } from '@/components/search/AdvancedSearch'
+import { AdvancedSearch } from '@/components/search/AdvancedSearch'
 import { trpc } from '@/lib/trpc/client'
 import { toast } from 'sonner'
 import Link from 'next/link'
 
 export default function EnhancedItemsPage() {
-  const [filters, setFilters] = useState<SearchFilters>({
+  const [filters, setFilters] = useState({
     sortBy: 'name',
     sortOrder: 'asc'
   })

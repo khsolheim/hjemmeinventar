@@ -24,9 +24,17 @@ import { integrationRouter } from './integration'
 import { performanceRouter } from './performance'
 import { reportingRouter } from './reporting'
 import { blockchainRouter } from './blockchain'
-import { iotRouter } from './iot'
 import { arVrRouter } from './ar-vr'
 import { mlRouter } from './ml'
+import { quantumRouter } from './quantum'
+import { edgeRouter } from './edge'
+import { networkRouter } from './network'
+import { cybersecurityRouter } from './cybersecurity'
+import { aiMlRouter } from './ai-ml'
+import { cloudRouter } from './cloud'
+import { mobileRouter } from './mobile'
+import { voiceRouter } from './voice'
+import { iotRouter } from './iot'
 
 export const appRouter = createTRPCRouter({
   items: itemsRouter,
@@ -57,4 +65,12 @@ export const appRouter = createTRPCRouter({
   iot: iotRouter,
   arVr: arVrRouter,
   ml: mlRouter,
+  quantum: quantumRouter,
+  edge: edgeRouter,
+  network: networkRouter,
+  cybersecurity: cybersecurityRouter,
+  aiMl: aiMlRouter,
+  cloud: cloudRouter,
+  mobile: mobileRouter,
+  voice: voiceRouter,
 })

@@ -16,7 +16,6 @@ import {
   Trash2,
   Play,
   Pause,
-  Stop,
   Timer,
   Users,
   UserPlus,
@@ -55,41 +54,6 @@ import {
   List,
   Layers,
   Crosshair,
-  Aim,
-  Magic,
-  Launch,
-  King,
-  Victory,
-  Prize,
-  Favorite,
-  Details,
-  Error,
-  Warning,
-  Success,
-  Update,
-  Config,
-  Goal,
-  Fitness,
-  Pulse,
-  Eye,
-  EyeOff,
-  Shield,
-  Lock,
-  Unlock,
-  Download,
-  Upload,
-  Share2,
-  Heart,
-  DollarSign,
-  Activity,
-  Brain,
-  Home,
-  ExternalLink,
-  AlertTriangle,
-  Leaf,
-  LayoutDashboard,
-  BookOpen,
-  MapPin as Location,
   RefreshCw,
   CheckCircle,
   XCircle,
@@ -114,178 +78,19 @@ import {
   Terminal,
   Clock,
   Webhook,
-  Api,
-  Database as Db,
   Network,
   Gauge,
   HardDrive,
-  Memory,
-  Cpu as Processor,
-  Wifi as NetworkIcon,
-  HardDrive as Storage,
-  Activity as Performance,
   PieChart,
   LineChart,
   TrendingDown,
-  Download as Export,
-  FileText as Report,
   BarChart,
-  PieChart as Chart,
-  Activity as Analytics,
   Link,
   Wallet,
   Coins,
   Bitcoin,
-  Ethereum,
-  Zap as Lightning,
-  Shield as Security,
-  Lock as Privacy,
-  Globe as Web3,
-  Database as Blockchain,
-  Network as DeFi,
-  Activity as Mining,
-  Timer as Gas,
-  DollarSign as Token,
-  Star as NFT,
-  Award as SmartContract,
-  Trophy as Governance,
-  Crown as DAO,
-  Rocket as Deploy,
-  Sparkles as Mint,
-  CheckSquare as Verify,
-  Target as Consensus,
-  MessageSquare as Transaction,
-  Phone as Mobile,
-  FileText as Document,
-  Music as Audio,
-  Video as Media,
-  Gamepad2 as Gaming,
-  Workflow as Workflow,
-  Cpu as Compute,
-  Code as Code,
-  Terminal as CLI,
-  Clock as Time,
-  Webhook as Webhook,
-  Api as API,
-  Database as Storage,
-  Network as Network,
-  Gauge as Metrics,
-  HardDrive as Storage,
-  Memory as Memory,
-  Cpu as CPU,
-  Wifi as WiFi,
-  HardDrive as Disk,
-  Activity as Activity,
-  PieChart as Chart,
-  LineChart as Trend,
-  TrendingDown as Decline,
-  Download as Download,
-  FileText as File,
-  BarChart as Graph,
-  PieChart as Circle,
-  Activity as Monitor,
-  Link as Connect,
-  Wallet as Wallet,
-  Coins as Coins,
-  Bitcoin as BTC,
-  Ethereum as ETH,
-  Zap as Lightning,
-  Shield as Security,
-  Lock as Privacy,
-  Globe as Web3,
-  Database as Chain,
-  Network as Network,
-  Activity as Mining,
-  Timer as Gas,
-  DollarSign as Money,
-  Star as NFT,
-  Award as Contract,
-  Trophy as Governance,
-  Crown as DAO,
-  Rocket as Deploy,
-  Sparkles as Mint,
-  CheckSquare as Verify,
-  Target as Consensus,
-  MessageSquare as Message,
-  Phone as Mobile,
-  FileText as Document,
-  Music as Audio,
-  Video as Media,
-  Gamepad2 as Gaming,
-  Workflow as Workflow,
-  Cpu as Compute,
-  Code as Code,
-  Terminal as CLI,
-  Clock as Time,
-  Webhook as Webhook,
-  Api as API,
-  Database as Storage,
-  Network as Network,
-  Gauge as Metrics,
-  HardDrive as Storage,
-  Memory as Memory,
-  Cpu as CPU,
-  Wifi as WiFi,
-  HardDrive as Disk,
-  Activity as Activity,
-  PieChart as Chart,
-  LineChart as Trend,
-  TrendingDown as Decline,
-  Download as Download,
-  FileText as File,
-  BarChart as Graph,
-  PieChart as Circle,
-  Activity as Monitor,
-  Zap,
-  Wifi as IoT,
-  Bluetooth as Sensor,
-  Home as SmartHome,
-  Shield as IoTSecurity,
-  Lock as IoTPrivacy,
-  Globe as IoTNetwork,
-  Database as IoTDatabase,
-  Network as IoTSensor,
-  Activity as IoTAnalytics,
-  Timer as IoTTimer,
-  DollarSign as IoTCost,
-  Star as IoTDevice,
-  Award as IoTSystem,
-  Trophy as IoTAchievement,
-  Crown as IoTCrown,
-  Rocket as IoTDeploy,
-  Sparkles as IoTMagic,
-  CheckSquare as IoTCheck,
-  Target as IoTTarget,
-  MessageSquare as IoTMessage,
-  Phone as IoTSmartphone,
-  FileText as IoTDocument,
-  Music as IoTMusic,
-  Video as IoTVideo,
-  Gamepad2 as IoTGame,
-  Workflow as IoTWorkflow,
-  Cpu as IoTCpu,
-  Code as IoTCode,
-  Terminal as IoTTerminal,
-  Clock as IoTClock,
-  Webhook as IoTWebhook,
-  Api as IoTApi,
-  Database as IoTStorage,
-  Network as IoTNetwork2,
-  Gauge as IoTGauge,
-  HardDrive as IoTStorage2,
-  Memory as IoTMemory,
-  Cpu as IoTCpu2,
-  Wifi as IoTWifi,
-  HardDrive as IoTDisk,
-  Activity as IoTActivity,
-  PieChart as IoTChart,
-  LineChart as IoTTrend,
-  TrendingDown as IoTDecline,
-  Download as IoTDownload,
-  FileText as IoTFile,
-  BarChart as IoTGraph,
-  PieChart as IoTCircle,
-  Activity as IoTMonitor
+  Brain,
+  Zap
 } from 'lucide-react'
 import { trpc } from '@/lib/trpc/client'
 import { useHapticFeedback } from '@/lib/services/haptic-feedback'
@@ -295,30 +100,30 @@ interface AdvancedIoTProps {
 }
 
 export function AdvancedIoT({ className }: AdvancedIoTProps) {
-  const [selectedTab, setSelectedTab] = useState<'devices' | 'sensors' | 'smart-home' | 'settings'>('devices')
-  const [isConnecting, setIsConnecting] = useState(false)
+  const [selectedTab, setSelectedTab] = useState<'devices' | 'processing' | 'integration' | 'settings'>('devices')
+  const [isRunning, setIsRunning] = useState(false)
   const [iotEnabled, setIotEnabled] = useState(true)
   const [selectedDevice, setSelectedDevice] = useState<string | null>(null)
-  const [selectedSensor, setSelectedSensor] = useState<string | null>(null)
+  const [selectedProcess, setSelectedProcess] = useState<string | null>(null)
   const haptic = useHapticFeedback()
 
   // IoT queries
   const devicesQuery = trpc.iot.getDevicesData.useQuery()
-  const sensorsQuery = trpc.iot.getSensorsData.useQuery()
-  const smartHomeQuery = trpc.iot.getSmartHomeData.useQuery()
+  const processingQuery = trpc.iot.getProcessingData.useQuery()
+  const integrationQuery = trpc.iot.getIntegrationData.useQuery()
   const settingsQuery = trpc.iot.getIoTSettings.useQuery()
 
-  const connectDeviceMutation = trpc.iot.connectDevice.useMutation()
-  const monitorSensorMutation = trpc.iot.monitorSensor.useMutation()
-  const controlSmartHomeMutation = trpc.iot.controlSmartHome.useMutation()
+  const deployDeviceMutation = trpc.iot.deployDevice.useMutation()
+  const startProcessingMutation = trpc.iot.startProcessing.useMutation()
+  const syncIoTMutation = trpc.iot.syncIoT.useMutation()
   const updateSettingsMutation = trpc.iot.updateSettings.useMutation()
 
-  const handleConnectDevice = async (deviceData: any) => {
+  const handleDeployDevice = async (deviceData: any) => {
     try {
-      setIsConnecting(true)
+      setIsRunning(true)
       haptic.selection()
 
-      const result = await connectDeviceMutation.mutateAsync(deviceData)
+      const result = await deployDeviceMutation.mutateAsync(deviceData)
 
       if (result.success) {
         haptic.success()
@@ -326,18 +131,18 @@ export function AdvancedIoT({ className }: AdvancedIoTProps) {
         haptic.error()
       }
     } catch (error) {
-      console.error('Failed to connect device:', error)
+      console.error('Failed to deploy device:', error)
       haptic.error()
     } finally {
-      setIsConnecting(false)
+      setIsRunning(false)
     }
   }
 
-  const handleMonitorSensor = async (sensorData: any) => {
+  const handleStartProcessing = async (processingData: any) => {
     try {
       haptic.selection()
 
-      const result = await monitorSensorMutation.mutateAsync(sensorData)
+      const result = await startProcessingMutation.mutateAsync(processingData)
 
       if (result.success) {
         haptic.success()
@@ -345,16 +150,16 @@ export function AdvancedIoT({ className }: AdvancedIoTProps) {
         haptic.error()
       }
     } catch (error) {
-      console.error('Failed to monitor sensor:', error)
+      console.error('Failed to start processing:', error)
       haptic.error()
     }
   }
 
-  const handleControlSmartHome = async (smartHomeData: any) => {
+  const handleSyncIoT = async (syncData: any) => {
     try {
       haptic.selection()
 
-      const result = await controlSmartHomeMutation.mutateAsync(smartHomeData)
+      const result = await syncIoTMutation.mutateAsync(syncData)
 
       if (result.success) {
         haptic.success()
@@ -362,7 +167,7 @@ export function AdvancedIoT({ className }: AdvancedIoTProps) {
         haptic.error()
       }
     } catch (error) {
-      console.error('Failed to control smart home:', error)
+      console.error('Failed to sync IoT:', error)
       haptic.error()
     }
   }
@@ -381,18 +186,18 @@ export function AdvancedIoT({ className }: AdvancedIoTProps) {
     switch (status) {
       case 'connected': return { color: 'text-green-600', label: 'Connected', icon: CheckCircle }
       case 'connecting': return { color: 'text-blue-600', label: 'Connecting', icon: RefreshCw }
-      case 'disconnected': return { color: 'text-gray-600', label: 'Disconnected', icon: XCircle }
-      case 'error': return { color: 'text-red-600', label: 'Error', icon: AlertTriangle }
+      case 'disconnected': return { color: 'text-red-600', label: 'Disconnected', icon: XCircle }
+      case 'updating': return { color: 'text-yellow-600', label: 'Updating', icon: Clock }
       default: return { color: 'text-gray-600', label: 'Unknown', icon: Info }
     }
   }
 
-  const getSensorStatus = (status: string) => {
+  const getProcessingStatus = (status: string) => {
     switch (status) {
-      case 'active': return { color: 'text-green-600', label: 'Active', icon: CheckCircle }
-      case 'inactive': return { color: 'text-gray-600', label: 'Inactive', icon: Pause }
-      case 'error': return { color: 'text-red-600', label: 'Error', icon: XCircle }
-      case 'calibrating': return { color: 'text-blue-600', label: 'Calibrating', icon: RefreshCw }
+      case 'running': return { color: 'text-green-600', label: 'Running', icon: CheckCircle }
+      case 'queued': return { color: 'text-yellow-600', label: 'Queued', icon: Clock }
+      case 'failed': return { color: 'text-red-600', label: 'Failed', icon: XCircle }
+      case 'completed': return { color: 'text-blue-600', label: 'Completed', icon: CheckSquare }
       default: return { color: 'text-gray-600', label: 'Unknown', icon: Info }
     }
   }
@@ -404,17 +209,17 @@ export function AdvancedIoT({ className }: AdvancedIoTProps) {
         <div>
           <h2 className="text-2xl font-bold">Advanced IoT</h2>
           <p className="text-muted-foreground">
-            Device management, sensor monitoring og smart home integration
+            IoT device management, IoT processing og IoT integration
           </p>
         </div>
         <div className="flex items-center gap-2">
           <Badge variant="outline" className="flex items-center gap-1">
-            <IoT className="w-3 h-3" />
+            <Wifi className="w-3 h-3" />
             IoT Active
           </Badge>
           <Badge variant="outline" className="flex items-center gap-1">
-            <SmartHome className="w-3 h-3" />
-            Smart Home Ready
+            <Bluetooth className="w-3 h-3" />
+            Devices Ready
           </Badge>
         </div>
       </div>
@@ -424,7 +229,7 @@ export function AdvancedIoT({ className }: AdvancedIoTProps) {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Connected Devices</CardTitle>
-            <IoTDevice className="h-4 w-4 text-blue-600" />
+            <Wifi className="h-4 w-4 text-blue-600" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-blue-600">
@@ -438,30 +243,30 @@ export function AdvancedIoT({ className }: AdvancedIoTProps) {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Active Sensors</CardTitle>
-            <Sensor className="h-4 w-4 text-green-600" />
+            <CardTitle className="text-sm font-medium">IoT Processing</CardTitle>
+            <Cpu className="h-4 w-4 text-green-600" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-green-600">
-              {sensorsQuery.data?.activeSensors || 0}
+              {processingQuery.data?.activeProcesses || 0}
             </div>
             <p className="text-xs text-muted-foreground">
-              Monitoring sensors
+              Running processes
             </p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Smart Home Devices</CardTitle>
-            <SmartHome className="h-4 w-4 text-purple-600" />
+            <CardTitle className="text-sm font-medium">IoT Sync</CardTitle>
+            <Link className="h-4 w-4 text-purple-600" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-purple-600">
-              {smartHomeQuery.data?.smartHomeDevices || 0}
+              {integrationQuery.data?.iotSyncs || 0}
             </div>
             <p className="text-xs text-muted-foreground">
-              Connected devices
+              Active syncs
             </p>
           </CardContent>
         </Card>
@@ -469,14 +274,14 @@ export function AdvancedIoT({ className }: AdvancedIoTProps) {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">IoT Score</CardTitle>
-            <IoTSystem className="h-4 w-4 text-orange-600" />
+            <BarChart3 className="h-4 w-4 text-orange-600" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-orange-600">
               {settingsQuery.data?.iotScore || 0}%
             </div>
             <p className="text-xs text-muted-foreground">
-              System health
+              System performance
             </p>
           </CardContent>
         </Card>
@@ -490,26 +295,26 @@ export function AdvancedIoT({ className }: AdvancedIoTProps) {
           onClick={() => setSelectedTab('devices')}
           className="flex-1"
         >
-          <IoTDevice className="w-4 h-4 mr-2" />
+          <Wifi className="w-4 h-4 mr-2" />
           Devices
         </Button>
         <Button
-          variant={selectedTab === 'sensors' ? 'default' : 'ghost'}
+          variant={selectedTab === 'processing' ? 'default' : 'ghost'}
           size="sm"
-          onClick={() => setSelectedTab('sensors')}
+          onClick={() => setSelectedTab('processing')}
           className="flex-1"
         >
-          <Sensor className="w-4 h-4 mr-2" />
-          Sensors
+          <Cpu className="w-4 h-4 mr-2" />
+          Processing
         </Button>
         <Button
-          variant={selectedTab === 'smart-home' ? 'default' : 'ghost'}
+          variant={selectedTab === 'integration' ? 'default' : 'ghost'}
           size="sm"
-          onClick={() => setSelectedTab('smart-home')}
+          onClick={() => setSelectedTab('integration')}
           className="flex-1"
         >
-          <SmartHome className="w-4 h-4 mr-2" />
-          Smart Home
+          <Link className="w-4 h-4 mr-2" />
+          Integration
         </Button>
         <Button
           variant={selectedTab === 'settings' ? 'default' : 'ghost'}
@@ -525,15 +330,15 @@ export function AdvancedIoT({ className }: AdvancedIoTProps) {
       {/* Devices Tab */}
       {selectedTab === 'devices' && (
         <div className="space-y-4">
-          {/* Device Management */}
+          {/* IoT Device Management */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <IoTDevice className="w-5 h-5" />
-                Device Management
+                <Wifi className="w-5 h-5" />
+                IoT Device Management
               </CardTitle>
               <CardDescription>
-                Connect og manage IoT devices
+                Deploy og manage IoT devices
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -554,18 +359,18 @@ export function AdvancedIoT({ className }: AdvancedIoTProps) {
 
                     <div className="flex items-center gap-3">
                       <div className="text-right">
-                        <div className="text-sm font-medium">{device.lastSeen}</div>
+                        <div className="text-sm font-medium">{device.signal}</div>
                         <div className="text-xs text-muted-foreground">
-                          {device.battery}% battery
+                          {device.lastSeen}
                         </div>
                       </div>
 
                       <Button
-                        onClick={() => handleConnectDevice({ deviceId: device.id, action: 'connect' })}
+                        onClick={() => handleDeployDevice({ deviceId: device.id, action: 'deploy' })}
                         variant="outline"
                         size="sm"
                       >
-                        <Link className="w-4 h-4" />
+                        <Rocket className="w-4 h-4" />
                       </Button>
 
                       <Badge variant={device.status === 'connected' ? 'default' : 'secondary'}>
@@ -605,53 +410,53 @@ export function AdvancedIoT({ className }: AdvancedIoTProps) {
         </div>
       )}
 
-      {/* Sensors Tab */}
-      {selectedTab === 'sensors' && (
+      {/* Processing Tab */}
+      {selectedTab === 'processing' && (
         <div className="space-y-4">
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <Sensor className="w-5 h-5" />
-                Sensor Monitoring
+                <Cpu className="w-5 h-5" />
+                IoT Processing
               </CardTitle>
               <CardDescription>
-                Monitor og manage sensors
+                Manage IoT processing tasks og workflows
               </CardDescription>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {sensorsQuery.data?.sensors?.map((sensor) => (
-                  <div key={sensor.id} className="flex items-center justify-between p-4 border rounded-lg">
+                {processingQuery.data?.processes?.map((process) => (
+                  <div key={process.id} className="flex items-center justify-between p-4 border rounded-lg">
                     <div className="flex items-center gap-3">
                       <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
-                        <sensor.icon className="w-6 h-6 text-green-600" />
+                        <process.icon className="w-6 h-6 text-green-600" />
                       </div>
                       <div>
-                        <div className="font-medium">{sensor.name}</div>
+                        <div className="font-medium">{process.name}</div>
                         <div className="text-sm text-muted-foreground">
-                          {sensor.description} • {sensor.value} {sensor.unit}
+                          {process.description} • {process.type}
                         </div>
                       </div>
                     </div>
 
                     <div className="flex items-center gap-3">
                       <div className="text-right">
-                        <div className="text-sm font-medium">{sensor.lastReading}</div>
+                        <div className="text-sm font-medium">{process.duration}</div>
                         <div className="text-xs text-muted-foreground">
-                          {sensor.location}
+                          {process.resources} resources
                         </div>
                       </div>
 
                       <Button
-                        onClick={() => handleMonitorSensor({ sensorId: sensor.id, action: 'monitor' })}
+                        onClick={() => handleStartProcessing({ processId: process.id, action: 'start' })}
                         variant="outline"
                         size="sm"
                       >
-                        <Sensor className="w-4 h-4" />
+                        <Play className="w-4 h-4" />
                       </Button>
 
-                      <Badge variant={sensor.status === 'active' ? 'default' : 'secondary'}>
-                        {sensor.status}
+                      <Badge variant={process.status === 'running' ? 'default' : 'secondary'}>
+                        {process.status}
                       </Badge>
                     </div>
                   </div>
@@ -660,17 +465,17 @@ export function AdvancedIoT({ className }: AdvancedIoTProps) {
             </CardContent>
           </Card>
 
-          {/* Sensor Analytics */}
+          {/* Processing Analytics */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <PieChart className="w-5 h-5" />
-                Sensor Analytics
+                Processing Analytics
               </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {sensorsQuery.data?.sensorAnalytics?.map((analytic) => (
+                {processingQuery.data?.processingAnalytics?.map((analytic) => (
                   <div key={analytic.id} className="space-y-2">
                     <div className="flex items-center justify-between">
                       <span className="text-sm font-medium">{analytic.name}</span>
@@ -685,53 +490,53 @@ export function AdvancedIoT({ className }: AdvancedIoTProps) {
         </div>
       )}
 
-      {/* Smart Home Tab */}
-      {selectedTab === 'smart-home' && (
+      {/* Integration Tab */}
+      {selectedTab === 'integration' && (
         <div className="space-y-4">
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <SmartHome className="w-5 h-5" />
-                Smart Home Control
+                <Link className="w-5 h-5" />
+                IoT Integration
               </CardTitle>
               <CardDescription>
-                Control smart home devices
+                Manage IoT synchronization og data flow
               </CardDescription>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {smartHomeQuery.data?.smartHomeDevices?.map((device) => (
-                  <div key={device.id} className="flex items-center justify-between p-4 border rounded-lg">
+                {integrationQuery.data?.syncs?.map((sync) => (
+                  <div key={sync.id} className="flex items-center justify-between p-4 border rounded-lg">
                     <div className="flex items-center gap-3">
                       <div className="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center">
-                        <device.icon className="w-6 h-6 text-purple-600" />
+                        <sync.icon className="w-6 h-6 text-purple-600" />
                       </div>
                       <div>
-                        <div className="font-medium">{device.name}</div>
+                        <div className="font-medium">{sync.name}</div>
                         <div className="text-sm text-muted-foreground">
-                          {device.description} • {device.room}
+                          {sync.description} • {sync.frequency}
                         </div>
                       </div>
                     </div>
 
                     <div className="flex items-center gap-3">
                       <div className="text-right">
-                        <div className="text-sm font-medium">{device.status}</div>
+                        <div className="text-sm font-medium">{sync.dataSize}</div>
                         <div className="text-xs text-muted-foreground">
-                          {device.lastAction}
+                          {sync.lastSync}
                         </div>
                       </div>
 
                       <Button
-                        onClick={() => handleControlSmartHome({ deviceId: device.id, action: 'control' })}
+                        onClick={() => handleSyncIoT({ syncId: sync.id, action: 'sync' })}
                         variant="outline"
                         size="sm"
                       >
-                        <SmartHome className="w-4 h-4" />
+                        <Link className="w-4 h-4" />
                       </Button>
 
-                      <Badge variant={device.status === 'on' ? 'default' : 'secondary'}>
-                        {device.status}
+                      <Badge variant={sync.status === 'synced' ? 'default' : 'secondary'}>
+                        {sync.status}
                       </Badge>
                     </div>
                   </div>
@@ -740,17 +545,17 @@ export function AdvancedIoT({ className }: AdvancedIoTProps) {
             </CardContent>
           </Card>
 
-          {/* Smart Home Analytics */}
+          {/* Integration Analytics */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <BarChart3 className="w-5 h-5" />
-                Smart Home Analytics
+                Integration Analytics
               </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                {smartHomeQuery.data?.smartHomeAnalytics?.map((analytic) => (
+                {integrationQuery.data?.integrationAnalytics?.map((analytic) => (
                   <div key={analytic.id} className="p-4 border rounded-lg text-center">
                     <div className="w-12 h-12 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-2">
                       <analytic.icon className="w-6 h-6 text-orange-600" />
@@ -841,16 +646,16 @@ export function AdvancedIoT({ className }: AdvancedIoTProps) {
         <CardContent>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             <Button variant="outline" className="h-auto p-4 flex flex-col gap-2">
-              <IoTDevice className="w-5 h-5" />
-              <span className="text-sm">Connect Device</span>
+              <Wifi className="w-5 h-5" />
+              <span className="text-sm">Deploy Device</span>
             </Button>
             <Button variant="outline" className="h-auto p-4 flex flex-col gap-2">
-              <Sensor className="w-5 h-5" />
-              <span className="text-sm">Monitor Sensor</span>
+              <Cpu className="w-5 h-5" />
+              <span className="text-sm">Start Processing</span>
             </Button>
             <Button variant="outline" className="h-auto p-4 flex flex-col gap-2">
-              <SmartHome className="w-5 h-5" />
-              <span className="text-sm">Control Home</span>
+              <Link className="w-5 h-5" />
+              <span className="text-sm">Sync IoT</span>
             </Button>
             <Button variant="outline" className="h-auto p-4 flex flex-col gap-2">
               <Settings className="w-5 h-5" />

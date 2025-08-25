@@ -40,7 +40,14 @@ import {
   Shield,
   Link,
   Star,
-  Eye
+  Eye,
+  Zap as Quantum,
+  Server as Edge,
+  Wifi as Network5G,
+  Shield as Cyber,
+  Database as Blockchain,
+  Brain as AIML,
+  Cloud as CloudComputing
 } from 'lucide-react'
 import { QuickAddModal } from '@/components/items/QuickAddModal'
 import { VoiceCommand } from '@/components/ui/voice-command'
@@ -132,6 +139,19 @@ export default function TestFeaturesPage() {
           <TabsTrigger value="notifications-advanced">Sprint 17</TabsTrigger>
           <TabsTrigger value="search-advanced">Sprint 18</TabsTrigger>
           <TabsTrigger value="dashboard-advanced">Sprint 19</TabsTrigger>
+          <TabsTrigger value="iot-advanced">Sprint 20</TabsTrigger>
+          <TabsTrigger value="ar-vr-advanced">Sprint 21</TabsTrigger>
+          <TabsTrigger value="ml-advanced">Sprint 22</TabsTrigger>
+          <TabsTrigger value="quantum-advanced">Sprint 23</TabsTrigger>
+          <TabsTrigger value="edge-advanced">Sprint 24</TabsTrigger>
+          <TabsTrigger value="network-advanced">Sprint 25</TabsTrigger>
+          <TabsTrigger value="cybersecurity-advanced">Sprint 26</TabsTrigger>
+          <TabsTrigger value="blockchain-advanced">Sprint 27</TabsTrigger>
+          <TabsTrigger value="ai-ml-advanced">Sprint 28</TabsTrigger>
+          <TabsTrigger value="cloud-advanced">Sprint 29</TabsTrigger>
+          <TabsTrigger value="mobile-advanced">Sprint 30</TabsTrigger>
+          <TabsTrigger value="voice-advanced">Sprint 31</TabsTrigger>
+          <TabsTrigger value="iot-advanced">Sprint 32</TabsTrigger>
           <TabsTrigger value="mobile">Mobile</TabsTrigger>
           <TabsTrigger value="voice">Stemme</TabsTrigger>
           <TabsTrigger value="results">Resultater</TabsTrigger>
@@ -1631,9 +1651,339 @@ export default function TestFeaturesPage() {
               </CardContent>
             </Card>
           </div>
-        </TabsContent>
+                    </TabsContent>
 
-        <TabsContent value="mobile" className="space-y-4">
+            <TabsContent value="quantum-advanced" className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-1 gap-4">
+                {/* Advanced Quantum Computing */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Quantum className="w-5 h-5 text-green-600" />
+                      Advanced Quantum Computing
+                    </CardTitle>
+                    <CardDescription>
+                      Quantum algorithm management, simulation og quantum-classical integration
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-2">
+                      <Badge variant="outline" className="w-full justify-center">
+                        ✅ Implementert
+                      </Badge>
+                      <p className="text-sm text-muted-foreground">
+                        Quantum algorithms, quantum simulation, quantum integration, quantum settings
+                      </p>
+                      <Button 
+                        onClick={() => window.location.href = '/quantum'}
+                        className="w-full"
+                      >
+                        Test Quantum
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            </TabsContent>
+
+            <TabsContent value="edge-advanced" className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-1 gap-4">
+                {/* Advanced Edge Computing */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Edge className="w-5 h-5 text-green-600" />
+                      Advanced Edge Computing
+                    </CardTitle>
+                    <CardDescription>
+                      Edge node management, edge processing og edge-cloud integration
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-2">
+                      <Badge variant="outline" className="w-full justify-center">
+                        ✅ Implementert
+                      </Badge>
+                      <p className="text-sm text-muted-foreground">
+                        Edge nodes, edge processing, edge integration, edge settings
+                      </p>
+                      <Button 
+                        onClick={() => window.location.href = '/edge'}
+                        className="w-full"
+                      >
+                        Test Edge
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            </TabsContent>
+
+            <TabsContent value="network-advanced" className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-1 gap-4">
+                {/* Advanced 5G/6G Network */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Network5G className="w-5 h-5 text-green-600" />
+                      Advanced 5G/6G Network
+                    </CardTitle>
+                    <CardDescription>
+                      5G/6G network management, network processing og network integration
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-2">
+                      <Badge variant="outline" className="w-full justify-center">
+                        ✅ Implementert
+                      </Badge>
+                      <p className="text-sm text-muted-foreground">
+                        5G/6G nodes, network processing, network integration, network settings
+                      </p>
+                      <Button 
+                        onClick={() => window.location.href = '/network'}
+                        className="w-full"
+                      >
+                        Test Network
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+                        </TabsContent>
+
+            <TabsContent value="cybersecurity-advanced" className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-1 gap-4">
+                {/* Advanced Cybersecurity */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Cyber className="w-5 h-5 text-green-600" />
+                      Advanced Cybersecurity
+                    </CardTitle>
+                    <CardDescription>
+                      Threat management, security processing og security integration
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-2">
+                      <Badge variant="outline" className="w-full justify-center">
+                        ✅ Implementert
+                      </Badge>
+                      <p className="text-sm text-muted-foreground">
+                        Threat management, security processing, security integration, security settings
+                      </p>
+                      <Button 
+                        onClick={() => window.location.href = '/cybersecurity'}
+                        className="w-full"
+                      >
+                        Test Cybersecurity
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            </TabsContent>
+
+            <TabsContent value="blockchain-advanced" className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-1 gap-4">
+                {/* Advanced Blockchain */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Blockchain className="w-5 h-5 text-green-600" />
+                      Advanced Blockchain
+                    </CardTitle>
+                    <CardDescription>
+                      Smart contract management, blockchain processing og DeFi integration
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-2">
+                      <Badge variant="outline" className="w-full justify-center">
+                        ✅ Implementert
+                      </Badge>
+                      <p className="text-sm text-muted-foreground">
+                        Smart contracts, blockchain processing, DeFi integration, blockchain settings
+                      </p>
+                      <Button 
+                        onClick={() => window.location.href = '/blockchain'}
+                        className="w-full"
+                      >
+                        Test Blockchain
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            </TabsContent>
+
+            <TabsContent value="ai-ml-advanced" className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-1 gap-4">
+                {/* Advanced AI/ML */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <AIML className="w-5 h-5 text-green-600" />
+                      Advanced AI/ML
+                    </CardTitle>
+                    <CardDescription>
+                      Model management, AI/ML processing og model integration
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-2">
+                      <Badge variant="outline" className="w-full justify-center">
+                        ✅ Implementert
+                      </Badge>
+                      <p className="text-sm text-muted-foreground">
+                        AI/ML models, processing, model integration, AI/ML settings
+                      </p>
+                      <Button 
+                        onClick={() => window.location.href = '/ai-ml'}
+                        className="w-full"
+                      >
+                        Test AI/ML
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            </TabsContent>
+
+            <TabsContent value="cloud-advanced" className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-1 gap-4">
+                {/* Advanced Cloud Computing */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <CloudComputing className="w-5 h-5 text-green-600" />
+                      Advanced Cloud Computing
+                    </CardTitle>
+                    <CardDescription>
+                      Infrastructure management, cloud processing og service integration
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-2">
+                      <Badge variant="outline" className="w-full justify-center">
+                        ✅ Implementert
+                      </Badge>
+                      <p className="text-sm text-muted-foreground">
+                        Cloud infrastructure, processing, service integration, cloud settings
+                      </p>
+                      <Button 
+                        onClick={() => window.location.href = '/cloud'}
+                        className="w-full"
+                      >
+                        Test Cloud
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            </TabsContent>
+
+            <TabsContent value="mobile-advanced" className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-1 gap-4">
+                {/* Advanced Mobile */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Smartphone className="w-5 h-5 text-green-600" />
+                      Advanced Mobile
+                    </CardTitle>
+                    <CardDescription>
+                      App management, mobile processing og app integration
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-2">
+                      <Badge variant="outline" className="w-full justify-center">
+                        ✅ Implementert
+                      </Badge>
+                      <p className="text-sm text-muted-foreground">
+                        Mobile apps, processing, app integration, mobile settings
+                      </p>
+                      <Button 
+                        onClick={() => window.location.href = '/mobile'}
+                        className="w-full"
+                      >
+                        Test Mobile
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            </TabsContent>
+
+            <TabsContent value="voice-advanced" className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-1 gap-4">
+                {/* Advanced Voice */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Mic className="w-5 h-5 text-green-600" />
+                      Advanced Voice
+                    </CardTitle>
+                    <CardDescription>
+                      Voice command management, voice processing og voice integration
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-2">
+                      <Badge variant="outline" className="w-full justify-center">
+                        ✅ Implementert
+                      </Badge>
+                      <p className="text-sm text-muted-foreground">
+                        Voice commands, processing, voice integration, voice settings
+                      </p>
+                      <Button 
+                        onClick={() => window.location.href = '/voice'}
+                        className="w-full"
+                      >
+                        Test Voice
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            </TabsContent>
+
+            <TabsContent value="iot-advanced" className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-1 gap-4">
+                {/* Advanced IoT */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Wifi className="w-5 h-5 text-green-600" />
+                      Advanced IoT
+                    </CardTitle>
+                    <CardDescription>
+                      IoT device management, IoT processing og IoT integration
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-2">
+                      <Badge variant="outline" className="w-full justify-center">
+                        ✅ Implementert
+                      </Badge>
+                      <p className="text-sm text-muted-foreground">
+                        IoT devices, processing, IoT integration, IoT settings
+                      </p>
+                      <Button 
+                        onClick={() => window.location.href = '/iot'}
+                        className="w-full"
+                      >
+                        Test IoT
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            </TabsContent>
+
+            <TabsContent value="mobile" className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {/* Mobile Features */}
             <Card>

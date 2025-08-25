@@ -345,6 +345,21 @@ export default function SettingsPage() {
                 </Link>
               </div>
 
+              <div className="flex items-center justify-between p-3 border rounded-lg">
+                <div className="space-y-1">
+                  <div className="font-medium">Aktive sider</div>
+                  <div className="text-sm text-muted-foreground">
+                    Kontroller hvilke sider som vises i sidemenyen
+                  </div>
+                </div>
+                <Link href="/settings/active-pages">
+                  <Button variant="outline" size="sm" className="flex items-center gap-2">
+                    Konfigurer
+                    <ExternalLink className="h-3 w-3" />
+                  </Button>
+                </Link>
+              </div>
+
               <div className="flex items-center justify-between">
                 <div className="space-y-0.5">
                   <Label htmlFor="org-strict-validation" className="text-base">Streng hierarki-validering</Label>

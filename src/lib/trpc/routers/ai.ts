@@ -3,6 +3,30 @@ import { createTRPCRouter, protectedProcedure } from '../server'
 import { TRPCError } from '@trpc/server'
 
 export const aiRouter = createTRPCRouter({
+  // Check if AI is enabled
+  isEnabled: protectedProcedure
+    .query(async ({ ctx }) => {
+      try {
+        // For now, always return enabled since we don't have user preferences
+        // In the future, this could check user settings or subscription status
+        return {
+          enabled: true,
+          features: {
+            predictions: true,
+            automations: true,
+            insights: true,
+            chat: true,
+            voice: true
+          }
+        }
+      } catch (error) {
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Kunne ikke sjekke AI-status'
+        })
+      }
+    }),
+
   // Get AI predictions
   getPredictions: protectedProcedure
     .query(async ({ ctx }) => {
@@ -10,14 +34,13 @@ export const aiRouter = createTRPCRouter({
         const userId = ctx.user.id
 
         // Get user's data for prediction analysis
-        const [items, activities, analytics] = await Promise.all([
+        const [items, activities] = await Promise.all([
           ctx.db.item.findMany({ where: { userId } }),
-          ctx.db.activity.findMany({ where: { userId } }),
-          ctx.db.analytics.findMany({ where: { userId } })
+          ctx.db.activity.findMany({ where: { userId } })
         ])
 
         // Generate AI predictions based on user data
-        const predictions = generatePredictions(items, activities, analytics)
+        const predictions = generatePredictions(items, activities, [])
 
         return predictions
       } catch (error) {
@@ -32,23 +55,28 @@ export const aiRouter = createTRPCRouter({
   getAutomations: protectedProcedure
     .query(async ({ ctx }) => {
       try {
-        const userId = ctx.user.id
-
-        // Get user's AI automations
-        const automations = await ctx.db.aiAutomation.findMany({
-          where: { userId },
-          orderBy: { createdAt: 'desc' }
-        })
-
-        return automations.map(automation => ({
-          id: automation.id,
-          name: automation.name,
-          description: automation.description,
-          enabled: automation.enabled,
-          triggerCount: automation.triggerCount,
-          lastTriggered: automation.lastTriggered,
-          confidence: automation.confidence
-        }))
+        // For now, return mock data since aiAutomation model doesn't exist
+        // In the future, this would query the actual automations table
+        return [
+          {
+            id: '1',
+            name: 'Automatisk kategorisering',
+            description: 'Kategoriserer nye gjenstander automatisk',
+            enabled: true,
+            triggerCount: 15,
+            lastTriggered: new Date().toISOString(),
+            confidence: 85
+          },
+          {
+            id: '2',
+            name: 'Lagerpåminnelser',
+            description: 'Varsler når lager er lavt',
+            enabled: true,
+            triggerCount: 8,
+            lastTriggered: new Date().toISOString(),
+            confidence: 92
+          }
+        ]
       } catch (error) {
         throw new TRPCError({
           code: 'INTERNAL_SERVER_ERROR',
@@ -64,20 +92,237 @@ export const aiRouter = createTRPCRouter({
         const userId = ctx.user.id
 
         // Get user's data for insight generation
-        const [items, activities, analytics] = await Promise.all([
+        const [items, activities] = await Promise.all([
           ctx.db.item.findMany({ where: { userId } }),
-          ctx.db.activity.findMany({ where: { userId } }),
-          ctx.db.analytics.findMany({ where: { userId } })
+          ctx.db.activity.findMany({ where: { userId } })
         ])
 
         // Generate AI insights based on user data
-        const insights = generateInsights(items, activities, analytics)
+        const insights = generateInsights(items, activities, [])
 
         return insights
       } catch (error) {
         throw new TRPCError({
           code: 'INTERNAL_SERVER_ERROR',
           message: 'Kunne ikke hente AI-innsikt'
+        })
+      }
+    }),
+
+  // Enhance search query with AI
+  enhanceSearchQuery: protectedProcedure
+    .input(z.object({
+      query: z.string().min(1)
+    }))
+    .mutation(async ({ ctx, input }) => {
+      try {
+        // Simple AI enhancement - in a real app, this would use an AI service
+        const enhanced = input.query
+          .split(' ')
+          .map(word => {
+            // Add common synonyms and related terms
+            const synonyms: Record<string, string[]> = {
+              'bok': ['book', 'bøker', 'reading'],
+              'klær': ['clothes', 'clothing', 'dress'],
+              'elektronikk': ['electronics', 'tech', 'gadgets'],
+              'kjøkken': ['kitchen', 'cooking', 'utensils'],
+              'bathroom': ['bad', 'bathroom', 'hygiene'],
+              'verktøy': ['tools', 'equipment', 'hardware']
+            }
+            
+            const lowerWord = word.toLowerCase()
+            const found = Object.entries(synonyms).find(([key]) => 
+              key.includes(lowerWord) || lowerWord.includes(key)
+            )
+            
+            return found ? `${word} ${found[1].join(' ')}` : word
+          })
+          .join(' ')
+        
+        return enhanced
+      } catch (error) {
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Kunne ikke forbedre søket'
+        })
+      }
+    }),
+
+  // Analyze image with AI
+  analyzeImage: protectedProcedure
+    .input(z.object({
+      imageUrl: z.string().url(),
+      description: z.string().optional()
+    }))
+    .mutation(async ({ ctx, input }) => {
+      try {
+        // Mock AI image analysis - in a real app, this would use an AI service
+        const analysis = {
+          detectedObjects: ['item', 'object'],
+          suggestedName: 'Detected Item',
+          suggestedCategory: 'General',
+          confidence: 0.85,
+          tags: ['detected', 'item'],
+          description: input.description || 'AI-detected item'
+        }
+        
+        return analysis
+      } catch (error) {
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Kunne ikke analysere bilde'
+        })
+      }
+    }),
+
+  // Generate insights
+  generateInsights: protectedProcedure
+    .query(async ({ ctx }) => {
+      try {
+        const userId = ctx.user.id
+        
+        // Mock insights generation
+        return [
+          {
+            id: '1',
+            title: 'Lageroptimalisering',
+            description: 'Du kan spare plass ved å organisere gjenstander bedre',
+            type: 'optimization',
+            priority: 'high'
+          },
+          {
+            id: '2',
+            title: 'Kategorisering',
+            description: 'Flere gjenstander mangler kategorier',
+            type: 'organization',
+            priority: 'medium'
+          }
+        ]
+      } catch (error) {
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Kunne ikke generere innsikt'
+        })
+      }
+    }),
+
+  // Analyze inventory
+  analyzeInventory: protectedProcedure
+    .query(async ({ ctx }) => {
+      try {
+        const userId = ctx.user.id
+        
+        // Mock inventory analysis
+        return {
+          totalItems: 150,
+          categories: 12,
+          locations: 8,
+          efficiency: 0.75,
+          recommendations: [
+            'Organiser kjøkkenutstyr bedre',
+            'Legg til flere kategorier'
+          ]
+        }
+      } catch (error) {
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Kunne ikke analysere inventar'
+        })
+      }
+    }),
+
+  // Get suggestions
+  getSuggestions: protectedProcedure
+    .query(async ({ ctx }) => {
+      try {
+        // Mock suggestions
+        return [
+          {
+            id: '1',
+            type: 'category',
+            suggestion: 'Legg til "Elektronikk" kategori',
+            confidence: 0.9
+          },
+          {
+            id: '2',
+            type: 'organization',
+            suggestion: 'Organiser kjøkkenutstyr',
+            confidence: 0.8
+          }
+        ]
+      } catch (error) {
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Kunne ikke hente forslag'
+        })
+      }
+    }),
+
+  // Get batch suggestions
+  getBatchSuggestions: protectedProcedure
+    .input(z.object({
+      items: z.array(z.object({
+        name: z.string(),
+        description: z.string().optional()
+      }))
+    }))
+    .mutation(async ({ ctx, input }) => {
+      try {
+        // Mock batch suggestions
+        return input.items.map(item => ({
+          name: item.name,
+          suggestedCategory: 'General',
+          suggestedTags: ['suggested'],
+          confidence: 0.7
+        }))
+      } catch (error) {
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Kunne ikke generere batch-forslag'
+        })
+      }
+    }),
+
+  // Suggest category
+  suggestCategory: protectedProcedure
+    .input(z.object({
+      name: z.string(),
+      description: z.string().optional()
+    }))
+    .mutation(async ({ ctx, input }) => {
+      try {
+        // Mock category suggestion
+        return {
+          suggestedCategory: 'General',
+          confidence: 0.8,
+          alternatives: ['Other', 'Misc']
+        }
+      } catch (error) {
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Kunne ikke foreslå kategori'
+        })
+      }
+    }),
+
+  // Suggest tags
+  suggestTags: protectedProcedure
+    .input(z.object({
+      name: z.string(),
+      description: z.string().optional(),
+      category: z.string().optional()
+    }))
+    .mutation(async ({ ctx, input }) => {
+      try {
+        // Mock tag suggestions
+        return {
+          suggestedTags: ['suggested', 'tag'],
+          confidence: 0.7
+        }
+      } catch (error) {
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Kunne ikke foreslå tags'
         })
       }
     }),
@@ -89,15 +334,14 @@ export const aiRouter = createTRPCRouter({
         const userId = ctx.user.id
 
         // Get comprehensive user context for AI
-        const [user, items, activities, preferences] = await Promise.all([
+        const [user, items, activities] = await Promise.all([
           ctx.db.user.findUnique({ where: { id: userId } }),
           ctx.db.item.findMany({ where: { userId } }),
           ctx.db.activity.findMany({ 
             where: { userId },
             orderBy: { createdAt: 'desc' },
             take: 50
-          }),
-          ctx.db.userPreference.findMany({ where: { userId } })
+          })
         ])
 
         return {

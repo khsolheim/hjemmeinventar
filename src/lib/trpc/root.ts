@@ -18,7 +18,6 @@ import { collaborationRouter } from './routers/collaboration'
 import { integrationsRouter } from './routers/integrations'
 import { emergencyRouter } from './routers/emergency'
 import { sustainabilityRouter } from './routers/sustainability'
-import { aiRouter } from './routers/ai'
 import { iotRouter } from './routers/iot'
 import { mlRouter } from './routers/ml'
 import { securityRouter } from './routers/security'
@@ -30,7 +29,6 @@ import { voiceRouter } from './routers/voice'
 import { cameraRouter } from './routers/camera'
 import { locationRouter } from './routers/location'
 import { notificationsRouter } from './routers/notifications'
-import { searchRouter } from './routers/search'
 import { dashboardRouter } from './routers/dashboard'
 import { importExportRouter } from './routers/import-export'
 import { hierarchyRouter } from './routers/hierarchy'
@@ -56,7 +54,6 @@ export const appRouter = createTRPCRouter({
   integrations: integrationsRouter,
   emergency: emergencyRouter,
   sustainability: sustainabilityRouter,
-  ai: aiRouter,
   iot: iotRouter,
   ml: mlRouter,
   security: securityRouter,
@@ -68,7 +65,6 @@ export const appRouter = createTRPCRouter({
   camera: cameraRouter,
   location: locationRouter,
   notifications: notificationsRouter,
-  search: searchRouter,
   dashboard: dashboardRouter,
   importExport: importExportRouter,
   hierarchy: hierarchyRouter,

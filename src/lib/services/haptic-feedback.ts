@@ -6,28 +6,45 @@ export class HapticFeedbackService {
   // Light haptic feedback for button presses
   light() {
     if (this.isSupported()) {
-      navigator.vibrate(10)
+      try {
+        navigator.vibrate(10)
+      } catch (error) {
+        console.debug('Haptic feedback not available:', error)
+      }
     }
   }
 
   // Medium haptic feedback for important actions
   medium() {
     if (this.isSupported()) {
-      navigator.vibrate(50)
+      try {
+        navigator.vibrate(50)
+      } catch (error) {
+        console.debug('Haptic feedback not available:', error)
+      }
     }
   }
 
   // Strong haptic feedback for critical actions
   strong() {
     if (this.isSupported()) {
-      navigator.vibrate(100)
+      try {
+        navigator.vibrate(100)
+      } catch (error) {
+        console.debug('Haptic feedback not available:', error)
+      }
     }
   }
 
   // Pattern haptic feedback for complex interactions
   pattern(pattern: number[]) {
     if (this.isSupported()) {
-      navigator.vibrate(pattern)
+      try {
+        navigator.vibrate(pattern)
+      } catch (error) {
+        // Silently fail if vibration is not allowed
+        console.debug('Haptic feedback not available:', error)
+      }
     }
   }
 

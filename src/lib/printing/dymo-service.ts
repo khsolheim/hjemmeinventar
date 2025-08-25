@@ -124,8 +124,20 @@ class DymoService {
    */
   private async loadDymoFramework(): Promise<void> {
     return new Promise((resolve, reject) => {
+      // Check if we're in a browser environment
+      if (typeof window === 'undefined' || typeof document === 'undefined') {
+        reject(new Error('DYMO framework requires browser environment'))
+        return
+      }
+
       // Check if DYMO framework script already exists
       if (document.querySelector('script[src*="DYMO.Label.Framework"]')) {
+        resolve()
+        return
+      }
+
+      // Check if DYMO framework is already available
+      if (typeof (window as any).dymo !== 'undefined') {
         resolve()
         return
       }
@@ -134,8 +146,24 @@ class DymoService {
       script.src = 'https://labelwriter.com/software/dls/sdk/js/DYMO.Label.Framework.latest.js'
       script.type = 'text/javascript'
       
-      script.onload = () => resolve()
-      script.onerror = () => reject(new Error('Failed to load DYMO framework'))
+      // Add timeout for script loading
+      const timeout = setTimeout(() => {
+        reject(new Error('DYMO framework loading timeout'))
+      }, 10000)
+      
+      script.onload = () => {
+        clearTimeout(timeout)
+        // Verify the framework loaded correctly
+        if (typeof (window as any).dymo !== 'undefined') {
+          resolve()
+        } else {
+          reject(new Error('DYMO framework failed to initialize'))
+        }
+      }
+      script.onerror = () => {
+        clearTimeout(timeout)
+        reject(new Error('Failed to load DYMO framework'))
+      }
       
       document.head.appendChild(script)
     })

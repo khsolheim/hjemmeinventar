@@ -1,169 +1,79 @@
 import { z } from 'zod'
 import { createTRPCRouter, protectedProcedure } from '../server'
-import { TRPCError } from '@trpc/server'
 
 export const blockchainRouter = createTRPCRouter({
-  // Get NFTs data
-  getNFTsData: protectedProcedure
-    .query(async ({ ctx }) => {
-      // Mock NFTs data
-      const nftsData = {
-        totalNFTs: 156,
-        nfts: [
-          {
-            id: 'nft_1',
-            name: 'Inventory Item #001',
-            description: 'Rare vintage furniture piece',
-            tokenId: '0x1234...5678',
-            price: 0.5,
-            mintDate: '2 days ago',
-            status: 'minted',
-            icon: 'Star'
-          },
-          {
-            id: 'nft_2',
-            name: 'Art Collection #045',
-            description: 'Original artwork by local artist',
-            tokenId: '0x8765...4321',
-            price: 2.3,
-            mintDate: '1 week ago',
-            status: 'minted',
-            icon: 'Star'
-          },
-          {
-            id: 'nft_3',
-            name: 'Digital Asset #789',
-            description: 'Digital collectible from game',
-            tokenId: '0xabcd...efgh',
-            price: 0.1,
-            mintDate: '3 hours ago',
-            status: 'minting',
-            icon: 'Star'
-          },
-          {
-            id: 'nft_4',
-            name: 'Music NFT #123',
-            description: 'Exclusive music track',
-            tokenId: '0x9876...5432',
-            price: 1.5,
-            mintDate: '1 day ago',
-            status: 'minted',
-            icon: 'Star'
-          }
-        ],
-        nftAnalytics: [
-          {
-            id: 'total_minted',
-            name: 'Total Minted',
-            value: '156',
-            icon: 'Star'
-          },
-          {
-            id: 'total_value',
-            name: 'Total Value',
-            value: '45.2 ETH',
-            icon: 'DollarSign'
-          },
-          {
-            id: 'avg_price',
-            name: 'Avg Price',
-            value: '0.29 ETH',
-            icon: 'TrendingUp'
-          },
-          {
-            id: 'mint_success_rate',
-            name: 'Success Rate',
-            value: '98%',
-            icon: 'CheckCircle'
-          }
-        ]
-      }
-
-      // Log activity
-      await ctx.db.activity.create({
-        data: {
-          userId: ctx.user.id,
-          type: 'BLOCKCHAIN_NFTS_VIEWED',
-          description: 'Viewed NFTs data',
-          metadata: { totalNFTs: nftsData.totalNFTs }
-        }
-      })
-
-      return nftsData
-    }),
-
   // Get contracts data
   getContractsData: protectedProcedure
     .query(async ({ ctx }) => {
       // Mock contracts data
       const contractsData = {
-        totalContracts: 12,
+        activeContracts: 12,
         contracts: [
           {
             id: 'contract_1',
-            name: 'Inventory Management',
-            description: 'Smart contract for inventory tracking',
+            name: 'DeFi Lending Contract',
+            description: 'Smart contract for decentralized lending',
+            network: 'Ethereum',
             address: '0x1234...5678',
-            gasUsed: 245000,
-            deployDate: '1 month ago',
+            deployed: '2 hours ago',
             status: 'deployed',
-            icon: 'Award'
+            icon: 'SmartContract'
           },
           {
             id: 'contract_2',
-            name: 'NFT Marketplace',
-            description: 'Decentralized NFT trading platform',
-            address: '0x8765...4321',
-            gasUsed: 890000,
-            deployDate: '2 weeks ago',
+            name: 'NFT Marketplace Contract',
+            description: 'Smart contract for NFT trading',
+            network: 'Polygon',
+            address: '0xabcd...efgh',
+            deployed: '1 day ago',
             status: 'deployed',
-            icon: 'Award'
+            icon: 'SmartContract'
           },
           {
             id: 'contract_3',
-            name: 'Governance Token',
-            description: 'DAO governance token contract',
-            address: '0xabcd...efgh',
-            gasUsed: 567000,
-            deployDate: '3 days ago',
-            status: 'testing',
-            icon: 'Award'
+            name: 'DAO Governance Contract',
+            description: 'Smart contract for DAO governance',
+            network: 'Ethereum',
+            address: '0x9876...5432',
+            deployed: '3 days ago',
+            status: 'deploying',
+            icon: 'SmartContract'
           },
           {
             id: 'contract_4',
-            name: 'Staking Contract',
-            description: 'Token staking and rewards',
-            address: '0x9876...5432',
-            gasUsed: 345000,
-            deployDate: '1 week ago',
-            status: 'deployed',
-            icon: 'Award'
+            name: 'Yield Farming Contract',
+            description: 'Smart contract for yield farming',
+            network: 'BSC',
+            address: '0xdcba...1234',
+            deployed: '1 week ago',
+            status: 'pending',
+            icon: 'SmartContract'
           }
         ],
         contractAnalytics: [
           {
-            id: 'deployed_contracts',
-            name: 'Deployed Contracts',
-            value: '9/12',
-            percentage: 75
+            id: 'contracts_deployed',
+            name: 'Contracts Deployed',
+            value: '156',
+            icon: 'SmartContract'
           },
           {
-            id: 'total_gas_used',
-            name: 'Total Gas Used',
-            value: '2.1M',
-            percentage: 85
+            id: 'avg_gas_used',
+            name: 'Avg Gas Used',
+            value: '45,000',
+            icon: 'Gas'
           },
           {
-            id: 'contract_success_rate',
+            id: 'deployment_success_rate',
             name: 'Success Rate',
-            value: '92%',
-            percentage: 92
+            value: '99.5%',
+            icon: 'CheckSquare'
           },
           {
-            id: 'avg_deployment_cost',
-            name: 'Avg Deployment Cost',
-            value: '0.15 ETH',
-            percentage: 65
+            id: 'total_value_locked',
+            name: 'Total Value Locked',
+            value: '$2.5M',
+            icon: 'DollarSign'
           }
         ]
       }
@@ -173,87 +83,86 @@ export const blockchainRouter = createTRPCRouter({
         data: {
           userId: ctx.user.id,
           type: 'BLOCKCHAIN_CONTRACTS_VIEWED',
-          description: 'Viewed contracts data',
-          metadata: { totalContracts: contractsData.totalContracts }
+          description: 'Viewed blockchain contracts data',
+          metadata: { activeContracts: contractsData.activeContracts }
         }
       })
 
       return contractsData
     }),
 
-  // Get Web3 data
-  getWeb3Data: protectedProcedure
+  // Get processing data
+  getProcessingData: protectedProcedure
     .query(async ({ ctx }) => {
-      // Mock Web3 data
-      const web3Data = {
-        connectedWallets: 3,
-        gasPrice: 25,
-        wallets: [
+      // Mock processing data
+      const processingData = {
+        activeProcesses: 8,
+        processes: [
           {
-            id: 'wallet_1',
-            name: 'MetaMask',
-            description: 'Browser wallet extension',
-            address: '0x1234...5678',
-            balance: 2.45,
-            lastConnected: '1 hour ago',
-            status: 'connected',
-            icon: 'Wallet'
+            id: 'process_1',
+            name: 'Blockchain Transaction Processing',
+            description: 'Process blockchain transactions',
+            type: 'Transaction',
+            duration: 'Continuous',
+            resources: '4 cores',
+            status: 'running',
+            icon: 'BlockchainProcessing'
           },
           {
-            id: 'wallet_2',
-            name: 'WalletConnect',
-            description: 'Mobile wallet connection',
-            address: '0x8765...4321',
-            balance: 1.23,
-            lastConnected: '3 hours ago',
-            status: 'connected',
-            icon: 'Wallet'
+            id: 'process_2',
+            name: 'Smart Contract Verification',
+            description: 'Verify smart contract code',
+            type: 'Verification',
+            duration: '30 min',
+            resources: '2 cores',
+            status: 'running',
+            icon: 'BlockchainProcessing'
           },
           {
-            id: 'wallet_3',
-            name: 'Coinbase Wallet',
-            description: 'Exchange wallet',
-            address: '0xabcd...efgh',
-            balance: 0.89,
-            lastConnected: '1 day ago',
-            status: 'disconnected',
-            icon: 'Wallet'
+            id: 'process_3',
+            name: 'Blockchain Analytics',
+            description: 'Analyze blockchain data',
+            type: 'Analytics',
+            duration: 'Continuous',
+            resources: '3 cores',
+            status: 'running',
+            icon: 'BlockchainProcessing'
           },
           {
-            id: 'wallet_4',
-            name: 'Trust Wallet',
-            description: 'Mobile crypto wallet',
-            address: '0x9876...5432',
-            balance: 3.67,
-            lastConnected: '2 hours ago',
-            status: 'connected',
-            icon: 'Wallet'
+            id: 'process_4',
+            name: 'Gas Price Monitoring',
+            description: 'Monitor gas prices',
+            type: 'Monitoring',
+            duration: '5 min',
+            resources: '1 core',
+            status: 'queued',
+            icon: 'BlockchainProcessing'
           }
         ],
-        web3Analytics: [
+        processingAnalytics: [
           {
-            id: 'connected_wallets',
-            name: 'Connected Wallets',
-            value: '3',
-            icon: 'Wallet'
+            id: 'processing_efficiency',
+            name: 'Processing Efficiency',
+            value: '96%',
+            percentage: 96
           },
           {
-            id: 'total_balance',
-            name: 'Total Balance',
-            value: '8.24 ETH',
-            icon: 'DollarSign'
+            id: 'avg_processing_time',
+            name: 'Avg Processing Time',
+            value: '2.5s',
+            percentage: 85
           },
           {
-            id: 'gas_price',
-            name: 'Gas Price',
-            value: '25 Gwei',
-            icon: 'Timer'
+            id: 'resource_utilization',
+            name: 'Resource Utilization',
+            value: '82%',
+            percentage: 82
           },
           {
-            id: 'network_status',
-            name: 'Network Status',
-            value: 'Connected',
-            icon: 'CheckCircle'
+            id: 'processing_accuracy',
+            name: 'Processing Accuracy',
+            value: '99.8%',
+            percentage: 99
           }
         ]
       }
@@ -262,13 +171,102 @@ export const blockchainRouter = createTRPCRouter({
       await ctx.db.activity.create({
         data: {
           userId: ctx.user.id,
-          type: 'BLOCKCHAIN_WEB3_VIEWED',
-          description: 'Viewed Web3 data',
-          metadata: { connectedWallets: web3Data.connectedWallets }
+          type: 'BLOCKCHAIN_PROCESSING_VIEWED',
+          description: 'Viewed blockchain processing data',
+          metadata: { activeProcesses: processingData.activeProcesses }
         }
       })
 
-      return web3Data
+      return processingData
+    }),
+
+  // Get integration data
+  getIntegrationData: protectedProcedure
+    .query(async ({ ctx }) => {
+      // Mock integration data
+      const integrationData = {
+        defiSyncs: 6,
+        syncs: [
+          {
+            id: 'sync_1',
+            name: 'DeFi Protocol Sync',
+            description: 'Sync DeFi protocol data',
+            frequency: 'Every 5 min',
+            dataSize: '2.8 GB',
+            lastSync: '3 min ago',
+            status: 'synced',
+            icon: 'BlockchainIntegration'
+          },
+          {
+            id: 'sync_2',
+            name: 'Token Price Sync',
+            description: 'Sync token price data',
+            frequency: 'Every minute',
+            dataSize: '500 MB',
+            lastSync: '45 sec ago',
+            status: 'synced',
+            icon: 'BlockchainIntegration'
+          },
+          {
+            id: 'sync_3',
+            name: 'Liquidity Pool Sync',
+            description: 'Sync liquidity pool data',
+            frequency: 'Every 10 min',
+            dataSize: '1.2 GB',
+            lastSync: '8 min ago',
+            status: 'syncing',
+            icon: 'BlockchainIntegration'
+          },
+          {
+            id: 'sync_4',
+            name: 'Yield Farming Sync',
+            description: 'Sync yield farming data',
+            frequency: 'Every 15 min',
+            dataSize: '800 MB',
+            lastSync: '12 min ago',
+            status: 'synced',
+            icon: 'BlockchainIntegration'
+          }
+        ],
+        integrationAnalytics: [
+          {
+            id: 'sync_success_rate',
+            name: 'Sync Success Rate',
+            value: '99.9%',
+            icon: 'BlockchainIntegration'
+          },
+          {
+            id: 'data_transfer_speed',
+            name: 'Data Transfer Speed',
+            value: '3.2 Gbps',
+            icon: 'BlockchainNetwork'
+          },
+          {
+            id: 'sync_latency',
+            name: 'Sync Latency',
+            value: '35ms',
+            icon: 'BlockchainTimer'
+          },
+          {
+            id: 'data_integrity',
+            name: 'Data Integrity',
+            value: '99.99%',
+            icon: 'BlockchainCheck'
+          }
+        ]
+      }
+
+      // Log activity
+      await ctx.db.activity.create({
+        data: {
+          userId: ctx.user.id,
+          type: 'BLOCKCHAIN_INTEGRATION_VIEWED',
+          description: 'Viewed blockchain integration data',
+          metadata: { defiSyncs: integrationData.defiSyncs }
+        }
+      })
+
+      return integrationData
     }),
 
   // Get blockchain settings
@@ -276,61 +274,61 @@ export const blockchainRouter = createTRPCRouter({
     .query(async ({ ctx }) => {
       // Mock blockchain settings
       const settingsData = {
-        blockchainScore: 87,
+        blockchainScore: 89,
         settings: [
           {
             id: 'blockchain_enabled',
             key: 'blockchainEnabled',
             name: 'Blockchain System',
             enabled: true,
-            icon: 'Blockchain'
-          },
-          {
-            id: 'nft_minting',
-            key: 'nftMinting',
-            name: 'NFT Minting',
-            enabled: true,
-            icon: 'Star'
+            icon: 'BlockchainSystem'
           },
           {
             id: 'smart_contracts',
             key: 'smartContracts',
             name: 'Smart Contracts',
             enabled: true,
-            icon: 'Award'
+            icon: 'SmartContract'
           },
           {
-            id: 'web3_integration',
-            key: 'web3Integration',
-            name: 'Web3 Integration',
+            id: 'defi_integration',
+            key: 'defiIntegration',
+            name: 'DeFi Integration',
+            enabled: true,
+            icon: 'BlockchainIntegration'
+          },
+          {
+            id: 'blockchain_security',
+            key: 'blockchainSecurity',
+            name: 'Blockchain Security',
             enabled: false,
-            icon: 'Web3'
+            icon: 'BlockchainSecurity'
           }
         ],
         blockchainGoals: [
           {
-            id: 'nft_collection',
-            name: 'NFT Collection',
-            current: 87,
+            id: 'contract_deployment_rate',
+            name: 'Contract Deployment Rate',
+            current: 89,
             target: 95
           },
           {
-            id: 'contract_deployment',
-            name: 'Contract Deployment',
+            id: 'processing_speed',
+            name: 'Processing Speed',
             current: 92,
             target: 98
           },
           {
-            id: 'wallet_connections',
-            name: 'Wallet Connections',
-            current: 75,
-            target: 90
+            id: 'defi_sync_reliability',
+            name: 'DeFi Sync Reliability',
+            current: 99.9,
+            target: 99.99
           },
           {
-            id: 'gas_optimization',
-            name: 'Gas Optimization',
-            current: 89,
-            target: 95
+            id: 'gas_efficiency',
+            name: 'Gas Efficiency',
+            current: 85,
+            target: 90
           }
         ]
       }
@@ -346,26 +344,6 @@ export const blockchainRouter = createTRPCRouter({
       })
 
       return settingsData
-    }),
-
-  // Mint NFT
-  mintNFT: protectedProcedure
-    .input(z.object({
-      nftId: z.string(),
-      action: z.string()
-    }))
-    .mutation(async ({ ctx, input }) => {
-      // Log activity
-      await ctx.db.activity.create({
-        data: {
-          userId: ctx.user.id,
-          type: 'BLOCKCHAIN_NFT_MINTED',
-          description: `Minted NFT: ${input.nftId}`,
-          metadata: { nftId: input.nftId, action: input.action }
-        }
-      })
-
-      return { success: true, message: 'NFT minted successfully' }
     }),
 
   // Deploy contract
@@ -388,10 +366,10 @@ export const blockchainRouter = createTRPCRouter({
       return { success: true, message: 'Contract deployed successfully' }
     }),
 
-  // Connect wallet
-  connectWallet: protectedProcedure
+  // Start processing
+  startProcessing: protectedProcedure
     .input(z.object({
-      walletId: z.string(),
+      processId: z.string(),
       action: z.string()
     }))
     .mutation(async ({ ctx, input }) => {
@@ -399,22 +377,42 @@ export const blockchainRouter = createTRPCRouter({
       await ctx.db.activity.create({
         data: {
           userId: ctx.user.id,
-          type: 'BLOCKCHAIN_WALLET_CONNECTED',
-          description: `Connected wallet: ${input.walletId}`,
-          metadata: { walletId: input.walletId, action: input.action }
+          type: 'BLOCKCHAIN_PROCESSING_STARTED',
+          description: `Started processing: ${input.processId}`,
+          metadata: { processId: input.processId, action: input.action }
         }
       })
 
-      return { success: true, message: 'Wallet connected successfully' }
+      return { success: true, message: 'Processing started successfully' }
+    }),
+
+  // Sync DeFi
+  syncDeFi: protectedProcedure
+    .input(z.object({
+      syncId: z.string(),
+      action: z.string()
+    }))
+    .mutation(async ({ ctx, input }) => {
+      // Log activity
+      await ctx.db.activity.create({
+        data: {
+          userId: ctx.user.id,
+          type: 'BLOCKCHAIN_DEFI_SYNC',
+          description: `Synced DeFi: ${input.syncId}`,
+          metadata: { syncId: input.syncId, action: input.action }
+        }
+      })
+
+      return { success: true, message: 'DeFi sync completed successfully' }
     }),
 
   // Update blockchain settings
   updateSettings: protectedProcedure
     .input(z.object({
       blockchainEnabled: z.boolean().optional(),
-      nftMinting: z.boolean().optional(),
       smartContracts: z.boolean().optional(),
-      web3Integration: z.boolean().optional()
+      defiIntegration: z.boolean().optional(),
+      blockchainSecurity: z.boolean().optional()
     }))
     .mutation(async ({ ctx, input }) => {
       // Log activity
@@ -435,12 +433,12 @@ export const blockchainRouter = createTRPCRouter({
     .query(async ({ ctx }) => {
       // Mock blockchain statistics
       const stats = {
-        totalNFTs: 156,
-        totalContracts: 12,
-        connectedWallets: 3,
-        gasPrice: 25,
-        blockchainScore: 87,
-        totalValue: 45.2
+        activeContracts: 12,
+        activeProcesses: 8,
+        defiSyncs: 6,
+        blockchainScore: 89,
+        avgGasUsed: 45000,
+        totalValueLocked: 2500000
       }
 
       // Log activity

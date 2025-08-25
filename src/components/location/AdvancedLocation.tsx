@@ -60,7 +60,7 @@ import {
   Info as Help,
   Star as Rate,
   Award as Win,
-  Trophy as Success,
+  Trophy as Achievement,
   Crown as Leader,
   Rocket as Boost,
   Sparkles as Shine,
@@ -107,6 +107,7 @@ export function AdvancedLocation({ className }: AdvancedLocationProps) {
   const [locationEnabled, setLocationEnabled] = useState(true)
   const [currentLocation, setCurrentLocation] = useState<GeolocationPosition | null>(null)
   const [locationHistory, setLocationHistory] = useState<any[]>([])
+  const [geolocationSupported, setGeolocationSupported] = useState(true)
   const haptic = useHapticFeedback()
 
   // Location queries
@@ -135,6 +136,15 @@ export function AdvancedLocation({ className }: AdvancedLocationProps) {
   const startLocationTracking = async () => {
     try {
       if ('geolocation' in navigator) {
+        // Check if geolocation is supported and not blocked
+        const permission = await navigator.permissions?.query({ name: 'geolocation' })
+        
+        if (permission?.state === 'denied') {
+          console.warn('Geolocation permission denied by user')
+          setLocationEnabled(false)
+          return
+        }
+
         const watchId = navigator.geolocation.watchPosition(
           (position) => {
             setCurrentLocation(position)
@@ -143,6 +153,23 @@ export function AdvancedLocation({ className }: AdvancedLocationProps) {
           },
           (error) => {
             console.error('Location error:', error)
+            
+            // Handle specific error cases
+            switch (error.code) {
+              case error.PERMISSION_DENIED:
+                console.warn('Geolocation permission denied')
+                setLocationEnabled(false)
+                break
+              case error.POSITION_UNAVAILABLE:
+                console.warn('Location information unavailable')
+                break
+              case error.TIMEOUT:
+                console.warn('Location request timed out')
+                break
+              default:
+                console.warn('Unknown geolocation error')
+            }
+            
             haptic.error()
           },
           {
@@ -154,10 +181,15 @@ export function AdvancedLocation({ className }: AdvancedLocationProps) {
 
         // Store watch ID for cleanup
         return () => navigator.geolocation.clearWatch(watchId)
+      } else {
+        console.warn('Geolocation not supported in this browser')
+        setGeolocationSupported(false)
+        setLocationEnabled(false)
       }
     } catch (error) {
       console.error('Failed to start location tracking:', error)
       haptic.error()
+      setLocationEnabled(false)
     }
   }
 
@@ -407,13 +439,32 @@ export function AdvancedLocation({ className }: AdvancedLocationProps) {
                   </div>
                 )}
 
+                {/* Geolocation Not Available */}
+                {!geolocationSupported && (
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Location Services</label>
+                    <div className="p-4 border rounded-lg bg-yellow-50 border-yellow-200">
+                      <div className="flex items-center gap-3">
+                        <AlertTriangle className="w-5 h-5 text-yellow-600" />
+                        <div>
+                          <div className="font-medium text-yellow-800">Geolocation Not Available</div>
+                          <div className="text-sm text-yellow-700">
+                            Location services are not supported in this browser or have been disabled. 
+                            You can still use manual location features.
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
                 {/* GPS Controls */}
                 <div className="flex items-center justify-center gap-4">
                   <Button
                     size="lg"
                     variant={isTracking ? 'destructive' : 'default'}
                     onClick={handleStartTracking}
-                    disabled={!locationEnabled || isTracking}
+                    disabled={!locationEnabled || !geolocationSupported || isTracking}
                     className="w-20 h-20 rounded-full"
                   >
                     {isTracking ? (

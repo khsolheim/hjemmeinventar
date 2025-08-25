@@ -16,7 +16,6 @@ import {
   Trash2,
   Play,
   Pause,
-  Stop,
   Timer,
   Users,
   UserPlus,
@@ -55,41 +54,6 @@ import {
   List,
   Layers,
   Crosshair,
-  Aim,
-  Magic,
-  Launch,
-  King,
-  Victory,
-  Prize,
-  Favorite,
-  Details,
-  Error,
-  Warning,
-  Success,
-  Update,
-  Config,
-  Goal,
-  Fitness,
-  Pulse,
-  Eye,
-  EyeOff,
-  Shield,
-  Lock,
-  Unlock,
-  Download,
-  Upload,
-  Share2,
-  Heart,
-  DollarSign,
-  Activity,
-  Brain,
-  Home,
-  ExternalLink,
-  AlertTriangle,
-  Leaf,
-  LayoutDashboard,
-  BookOpen,
-  MapPin as Location,
   RefreshCw,
   CheckCircle,
   XCircle,
@@ -114,128 +78,17 @@ import {
   Terminal,
   Clock,
   Webhook,
-  Api,
-  Database as Db,
   Network,
   Gauge,
   HardDrive,
-  Memory,
-  Cpu as Processor,
-  Wifi as NetworkIcon,
-  HardDrive as Storage,
-  Activity as Performance,
   PieChart,
   LineChart,
   TrendingDown,
-  Download as Export,
-  FileText as Report,
   BarChart,
-  PieChart as Chart,
-  Activity as Analytics,
-  Link,
   Wallet,
   Coins,
   Bitcoin,
-  Ethereum,
-  Zap as Lightning,
-  Shield as Security,
-  Lock as Privacy,
-  Globe as Web3,
-  Database as Blockchain,
-  Network as DeFi,
-  Activity as Mining,
-  Timer as Gas,
-  DollarSign as Token,
-  Star as NFT,
-  Award as SmartContract,
-  Trophy as Governance,
-  Crown as DAO,
-  Rocket as Deploy,
-  Sparkles as Mint,
-  CheckSquare as Verify,
-  Target as Consensus,
-  MessageSquare as Transaction,
-  Phone as Mobile,
-  FileText as Document,
-  Music as Audio,
-  Video as Media,
-  Gamepad2 as Gaming,
-  Workflow as Workflow,
-  Cpu as Compute,
-  Code as Code,
-  Terminal as CLI,
-  Clock as Time,
-  Webhook as Webhook,
-  Api as API,
-  Database as Storage,
-  Network as Network,
-  Gauge as Metrics,
-  HardDrive as Storage,
-  Memory as Memory,
-  Cpu as CPU,
-  Wifi as WiFi,
-  HardDrive as Disk,
-  Activity as Activity,
-  PieChart as Chart,
-  LineChart as Trend,
-  TrendingDown as Decline,
-  Download as Download,
-  FileText as File,
-  BarChart as Graph,
-  PieChart as Circle,
-  Activity as Monitor,
-  Link as Connect,
-  Wallet as Wallet,
-  Coins as Coins,
-  Bitcoin as BTC,
-  Ethereum as ETH,
-  Zap as Lightning,
-  Shield as Security,
-  Lock as Privacy,
-  Globe as Web3,
-  Database as Chain,
-  Network as Network,
-  Activity as Mining,
-  Timer as Gas,
-  DollarSign as Money,
-  Star as NFT,
-  Award as Contract,
-  Trophy as Governance,
-  Crown as DAO,
-  Rocket as Deploy,
-  Sparkles as Mint,
-  CheckSquare as Verify,
-  Target as Consensus,
-  MessageSquare as Message,
-  Phone as Mobile,
-  FileText as Document,
-  Music as Audio,
-  Video as Media,
-  Gamepad2 as Gaming,
-  Workflow as Workflow,
-  Cpu as Compute,
-  Code as Code,
-  Terminal as CLI,
-  Clock as Time,
-  Webhook as Webhook,
-  Api as API,
-  Database as Storage,
-  Network as Network,
-  Gauge as Metrics,
-  HardDrive as Storage,
-  Memory as Memory,
-  Cpu as CPU,
-  Wifi as WiFi,
-  HardDrive as Disk,
-  Activity as Activity,
-  PieChart as Chart,
-  LineChart as Trend,
-  TrendingDown as Decline,
-  Download as Download,
-  FileText as File,
-  BarChart as Graph,
-  PieChart as Circle,
-  Activity as Monitor
+  Zap
 } from 'lucide-react'
 import { trpc } from '@/lib/trpc/client'
 import { useHapticFeedback } from '@/lib/services/haptic-feedback'
@@ -245,46 +98,27 @@ interface AdvancedBlockchainProps {
 }
 
 export function AdvancedBlockchain({ className }: AdvancedBlockchainProps) {
-  const [selectedTab, setSelectedTab] = useState<'nfts' | 'contracts' | 'web3' | 'settings'>('nfts')
-  const [isMinting, setIsMinting] = useState(false)
+  const [selectedTab, setSelectedTab] = useState<'contracts' | 'processing' | 'integration' | 'settings'>('contracts')
+  const [isRunning, setIsRunning] = useState(false)
   const [blockchainEnabled, setBlockchainEnabled] = useState(true)
-  const [selectedNFT, setSelectedNFT] = useState<string | null>(null)
   const [selectedContract, setSelectedContract] = useState<string | null>(null)
+  const [selectedProcess, setSelectedProcess] = useState<string | null>(null)
   const haptic = useHapticFeedback()
 
   // Blockchain queries
-  const nftsQuery = trpc.blockchain.getNFTsData.useQuery()
   const contractsQuery = trpc.blockchain.getContractsData.useQuery()
-  const web3Query = trpc.blockchain.getWeb3Data.useQuery()
+  const processingQuery = trpc.blockchain.getProcessingData.useQuery()
+  const integrationQuery = trpc.blockchain.getIntegrationData.useQuery()
   const settingsQuery = trpc.blockchain.getBlockchainSettings.useQuery()
 
-  const mintNFTMutation = trpc.blockchain.mintNFT.useMutation()
   const deployContractMutation = trpc.blockchain.deployContract.useMutation()
-  const connectWalletMutation = trpc.blockchain.connectWallet.useMutation()
+  const startProcessingMutation = trpc.blockchain.startProcessing.useMutation()
+  const syncDeFiMutation = trpc.blockchain.syncDeFi.useMutation()
   const updateSettingsMutation = trpc.blockchain.updateSettings.useMutation()
-
-  const handleMintNFT = async (nftData: any) => {
-    try {
-      setIsMinting(true)
-      haptic.selection()
-
-      const result = await mintNFTMutation.mutateAsync(nftData)
-
-      if (result.success) {
-        haptic.success()
-      } else {
-        haptic.error()
-      }
-    } catch (error) {
-      console.error('Failed to mint NFT:', error)
-      haptic.error()
-    } finally {
-      setIsMinting(false)
-    }
-  }
 
   const handleDeployContract = async (contractData: any) => {
     try {
+      setIsRunning(true)
       haptic.selection()
 
       const result = await deployContractMutation.mutateAsync(contractData)
@@ -297,14 +131,16 @@ export function AdvancedBlockchain({ className }: AdvancedBlockchainProps) {
     } catch (error) {
       console.error('Failed to deploy contract:', error)
       haptic.error()
+    } finally {
+      setIsRunning(false)
     }
   }
 
-  const handleConnectWallet = async (walletData: any) => {
+  const handleStartProcessing = async (processingData: any) => {
     try {
       haptic.selection()
 
-      const result = await connectWalletMutation.mutateAsync(walletData)
+      const result = await startProcessingMutation.mutateAsync(processingData)
 
       if (result.success) {
         haptic.success()
@@ -312,7 +148,24 @@ export function AdvancedBlockchain({ className }: AdvancedBlockchainProps) {
         haptic.error()
       }
     } catch (error) {
-      console.error('Failed to connect wallet:', error)
+      console.error('Failed to start processing:', error)
+      haptic.error()
+    }
+  }
+
+  const handleSyncDeFi = async (syncData: any) => {
+    try {
+      haptic.selection()
+
+      const result = await syncDeFiMutation.mutateAsync(syncData)
+
+      if (result.success) {
+        haptic.success()
+      } else {
+        haptic.error()
+      }
+    } catch (error) {
+      console.error('Failed to sync DeFi:', error)
       haptic.error()
     }
   }
@@ -327,22 +180,22 @@ export function AdvancedBlockchain({ className }: AdvancedBlockchainProps) {
     }
   }
 
-  const getNFTStatus = (status: string) => {
+  const getContractStatus = (status: string) => {
     switch (status) {
-      case 'minted': return { color: 'text-green-600', label: 'Minted', icon: CheckCircle }
-      case 'minting': return { color: 'text-blue-600', label: 'Minting', icon: RefreshCw }
+      case 'deployed': return { color: 'text-green-600', label: 'Deployed', icon: CheckCircle }
+      case 'deploying': return { color: 'text-blue-600', label: 'Deploying', icon: RefreshCw }
       case 'failed': return { color: 'text-red-600', label: 'Failed', icon: XCircle }
       case 'pending': return { color: 'text-yellow-600', label: 'Pending', icon: Clock }
       default: return { color: 'text-gray-600', label: 'Unknown', icon: Info }
     }
   }
 
-  const getContractStatus = (status: string) => {
+  const getProcessingStatus = (status: string) => {
     switch (status) {
-      case 'deployed': return { color: 'text-green-600', label: 'Deployed', icon: CheckCircle }
-      case 'deploying': return { color: 'text-blue-600', label: 'Deploying', icon: RefreshCw }
+      case 'running': return { color: 'text-green-600', label: 'Running', icon: CheckCircle }
+      case 'queued': return { color: 'text-yellow-600', label: 'Queued', icon: Clock }
       case 'failed': return { color: 'text-red-600', label: 'Failed', icon: XCircle }
-      case 'testing': return { color: 'text-purple-600', label: 'Testing', icon: Code }
+      case 'completed': return { color: 'text-blue-600', label: 'Completed', icon: CheckSquare }
       default: return { color: 'text-gray-600', label: 'Unknown', icon: Info }
     }
   }
@@ -354,18 +207,18 @@ export function AdvancedBlockchain({ className }: AdvancedBlockchainProps) {
         <div>
           <h2 className="text-2xl font-bold">Advanced Blockchain</h2>
           <p className="text-muted-foreground">
-            NFT management, smart contracts og Web3 integration
+            Smart contract management, blockchain processing og DeFi integration
           </p>
         </div>
         <div className="flex items-center gap-2">
           <Badge variant="outline" className="flex items-center gap-1">
-            <Blockchain className="w-3 h-3" />
+            <Database className="w-3 h-3" />
             Blockchain Active
           </Badge>
-          <Badge variant="outline" className="flex items-center gap-1">
-            <Web3 className="w-3 h-3" />
-            Web3 Ready
-          </Badge>
+                      <Badge variant="outline" className="flex items-center gap-1">
+              <Award className="w-3 h-3" />
+              Smart Contracts Ready
+            </Badge>
         </div>
       </div>
 
@@ -373,27 +226,12 @@ export function AdvancedBlockchain({ className }: AdvancedBlockchainProps) {
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total NFTs</CardTitle>
-            <Star className="h-4 w-4 text-blue-600" />
+            <CardTitle className="text-sm font-medium">Active Contracts</CardTitle>
+            <Award className="h-4 w-4 text-blue-600" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-blue-600">
-              {nftsQuery.data?.totalNFTs || 0}
-            </div>
-            <p className="text-xs text-muted-foreground">
-              Minted NFTs
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Smart Contracts</CardTitle>
-            <Award className="h-4 w-4 text-green-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-green-600">
-              {contractsQuery.data?.totalContracts || 0}
+              {contractsQuery.data?.activeContracts || 0}
             </div>
             <p className="text-xs text-muted-foreground">
               Deployed contracts
@@ -403,30 +241,45 @@ export function AdvancedBlockchain({ className }: AdvancedBlockchainProps) {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Connected Wallets</CardTitle>
-            <Wallet className="h-4 w-4 text-purple-600" />
+            <CardTitle className="text-sm font-medium">Blockchain Processing</CardTitle>
+            <Cpu className="h-4 w-4 text-green-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-purple-600">
-              {web3Query.data?.connectedWallets || 0}
+            <div className="text-2xl font-bold text-green-600">
+              {processingQuery.data?.activeProcesses || 0}
             </div>
             <p className="text-xs text-muted-foreground">
-              Active connections
+              Running processes
             </p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Gas Price</CardTitle>
-            <Timer className="h-4 w-4 text-orange-600" />
+            <CardTitle className="text-sm font-medium">DeFi Sync</CardTitle>
+            <Globe className="h-4 w-4 text-purple-600" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-purple-600">
+              {integrationQuery.data?.defiSyncs || 0}
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Active syncs
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Blockchain Score</CardTitle>
+            <BarChart3 className="h-4 w-4 text-orange-600" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-orange-600">
-              {web3Query.data?.gasPrice || 0} Gwei
+              {settingsQuery.data?.blockchainScore || 0}%
             </div>
             <p className="text-xs text-muted-foreground">
-              Current gas price
+              System performance
             </p>
           </CardContent>
         </Card>
@@ -434,33 +287,33 @@ export function AdvancedBlockchain({ className }: AdvancedBlockchainProps) {
 
       {/* Tab Navigation */}
       <div className="flex space-x-1 bg-muted p-1 rounded-lg">
-        <Button
-          variant={selectedTab === 'nfts' ? 'default' : 'ghost'}
-          size="sm"
-          onClick={() => setSelectedTab('nfts')}
-          className="flex-1"
-        >
-          <Star className="w-4 h-4 mr-2" />
-          NFTs
-        </Button>
-        <Button
-          variant={selectedTab === 'contracts' ? 'default' : 'ghost'}
-          size="sm"
-          onClick={() => setSelectedTab('contracts')}
-          className="flex-1"
-        >
-          <Award className="w-4 h-4 mr-2" />
-          Contracts
-        </Button>
-        <Button
-          variant={selectedTab === 'web3' ? 'default' : 'ghost'}
-          size="sm"
-          onClick={() => setSelectedTab('web3')}
-          className="flex-1"
-        >
-          <Web3 className="w-4 h-4 mr-2" />
-          Web3
-        </Button>
+                  <Button
+            variant={selectedTab === 'contracts' ? 'default' : 'ghost'}
+            size="sm"
+            onClick={() => setSelectedTab('contracts')}
+            className="flex-1"
+          >
+            <Award className="w-4 h-4 mr-2" />
+            Contracts
+          </Button>
+          <Button
+            variant={selectedTab === 'processing' ? 'default' : 'ghost'}
+            size="sm"
+            onClick={() => setSelectedTab('processing')}
+            className="flex-1"
+          >
+            <Cpu className="w-4 h-4 mr-2" />
+            Processing
+          </Button>
+          <Button
+            variant={selectedTab === 'integration' ? 'default' : 'ghost'}
+            size="sm"
+            onClick={() => setSelectedTab('integration')}
+            className="flex-1"
+          >
+            <Globe className="w-4 h-4 mr-2" />
+            Integration
+          </Button>
         <Button
           variant={selectedTab === 'settings' ? 'default' : 'ghost'}
           size="sm"
@@ -472,98 +325,16 @@ export function AdvancedBlockchain({ className }: AdvancedBlockchainProps) {
         </Button>
       </div>
 
-      {/* NFTs Tab */}
-      {selectedTab === 'nfts' && (
-        <div className="space-y-4">
-          {/* NFT Management */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Star className="w-5 h-5" />
-                NFT Management
-              </CardTitle>
-              <CardDescription>
-                Create og manage your NFTs
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {nftsQuery.data?.nfts?.map((nft) => (
-                  <div key={nft.id} className="flex items-center justify-between p-4 border rounded-lg">
-                    <div className="flex items-center gap-3">
-                      <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
-                        <nft.icon className="w-6 h-6 text-blue-600" />
-                      </div>
-                      <div>
-                        <div className="font-medium">{nft.name}</div>
-                        <div className="text-sm text-muted-foreground">
-                          {nft.description} • {nft.tokenId}
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center gap-3">
-                      <div className="text-right">
-                        <div className="text-sm font-medium">{nft.price} ETH</div>
-                        <div className="text-xs text-muted-foreground">
-                          {nft.mintDate}
-                        </div>
-                      </div>
-
-                      <Button
-                        onClick={() => handleMintNFT({ nftId: nft.id, action: 'mint' })}
-                        variant="outline"
-                        size="sm"
-                      >
-                        <Sparkles className="w-4 h-4" />
-                      </Button>
-
-                      <Badge variant={nft.status === 'minted' ? 'default' : 'secondary'}>
-                        {nft.status}
-                      </Badge>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* NFT Analytics */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <BarChart3 className="w-5 h-5" />
-                NFT Analytics
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                {nftsQuery.data?.nftAnalytics?.map((analytic) => (
-                  <div key={analytic.id} className="p-4 border rounded-lg text-center">
-                    <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-2">
-                      <analytic.icon className="w-6 h-6 text-blue-600" />
-                    </div>
-                    <div className="font-medium">{analytic.name}</div>
-                    <div className="text-sm text-muted-foreground">
-                      {analytic.value}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      )}
-
       {/* Contracts Tab */}
       {selectedTab === 'contracts' && (
         <div className="space-y-4">
+          {/* Smart Contract Management */}
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Award className="w-5 h-5" />
-                Smart Contracts
-              </CardTitle>
+                              <CardTitle className="flex items-center gap-2">
+                  <Award className="w-5 h-5" />
+                  Smart Contract Management
+                </CardTitle>
               <CardDescription>
                 Deploy og manage smart contracts
               </CardDescription>
@@ -573,22 +344,22 @@ export function AdvancedBlockchain({ className }: AdvancedBlockchainProps) {
                 {contractsQuery.data?.contracts?.map((contract) => (
                   <div key={contract.id} className="flex items-center justify-between p-4 border rounded-lg">
                     <div className="flex items-center gap-3">
-                      <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
-                        <contract.icon className="w-6 h-6 text-green-600" />
+                      <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
+                        <contract.icon className="w-6 h-6 text-blue-600" />
                       </div>
                       <div>
                         <div className="font-medium">{contract.name}</div>
                         <div className="text-sm text-muted-foreground">
-                          {contract.description} • {contract.address}
+                          {contract.description} • {contract.network}
                         </div>
                       </div>
                     </div>
 
                     <div className="flex items-center gap-3">
                       <div className="text-right">
-                        <div className="text-sm font-medium">{contract.gasUsed} gas</div>
+                        <div className="text-sm font-medium">{contract.address}</div>
                         <div className="text-xs text-muted-foreground">
-                          {contract.deployDate}
+                          {contract.deployed}
                         </div>
                       </div>
 
@@ -614,13 +385,95 @@ export function AdvancedBlockchain({ className }: AdvancedBlockchainProps) {
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <PieChart className="w-5 h-5" />
+                <BarChart3 className="w-5 h-5" />
                 Contract Analytics
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="space-y-4">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 {contractsQuery.data?.contractAnalytics?.map((analytic) => (
+                  <div key={analytic.id} className="p-4 border rounded-lg text-center">
+                    <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-2">
+                      <analytic.icon className="w-6 h-6 text-blue-600" />
+                    </div>
+                    <div className="font-medium">{analytic.name}</div>
+                    <div className="text-sm text-muted-foreground">
+                      {analytic.value}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {/* Processing Tab */}
+      {selectedTab === 'processing' && (
+        <div className="space-y-4">
+          <Card>
+            <CardHeader>
+                              <CardTitle className="flex items-center gap-2">
+                  <Cpu className="w-5 h-5" />
+                  Blockchain Processing
+                </CardTitle>
+              <CardDescription>
+                Manage blockchain processing tasks og workflows
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                {processingQuery.data?.processes?.map((process) => (
+                  <div key={process.id} className="flex items-center justify-between p-4 border rounded-lg">
+                    <div className="flex items-center gap-3">
+                      <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
+                        <process.icon className="w-6 h-6 text-green-600" />
+                      </div>
+                      <div>
+                        <div className="font-medium">{process.name}</div>
+                        <div className="text-sm text-muted-foreground">
+                          {process.description} • {process.type}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-3">
+                      <div className="text-right">
+                        <div className="text-sm font-medium">{process.duration}</div>
+                        <div className="text-xs text-muted-foreground">
+                          {process.resources} resources
+                        </div>
+                      </div>
+
+                      <Button
+                        onClick={() => handleStartProcessing({ processId: process.id, action: 'start' })}
+                        variant="outline"
+                        size="sm"
+                      >
+                        <Play className="w-4 h-4" />
+                      </Button>
+
+                      <Badge variant={process.status === 'running' ? 'default' : 'secondary'}>
+                        {process.status}
+                      </Badge>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Processing Analytics */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <PieChart className="w-5 h-5" />
+                Processing Analytics
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                {processingQuery.data?.processingAnalytics?.map((analytic) => (
                   <div key={analytic.id} className="space-y-2">
                     <div className="flex items-center justify-between">
                       <span className="text-sm font-medium">{analytic.name}</span>
@@ -635,53 +488,53 @@ export function AdvancedBlockchain({ className }: AdvancedBlockchainProps) {
         </div>
       )}
 
-      {/* Web3 Tab */}
-      {selectedTab === 'web3' && (
+      {/* Integration Tab */}
+      {selectedTab === 'integration' && (
         <div className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Web3 className="w-5 h-5" />
-                Web3 Integration
-              </CardTitle>
+                              <CardTitle className="flex items-center gap-2">
+                  <Globe className="w-5 h-5" />
+                  DeFi Integration
+                </CardTitle>
               <CardDescription>
-                Connect wallets og manage Web3 features
+                Manage DeFi synchronization og data flow
               </CardDescription>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {web3Query.data?.wallets?.map((wallet) => (
-                  <div key={wallet.id} className="flex items-center justify-between p-4 border rounded-lg">
+                {integrationQuery.data?.syncs?.map((sync) => (
+                  <div key={sync.id} className="flex items-center justify-between p-4 border rounded-lg">
                     <div className="flex items-center gap-3">
                       <div className="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center">
-                        <wallet.icon className="w-6 h-6 text-purple-600" />
+                        <sync.icon className="w-6 h-6 text-purple-600" />
                       </div>
                       <div>
-                        <div className="font-medium">{wallet.name}</div>
+                        <div className="font-medium">{sync.name}</div>
                         <div className="text-sm text-muted-foreground">
-                          {wallet.description} • {wallet.address}
+                          {sync.description} • {sync.frequency}
                         </div>
                       </div>
                     </div>
 
                     <div className="flex items-center gap-3">
                       <div className="text-right">
-                        <div className="text-sm font-medium">{wallet.balance} ETH</div>
+                        <div className="text-sm font-medium">{sync.dataSize}</div>
                         <div className="text-xs text-muted-foreground">
-                          {wallet.lastConnected}
+                          {sync.lastSync}
                         </div>
                       </div>
 
-                      <Button
-                        onClick={() => handleConnectWallet({ walletId: wallet.id, action: 'connect' })}
-                        variant="outline"
-                        size="sm"
-                      >
-                        <Link className="w-4 h-4" />
-                      </Button>
+                                              <Button
+                          onClick={() => handleSyncDeFi({ syncId: sync.id, action: 'sync' })}
+                          variant="outline"
+                          size="sm"
+                        >
+                          <Globe className="w-4 h-4" />
+                        </Button>
 
-                      <Badge variant={wallet.status === 'connected' ? 'default' : 'secondary'}>
-                        {wallet.status}
+                      <Badge variant={sync.status === 'synced' ? 'default' : 'secondary'}>
+                        {sync.status}
                       </Badge>
                     </div>
                   </div>
@@ -690,17 +543,17 @@ export function AdvancedBlockchain({ className }: AdvancedBlockchainProps) {
             </CardContent>
           </Card>
 
-          {/* Web3 Analytics */}
+          {/* Integration Analytics */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <BarChart3 className="w-5 h-5" />
-                Web3 Analytics
+                Integration Analytics
               </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                {web3Query.data?.web3Analytics?.map((analytic) => (
+                {integrationQuery.data?.integrationAnalytics?.map((analytic) => (
                   <div key={analytic.id} className="p-4 border rounded-lg text-center">
                     <div className="w-12 h-12 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-2">
                       <analytic.icon className="w-6 h-6 text-orange-600" />
@@ -790,18 +643,18 @@ export function AdvancedBlockchain({ className }: AdvancedBlockchainProps) {
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-            <Button variant="outline" className="h-auto p-4 flex flex-col gap-2">
-              <Star className="w-5 h-5" />
-              <span className="text-sm">Mint NFT</span>
-            </Button>
-            <Button variant="outline" className="h-auto p-4 flex flex-col gap-2">
-              <Award className="w-5 h-5" />
-              <span className="text-sm">Deploy Contract</span>
-            </Button>
-            <Button variant="outline" className="h-auto p-4 flex flex-col gap-2">
-              <Wallet className="w-5 h-5" />
-              <span className="text-sm">Connect Wallet</span>
-            </Button>
+                          <Button variant="outline" className="h-auto p-4 flex flex-col gap-2">
+                <Award className="w-5 h-5" />
+                <span className="text-sm">Deploy Contract</span>
+              </Button>
+              <Button variant="outline" className="h-auto p-4 flex flex-col gap-2">
+                <Cpu className="w-5 h-5" />
+                <span className="text-sm">Start Processing</span>
+              </Button>
+                          <Button variant="outline" className="h-auto p-4 flex flex-col gap-2">
+                <Globe className="w-5 h-5" />
+                <span className="text-sm">Sync DeFi</span>
+              </Button>
             <Button variant="outline" className="h-auto p-4 flex flex-col gap-2">
               <Settings className="w-5 h-5" />
               <span className="text-sm">Settings</span>

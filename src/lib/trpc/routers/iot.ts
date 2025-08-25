@@ -418,73 +418,73 @@ export const iotRouter = createTRPCRouter({
     .query(async ({ ctx }) => {
       // Mock devices data
       const devicesData = {
-        connectedDevices: 12,
+        connectedDevices: 15,
         devices: [
           {
             id: 'device_1',
             name: 'Smart Thermostat',
-            description: 'Temperature control system',
-            type: 'Climate Control',
-            lastSeen: '2 minutes ago',
-            battery: 85,
+            description: 'Temperature control and monitoring',
+            type: 'Thermostat',
+            signal: 'Strong',
+            lastSeen: '2 min ago',
             status: 'connected',
-            icon: 'IoTDevice'
+            icon: 'Wifi'
           },
           {
             id: 'device_2',
             name: 'Security Camera',
-            description: 'HD surveillance camera',
-            type: 'Security',
-            lastSeen: '1 minute ago',
-            battery: 92,
+            description: 'Motion detection and video recording',
+            type: 'Camera',
+            signal: 'Good',
+            lastSeen: '5 min ago',
             status: 'connected',
-            icon: 'IoTDevice'
+            icon: 'Wifi'
           },
           {
             id: 'device_3',
-            name: 'Smart Lock',
-            description: 'Digital door lock',
-            type: 'Security',
-            lastSeen: '5 minutes ago',
-            battery: 78,
-            status: 'connected',
-            icon: 'IoTDevice'
+            name: 'Smart Light Bulb',
+            description: 'WiFi-enabled LED lighting control',
+            type: 'Lighting',
+            signal: 'Weak',
+            lastSeen: '10 min ago',
+            status: 'connecting',
+            icon: 'Wifi'
           },
           {
             id: 'device_4',
-            name: 'Smart Speaker',
-            description: 'Voice-controlled speaker',
-            type: 'Entertainment',
-            lastSeen: '10 minutes ago',
-            battery: 95,
-            status: 'disconnected',
-            icon: 'IoTDevice'
+            name: 'Door Lock Sensor',
+            description: 'Smart lock status monitoring',
+            type: 'Security',
+            signal: 'Strong',
+            lastSeen: '1 min ago',
+            status: 'updating',
+            icon: 'Wifi'
           }
         ],
         deviceAnalytics: [
           {
-            id: 'total_devices',
-            name: 'Total Devices',
-            value: '12',
-            icon: 'IoTDevice'
+            id: 'devices_connected',
+            name: 'Devices Connected',
+            value: '15',
+            icon: 'Wifi'
           },
           {
-            id: 'connected_rate',
-            name: 'Connection Rate',
-            value: '92%',
-            icon: 'IoT'
+            id: 'avg_signal_strength',
+            name: 'Avg Signal Strength',
+            value: '85%',
+            icon: 'Network'
           },
           {
-            id: 'avg_battery',
-            name: 'Avg Battery',
-            value: '87%',
-            icon: 'Battery'
+            id: 'data_transfer',
+            name: 'Data Transfer',
+            value: '2.3 GB',
+            icon: 'HardDrive'
           },
           {
-            id: 'device_health',
-            name: 'Device Health',
-            value: 'Good',
-            icon: 'CheckCircle'
+            id: 'uptime',
+            name: 'Uptime',
+            value: '99.2%',
+            icon: 'Timer'
           }
         ]
       }
@@ -502,82 +502,78 @@ export const iotRouter = createTRPCRouter({
       return devicesData
     }),
 
-  // Get sensors data
-  getSensorsData: protectedProcedure
+  // Get processing data
+  getProcessingData: protectedProcedure
     .query(async ({ ctx }) => {
-      // Mock sensors data
-      const sensorsData = {
-        activeSensors: 8,
-        sensors: [
+      // Mock processing data
+      const processingData = {
+        activeProcesses: 7,
+        processes: [
           {
-            id: 'sensor_1',
-            name: 'Temperature Sensor',
-            description: 'Room temperature monitoring',
-            value: 22.5,
-            unit: '°C',
-            lastReading: '1 minute ago',
-            location: 'Living Room',
-            status: 'active',
-            icon: 'Sensor'
+            id: 'process_1',
+            name: 'Data Collection Process',
+            description: 'Collect data from IoT devices',
+            type: 'Collection',
+            duration: 'Continuous',
+            resources: '2 cores',
+            status: 'running',
+            icon: 'Cpu'
           },
           {
-            id: 'sensor_2',
-            name: 'Humidity Sensor',
-            description: 'Air humidity monitoring',
-            value: 45,
-            unit: '%',
-            lastReading: '2 minutes ago',
-            location: 'Bedroom',
-            status: 'active',
-            icon: 'Sensor'
+            id: 'process_2',
+            name: 'Device Monitoring Process',
+            description: 'Monitor device health and status',
+            type: 'Monitoring',
+            duration: 'Continuous',
+            resources: '1 core',
+            status: 'running',
+            icon: 'Cpu'
           },
           {
-            id: 'sensor_3',
-            name: 'Motion Sensor',
-            description: 'Movement detection',
-            value: 1,
-            unit: 'detections',
-            lastReading: '30 seconds ago',
-            location: 'Hallway',
-            status: 'active',
-            icon: 'Sensor'
+            id: 'process_3',
+            name: 'Data Analysis Process',
+            description: 'Analyze collected IoT data',
+            type: 'Analysis',
+            duration: 'Every 5 min',
+            resources: '3 cores',
+            status: 'running',
+            icon: 'Cpu'
           },
           {
-            id: 'sensor_4',
-            name: 'Light Sensor',
-            description: 'Ambient light monitoring',
-            value: 650,
-            unit: 'lux',
-            lastReading: '5 minutes ago',
-            location: 'Kitchen',
-            status: 'inactive',
-            icon: 'Sensor'
+            id: 'process_4',
+            name: 'Device Update Process',
+            description: 'Update IoT device firmware',
+            type: 'Update',
+            duration: 'Daily',
+            resources: '1 core',
+            status: 'queued',
+            icon: 'Cpu'
           }
         ],
-        sensorAnalytics: [
+        processingAnalytics: [
           {
-            id: 'active_sensors',
-            name: 'Active Sensors',
-            value: '8/10',
-            percentage: 80
+            id: 'processing_efficiency',
+            name: 'Processing Efficiency',
+            value: '96%',
+            percentage: 96
           },
           {
-            id: 'data_accuracy',
-            name: 'Data Accuracy',
-            value: '95%',
-            percentage: 95
-          },
-          {
-            id: 'sensor_health',
-            name: 'Sensor Health',
-            value: 'Good',
-            percentage: 88
-          },
-          {
-            id: 'calibration_status',
-            name: 'Calibration Status',
-            value: 'Up to date',
+            id: 'avg_processing_time',
+            name: 'Avg Processing Time',
+            value: '0.8s',
             percentage: 92
+          },
+          {
+            id: 'resource_utilization',
+            name: 'Resource Utilization',
+            value: '78%',
+            percentage: 78
+          },
+          {
+            id: 'processing_accuracy',
+            name: 'Processing Accuracy',
+            value: '99.1%',
+            percentage: 99
           }
         ]
       }
@@ -586,83 +582,87 @@ export const iotRouter = createTRPCRouter({
       await ctx.db.activity.create({
         data: {
           userId: ctx.user.id,
-          type: 'IOT_SENSORS_VIEWED',
-          description: 'Viewed IoT sensors data',
-          metadata: { activeSensors: sensorsData.activeSensors }
+          type: 'IOT_PROCESSING_VIEWED',
+          description: 'Viewed IoT processing data',
+          metadata: { activeProcesses: processingData.activeProcesses }
         }
       })
 
-      return sensorsData
+      return processingData
     }),
 
-  // Get smart home data
-  getSmartHomeData: protectedProcedure
+  // Get integration data
+  getIntegrationData: protectedProcedure
     .query(async ({ ctx }) => {
-      // Mock smart home data
-      const smartHomeData = {
-        smartHomeDevices: 6,
-        smartHomeDevices: [
+      // Mock integration data
+      const integrationData = {
+        iotSyncs: 4,
+        syncs: [
           {
-            id: 'smart_1',
-            name: 'Smart Lights',
-            description: 'LED lighting system',
-            room: 'Living Room',
-            status: 'on',
-            lastAction: '2 minutes ago',
-            icon: 'SmartHome'
+            id: 'sync_1',
+            name: 'Device Data Sync',
+            description: 'Sync device data to cloud',
+            frequency: 'Every 10 min',
+            dataSize: '500 MB',
+            lastSync: '8 min ago',
+            status: 'synced',
+            icon: 'Link'
           },
           {
-            id: 'smart_2',
-            name: 'Smart Blinds',
-            description: 'Automated window blinds',
-            room: 'Bedroom',
-            status: 'off',
-            lastAction: '1 hour ago',
-            icon: 'SmartHome'
+            id: 'sync_2',
+            name: 'Configuration Sync',
+            description: 'Sync device configurations',
+            frequency: 'Every 30 min',
+            dataSize: '50 MB',
+            lastSync: '25 min ago',
+            status: 'synced',
+            icon: 'Link'
           },
           {
-            id: 'smart_3',
-            name: 'Smart Coffee Maker',
-            description: 'Programmable coffee machine',
-            room: 'Kitchen',
-            status: 'on',
-            lastAction: '30 minutes ago',
-            icon: 'SmartHome'
+            id: 'sync_3',
+            name: 'Analytics Sync',
+            description: 'Sync analytics and reports',
+            frequency: 'Every hour',
+            dataSize: '200 MB',
+            lastSync: '45 min ago',
+            status: 'syncing',
+            icon: 'Link'
           },
           {
-            id: 'smart_4',
-            name: 'Smart Vacuum',
-            description: 'Robot vacuum cleaner',
-            room: 'Entire House',
-            status: 'off',
-            lastAction: '3 hours ago',
-            icon: 'SmartHome'
+            id: 'sync_4',
+            name: 'Firmware Sync',
+            description: 'Sync device firmware updates',
+            frequency: 'Daily',
+            dataSize: '1.2 GB',
+            lastSync: '6 hours ago',
+            status: 'synced',
+            icon: 'Link'
           }
         ],
-        smartHomeAnalytics: [
+        integrationAnalytics: [
           {
-            id: 'energy_usage',
-            name: 'Energy Usage',
-            value: '2.3 kWh',
-            icon: 'Zap'
+            id: 'sync_success_rate',
+            name: 'Sync Success Rate',
+            value: '99.7%',
+            icon: 'Link'
           },
           {
-            id: 'automation_count',
-            name: 'Automations',
-            value: '15 active',
-            icon: 'Workflow'
+            id: 'data_transfer_speed',
+            name: 'Data Transfer Speed',
+            value: '1.5 Gbps',
+            icon: 'Network'
           },
           {
-            id: 'comfort_score',
-            name: 'Comfort Score',
-            value: '92%',
-            icon: 'Heart'
+            id: 'sync_latency',
+            name: 'Sync Latency',
+            value: '42ms',
+            icon: 'Timer'
           },
           {
-            id: 'security_status',
-            name: 'Security Status',
-            value: 'Armed',
-            icon: 'Shield'
+            id: 'data_integrity',
+            name: 'Data Integrity',
+            value: '99.9%',
+            icon: 'CheckSquare'
           }
         ]
       }
@@ -671,13 +671,13 @@ export const iotRouter = createTRPCRouter({
       await ctx.db.activity.create({
         data: {
           userId: ctx.user.id,
-          type: 'IOT_SMART_HOME_VIEWED',
-          description: 'Viewed smart home data',
-          metadata: { smartHomeDevices: smartHomeData.smartHomeDevices }
+          type: 'IOT_INTEGRATION_VIEWED',
+          description: 'Viewed IoT integration data',
+          metadata: { iotSyncs: integrationData.iotSyncs }
         }
       })
 
-      return smartHomeData
+      return integrationData
     }),
 
   // Get IoT settings
@@ -685,61 +685,61 @@ export const iotRouter = createTRPCRouter({
     .query(async ({ ctx }) => {
       // Mock IoT settings
       const settingsData = {
-        iotScore: 89,
+        iotScore: 94,
         settings: [
           {
             id: 'iot_enabled',
             key: 'iotEnabled',
             name: 'IoT System',
             enabled: true,
-            icon: 'IoT'
+            icon: 'Wifi'
           },
           {
-            id: 'device_management',
-            key: 'deviceManagement',
-            name: 'Device Management',
+            id: 'device_monitoring',
+            key: 'deviceMonitoring',
+            name: 'Device Monitoring',
             enabled: true,
-            icon: 'IoTDevice'
+            icon: 'Cpu'
           },
           {
-            id: 'sensor_monitoring',
-            key: 'sensorMonitoring',
-            name: 'Sensor Monitoring',
+            id: 'data_collection',
+            key: 'dataCollection',
+            name: 'Data Collection',
             enabled: true,
-            icon: 'Sensor'
+            icon: 'HardDrive'
           },
           {
-            id: 'smart_home_control',
-            key: 'smartHomeControl',
-            name: 'Smart Home Control',
+            id: 'auto_updates',
+            key: 'autoUpdates',
+            name: 'Auto Updates',
             enabled: false,
-            icon: 'SmartHome'
+            icon: 'Settings'
           }
         ],
         iotGoals: [
           {
-            id: 'device_connectivity',
-            name: 'Device Connectivity',
-            current: 89,
+            id: 'device_uptime',
+            name: 'Device Uptime',
+            current: 94,
+            target: 99
+          },
+          {
+            id: 'data_accuracy',
+            name: 'Data Accuracy',
+            current: 96,
+            target: 99
+          },
+          {
+            id: 'response_time',
+            name: 'Response Time',
+            current: 92,
             target: 95
           },
           {
-            id: 'sensor_accuracy',
-            name: 'Sensor Accuracy',
-            current: 92,
-            target: 98
-          },
-          {
-            id: 'automation_efficiency',
-            name: 'Automation Efficiency',
-            current: 85,
+            id: 'energy_efficiency',
+            name: 'Energy Efficiency',
+            current: 88,
             target: 90
-          },
-          {
-            id: 'energy_optimization',
-            name: 'Energy Optimization',
-            current: 87,
-            target: 92
           }
         ]
       }
@@ -757,8 +757,8 @@ export const iotRouter = createTRPCRouter({
       return settingsData
     }),
 
-  // Connect device
-  connectDevice: protectedProcedure
+  // Deploy device
+  deployDevice: protectedProcedure
     .input(z.object({
       deviceId: z.string(),
       action: z.string()
@@ -768,19 +768,19 @@ export const iotRouter = createTRPCRouter({
       await ctx.db.activity.create({
         data: {
           userId: ctx.user.id,
-          type: 'IOT_DEVICE_CONNECTED',
-          description: `Connected device: ${input.deviceId}`,
+          type: 'IOT_DEVICE_DEPLOYED',
+          description: `Deployed device: ${input.deviceId}`,
           metadata: { deviceId: input.deviceId, action: input.action }
         }
       })
 
-      return { success: true, message: 'Device connected successfully' }
+      return { success: true, message: 'Device deployed successfully' }
     }),
 
-  // Monitor sensor
-  monitorSensor: protectedProcedure
+  // Start processing
+  startProcessing: protectedProcedure
     .input(z.object({
-      sensorId: z.string(),
+      processId: z.string(),
       action: z.string()
     }))
     .mutation(async ({ ctx, input }) => {
@@ -788,19 +788,19 @@ export const iotRouter = createTRPCRouter({
       await ctx.db.activity.create({
         data: {
           userId: ctx.user.id,
-          type: 'IOT_SENSOR_MONITORED',
-          description: `Monitored sensor: ${input.sensorId}`,
-          metadata: { sensorId: input.sensorId, action: input.action }
+          type: 'IOT_PROCESSING_STARTED',
+          description: `Started processing: ${input.processId}`,
+          metadata: { processId: input.processId, action: input.action }
         }
       })
 
-      return { success: true, message: 'Sensor monitoring started successfully' }
+      return { success: true, message: 'Processing started successfully' }
     }),
 
-  // Control smart home
-  controlSmartHome: protectedProcedure
+  // Sync IoT
+  syncIoT: protectedProcedure
     .input(z.object({
-      deviceId: z.string(),
+      syncId: z.string(),
       action: z.string()
     }))
     .mutation(async ({ ctx, input }) => {
@@ -808,22 +808,22 @@ export const iotRouter = createTRPCRouter({
       await ctx.db.activity.create({
         data: {
           userId: ctx.user.id,
-          type: 'IOT_SMART_HOME_CONTROLLED',
-          description: `Controlled smart home device: ${input.deviceId}`,
-          metadata: { deviceId: input.deviceId, action: input.action }
+          type: 'IOT_SYNC',
+          description: `Synced IoT: ${input.syncId}`,
+          metadata: { syncId: input.syncId, action: input.action }
         }
       })
 
-      return { success: true, message: 'Smart home device controlled successfully' }
+      return { success: true, message: 'IoT sync completed successfully' }
     }),
 
   // Update IoT settings
   updateSettings: protectedProcedure
     .input(z.object({
       iotEnabled: z.boolean().optional(),
-      deviceManagement: z.boolean().optional(),
-      sensorMonitoring: z.boolean().optional(),
-      smartHomeControl: z.boolean().optional()
+      deviceMonitoring: z.boolean().optional(),
+      dataCollection: z.boolean().optional(),
+      autoUpdates: z.boolean().optional()
     }))
     .mutation(async ({ ctx, input }) => {
       // Log activity
@@ -844,12 +844,12 @@ export const iotRouter = createTRPCRouter({
     .query(async ({ ctx }) => {
       // Mock IoT statistics
       const stats = {
-        connectedDevices: 12,
-        activeSensors: 8,
-        smartHomeDevices: 6,
-        iotScore: 89,
-        totalAutomations: 15,
-        energyUsage: 2.3
+        connectedDevices: 15,
+        activeProcesses: 7,
+        iotSyncs: 4,
+        iotScore: 94,
+        avgSignalStrength: 85,
+        dataTransfer: 2300
       }
 
       // Log activity

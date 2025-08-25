@@ -185,13 +185,6 @@ export const usersRouter = createTRPCRouter({
         })
       }
     }),
-            }
-          }
-        }
-      })
-
-      return user
-    }),
 
   // Update user profile
   updateProfile: protectedProcedure

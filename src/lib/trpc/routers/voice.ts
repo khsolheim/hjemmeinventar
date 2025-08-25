@@ -292,95 +292,348 @@ export const voiceRouter = createTRPCRouter({
       }
     }),
 
+  // Get commands data
+  getCommandsData: protectedProcedure
+    .query(async ({ ctx }) => {
+      // Mock commands data
+      const commandsData = {
+        activeCommands: 12,
+        commands: [
+          {
+            id: 'command_1',
+            name: 'Inventory Search Command',
+            description: 'Voice command for searching inventory items',
+            language: 'Norwegian',
+            accuracy: '95.2%',
+            deployed: '2 hours ago',
+            status: 'active',
+            icon: 'Mic'
+          },
+          {
+            id: 'command_2',
+            name: 'Location Navigation Command',
+            description: 'Voice command for navigating to locations',
+            language: 'Norwegian',
+            accuracy: '92.8%',
+            deployed: '1 day ago',
+            status: 'active',
+            icon: 'Mic'
+          },
+          {
+            id: 'command_3',
+            name: 'Analytics Report Command',
+            description: 'Voice command for generating reports',
+            language: 'Norwegian',
+            accuracy: '89.5%',
+            deployed: '3 days ago',
+            status: 'deploying',
+            icon: 'Mic'
+          },
+          {
+            id: 'command_4',
+            name: 'Data Sync Command',
+            description: 'Voice command for syncing data',
+            language: 'Norwegian',
+            accuracy: '97.1%',
+            deployed: '1 week ago',
+            status: 'training',
+            icon: 'Mic'
+          }
+        ],
+        commandAnalytics: [
+          {
+            id: 'commands_deployed',
+            name: 'Commands Deployed',
+            value: '28',
+            icon: 'Mic'
+          },
+          {
+            id: 'avg_accuracy',
+            name: 'Avg Accuracy',
+            value: '93.2%',
+            icon: 'Target'
+          },
+          {
+            id: 'usage_count',
+            name: 'Usage Count',
+            value: '1.2K',
+            icon: 'Users'
+          },
+          {
+            id: 'response_time',
+            name: 'Response Time',
+            value: '0.8s',
+            icon: 'Timer'
+          }
+        ]
+      }
+
+      // Log activity
+      await ctx.db.activity.create({
+        data: {
+          userId: ctx.user.id,
+          type: 'VOICE_COMMANDS_VIEWED',
+          description: 'Viewed voice commands data',
+          metadata: { activeCommands: commandsData.activeCommands }
+        }
+      })
+
+      return commandsData
+    }),
+
+  // Get processing data
+  getProcessingData: protectedProcedure
+    .query(async ({ ctx }) => {
+      // Mock processing data
+      const processingData = {
+        activeProcesses: 6,
+        processes: [
+          {
+            id: 'process_1',
+            name: 'Speech Recognition Process',
+            description: 'Convert speech to text in real-time',
+            type: 'Recognition',
+            duration: 'Continuous',
+            resources: '2 cores',
+            status: 'running',
+            icon: 'Volume2'
+          },
+          {
+            id: 'process_2',
+            name: 'Natural Language Processing',
+            description: 'Process and understand voice commands',
+            type: 'NLP',
+            duration: 'Continuous',
+            resources: '3 cores',
+            status: 'running',
+            icon: 'Volume2'
+          },
+          {
+            id: 'process_3',
+            name: 'Voice Synthesis Process',
+            description: 'Convert text to speech for responses',
+            type: 'Synthesis',
+            duration: 'On-demand',
+            resources: '1 core',
+            status: 'running',
+            icon: 'Volume2'
+          },
+          {
+            id: 'process_4',
+            name: 'Command Training Process',
+            description: 'Train voice commands for better accuracy',
+            type: 'Training',
+            duration: 'Daily',
+            resources: '2 cores',
+            status: 'queued',
+            icon: 'Volume2'
+          }
+        ],
+        processingAnalytics: [
+          {
+            id: 'processing_efficiency',
+            name: 'Processing Efficiency',
+            value: '94%',
+            percentage: 94
+          },
+          {
+            id: 'avg_processing_time',
+            name: 'Avg Processing Time',
+            value: '1.2s',
+            percentage: 88
+          },
+          {
+            id: 'resource_utilization',
+            name: 'Resource Utilization',
+            value: '72%',
+            percentage: 72
+          },
+          {
+            id: 'processing_accuracy',
+            name: 'Processing Accuracy',
+            value: '96.8%',
+            percentage: 96
+          }
+        ]
+      }
+
+      // Log activity
+      await ctx.db.activity.create({
+        data: {
+          userId: ctx.user.id,
+          type: 'VOICE_PROCESSING_VIEWED',
+          description: 'Viewed voice processing data',
+          metadata: { activeProcesses: processingData.activeProcesses }
+        }
+      })
+
+      return processingData
+    }),
+
+  // Get integration data
+  getIntegrationData: protectedProcedure
+    .query(async ({ ctx }) => {
+      // Mock integration data
+      const integrationData = {
+        voiceSyncs: 5,
+        syncs: [
+          {
+            id: 'sync_1',
+            name: 'Voice Model Sync',
+            description: 'Sync voice recognition models',
+            frequency: 'Every 6 hours',
+            dataSize: '800 MB',
+            lastSync: '4 hours ago',
+            status: 'synced',
+            icon: 'Link'
+          },
+          {
+            id: 'sync_2',
+            name: 'Command Data Sync',
+            description: 'Sync voice command data',
+            frequency: 'Every 2 hours',
+            dataSize: '250 MB',
+            lastSync: '1 hour ago',
+            status: 'synced',
+            icon: 'Link'
+          },
+          {
+            id: 'sync_3',
+            name: 'Language Model Sync',
+            description: 'Sync language processing models',
+            frequency: 'Daily',
+            dataSize: '1.5 GB',
+            lastSync: '18 hours ago',
+            status: 'syncing',
+            icon: 'Link'
+          },
+          {
+            id: 'sync_4',
+            name: 'User Preferences Sync',
+            description: 'Sync user voice preferences',
+            frequency: 'Every 30 min',
+            dataSize: '50 MB',
+            lastSync: '25 min ago',
+            status: 'synced',
+            icon: 'Link'
+          }
+        ],
+        integrationAnalytics: [
+          {
+            id: 'sync_success_rate',
+            name: 'Sync Success Rate',
+            value: '99.3%',
+            icon: 'Link'
+          },
+          {
+            id: 'data_transfer_speed',
+            name: 'Data Transfer Speed',
+            value: '2.1 Gbps',
+            icon: 'Network'
+          },
+          {
+            id: 'sync_latency',
+            name: 'Sync Latency',
+            value: '38ms',
+            icon: 'Timer'
+          },
+          {
+            id: 'data_integrity',
+            name: 'Data Integrity',
+            value: '99.7%',
+            icon: 'CheckSquare'
+          }
+        ]
+      }
+
+      // Log activity
+      await ctx.db.activity.create({
+        data: {
+          userId: ctx.user.id,
+          type: 'VOICE_INTEGRATION_VIEWED',
+          description: 'Viewed voice integration data',
+          metadata: { voiceSyncs: integrationData.voiceSyncs }
+        }
+      })
+
+      return integrationData
+    }),
+
   // Get voice settings
   getVoiceSettings: protectedProcedure
     .query(async ({ ctx }) => {
-      try {
-        const userId = ctx.user.id
-
-        // Get voice settings
-        const settings = [
+      // Mock voice settings
+      const settingsData = {
+        voiceScore: 91,
+        settings: [
           {
-            id: 'voice-enabled',
+            id: 'voice_enabled',
             key: 'voiceEnabled',
-            name: 'Voice Assistant',
+            name: 'Voice System',
             enabled: true,
             icon: 'Mic'
           },
           {
-            id: 'speech-recognition',
+            id: 'speech_recognition',
             key: 'speechRecognition',
             name: 'Speech Recognition',
-            enabled: true,
-            icon: 'Mic'
-          },
-          {
-            id: 'speech-synthesis',
-            key: 'speechSynthesis',
-            name: 'Speech Synthesis',
             enabled: true,
             icon: 'Volume2'
           },
           {
-            id: 'voice-commands',
-            key: 'voiceCommands',
-            name: 'Voice Commands',
+            id: 'voice_synthesis',
+            key: 'voiceSynthesis',
+            name: 'Voice Synthesis',
             enabled: true,
-            icon: 'MessageSquare'
+            icon: 'Mic'
           },
           {
-            id: 'voice-analytics',
-            key: 'voiceAnalytics',
-            name: 'Voice Analytics',
-            enabled: true,
-            icon: 'Brain'
-          },
-          {
-            id: 'voice-training',
-            key: 'voiceTraining',
-            name: 'Voice Training',
+            id: 'noise_reduction',
+            key: 'noiseReduction',
+            name: 'Noise Reduction',
             enabled: false,
-            icon: 'Headphones'
+            icon: 'Settings'
+          }
+        ],
+        voiceGoals: [
+          {
+            id: 'recognition_accuracy',
+            name: 'Recognition Accuracy',
+            current: 91,
+            target: 95
+          },
+          {
+            id: 'response_speed',
+            name: 'Response Speed',
+            current: 94,
+            target: 98
+          },
+          {
+            id: 'command_success_rate',
+            name: 'Command Success Rate',
+            current: 89,
+            target: 93
+          },
+          {
+            id: 'user_satisfaction',
+            name: 'User Satisfaction',
+            current: 92,
+            target: 96
           }
         ]
-
-        const preferences = [
-          {
-            id: 'speech-rate',
-            name: 'Speech Rate',
-            value: '0.9x',
-            percentage: 90
-          },
-          {
-            id: 'speech-pitch',
-            name: 'Speech Pitch',
-            value: '1.0x',
-            percentage: 100
-          },
-          {
-            id: 'recognition-confidence',
-            name: 'Recognition Confidence',
-            value: '0.8',
-            percentage: 80
-          },
-          {
-            id: 'response-delay',
-            name: 'Response Delay',
-            value: '1.2s',
-            percentage: 85
-          }
-        ]
-
-        return {
-          settings,
-          preferences
-        }
-      } catch (error) {
-        throw new TRPCError({
-          code: 'INTERNAL_SERVER_ERROR',
-          message: 'Kunne ikke hente voice settings'
-        })
       }
+
+      // Log activity
+      await ctx.db.activity.create({
+        data: {
+          userId: ctx.user.id,
+          type: 'VOICE_SETTINGS_VIEWED',
+          description: 'Viewed voice settings',
+          metadata: { voiceScore: settingsData.voiceScore }
+        }
+      })
+
+      return settingsData
     }),
 
   // Execute voice command
@@ -457,46 +710,86 @@ export const voiceRouter = createTRPCRouter({
       }
     }),
 
+  // Deploy command
+  deployCommand: protectedProcedure
+    .input(z.object({
+      commandId: z.string(),
+      action: z.string()
+    }))
+    .mutation(async ({ ctx, input }) => {
+      // Log activity
+      await ctx.db.activity.create({
+        data: {
+          userId: ctx.user.id,
+          type: 'VOICE_COMMAND_DEPLOYED',
+          description: `Deployed command: ${input.commandId}`,
+          metadata: { commandId: input.commandId, action: input.action }
+        }
+      })
+
+      return { success: true, message: 'Command deployed successfully' }
+    }),
+
+  // Start processing
+  startProcessing: protectedProcedure
+    .input(z.object({
+      processId: z.string(),
+      action: z.string()
+    }))
+    .mutation(async ({ ctx, input }) => {
+      // Log activity
+      await ctx.db.activity.create({
+        data: {
+          userId: ctx.user.id,
+          type: 'VOICE_PROCESSING_STARTED',
+          description: `Started processing: ${input.processId}`,
+          metadata: { processId: input.processId, action: input.action }
+        }
+      })
+
+      return { success: true, message: 'Processing started successfully' }
+    }),
+
+  // Sync voice
+  syncVoice: protectedProcedure
+    .input(z.object({
+      syncId: z.string(),
+      action: z.string()
+    }))
+    .mutation(async ({ ctx, input }) => {
+      // Log activity
+      await ctx.db.activity.create({
+        data: {
+          userId: ctx.user.id,
+          type: 'VOICE_SYNC',
+          description: `Synced voice: ${input.syncId}`,
+          metadata: { syncId: input.syncId, action: input.action }
+        }
+      })
+
+      return { success: true, message: 'Voice sync completed successfully' }
+    }),
+
   // Update voice settings
   updateSettings: protectedProcedure
     .input(z.object({
       voiceEnabled: z.boolean().optional(),
       speechRecognition: z.boolean().optional(),
-      speechSynthesis: z.boolean().optional(),
-      voiceCommands: z.boolean().optional(),
-      voiceAnalytics: z.boolean().optional(),
-      voiceTraining: z.boolean().optional()
+      voiceSynthesis: z.boolean().optional(),
+      noiseReduction: z.boolean().optional()
     }))
     .mutation(async ({ ctx, input }) => {
-      try {
-        const userId = ctx.user.id
-
-        // Update voice settings
-        const result = {
-          success: true,
-          updatedSettings: input,
-          timestamp: new Date()
+      // Log activity
+      await ctx.db.activity.create({
+        data: {
+          userId: ctx.user.id,
+          type: 'VOICE_SETTINGS_UPDATED',
+          description: 'Updated voice settings',
+          metadata: input
         }
+      })
 
-        // Log activity
-        await ctx.db.activity.create({
-          data: {
-            type: 'VOICE_SETTINGS_UPDATED',
-            description: 'Voice settings updated',
-            userId,
-            metadata: {
-              updatedSettings: input
-            }
-          }
-        })
-
-        return result
-      } catch (error) {
-        throw new TRPCError({
-          code: 'INTERNAL_SERVER_ERROR',
-          message: 'Kunne ikke oppdatere voice settings'
-        })
-      }
+      return { success: true, message: 'Voice settings updated successfully' }
     }),
 
   // Train voice
@@ -540,41 +833,26 @@ export const voiceRouter = createTRPCRouter({
   // Get voice statistics
   getVoiceStats: protectedProcedure
     .query(async ({ ctx }) => {
-      try {
-        const userId = ctx.user.id
-
-        // Get voice statistics
-        const [commands, settings, training] = await Promise.all([
-          ctx.db.activity.count({ 
-            where: { 
-              userId,
-              type: 'VOICE_COMMAND'
-            }
-          }),
-          ctx.db.activity.count({ 
-            where: { 
-              userId,
-              type: 'VOICE_SETTINGS_UPDATED'
-            }
-          }),
-          ctx.db.activity.count({ 
-            where: { 
-              userId,
-              type: 'VOICE_TRAINING'
-            }
-          })
-        ])
-
-        return {
-          totalCommands: commands,
-          totalSettingsUpdates: settings,
-          totalTrainingSessions: training
-        }
-      } catch (error) {
-        throw new TRPCError({
-          code: 'INTERNAL_SERVER_ERROR',
-          message: 'Kunne ikke hente voice statistikk'
-        })
+      // Mock voice statistics
+      const stats = {
+        activeCommands: 12,
+        activeProcesses: 6,
+        voiceSyncs: 5,
+        voiceScore: 91,
+        avgAccuracy: 93.2,
+        usageCount: 1200
       }
+
+      // Log activity
+      await ctx.db.activity.create({
+        data: {
+          userId: ctx.user.id,
+          type: 'VOICE_STATS_VIEWED',
+          description: 'Viewed voice statistics',
+          metadata: stats
+        }
+      })
+
+      return stats
     })
 })

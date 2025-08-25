@@ -189,7 +189,7 @@ export function QuickStartWizard({ onComplete, onSkip }: QuickStartWizardProps) 
         <CardHeader>
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 bg-gradient-to-br from-yellow-100 to-orange-100 rounded-full flex items-center justify-center">
-              <steps[currentStep].icon className="w-5 h-5 text-yellow-600" />
+              {React.createElement(steps[currentStep].icon, { className: "w-5 h-5 text-yellow-600" })}
             </div>
             <div>
               <CardTitle>{steps[currentStep].title}</CardTitle>
