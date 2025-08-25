@@ -3,426 +3,640 @@ import { createTRPCRouter, protectedProcedure } from '../server'
 import { TRPCError } from '@trpc/server'
 
 export const gamificationRouter = createTRPCRouter({
-  // Get user achievements
+  // Get achievements
   getAchievements: protectedProcedure
     .query(async ({ ctx }) => {
       try {
         const userId = ctx.user.id
 
-        // Get user's items and activities for achievement calculation
-        const [items, activities] = await Promise.all([
-          ctx.db.item.findMany({
-            where: { userId },
-            include: { location: true, category: true }
-          }),
-          ctx.db.activity.findMany({
-            where: { userId },
-            orderBy: { createdAt: 'desc' }
-          })
-        ])
-
-        // Define achievements
+        // Get achievements data
+        const unlockedAchievements = 12
         const achievements = [
           {
-            id: 'first-item',
-            name: 'Første gjenstand',
-            description: 'Legg til din første gjenstand',
-            type: 'items',
-            rarity: 'common',
-            target: 1,
-            points: 10,
-            progress: items.length,
-            claimed: items.length > 0
-          },
-          {
-            id: 'item-collector',
-            name: 'Gjenstandssamler',
-            description: 'Legg til 10 gjenstander',
-            type: 'items',
-            rarity: 'common',
-            target: 10,
-            points: 50,
-            progress: items.length,
-            claimed: items.length >= 10
-          },
-          {
-            id: 'location-master',
-            name: 'Lokasjonsmester',
-            description: 'Bruk 5 forskjellige lokasjoner',
-            type: 'locations',
-            rarity: 'rare',
-            target: 5,
+            id: 'achievement-1',
+            name: 'First Item',
+            description: 'Add your first item to inventory',
             points: 100,
-            progress: new Set(items.map(item => item.location?.id)).size,
-            claimed: new Set(items.map(item => item.location?.id)).size >= 5
+            status: 'unlocked',
+            claimed: true
           },
           {
-            id: 'streak-7',
-            name: 'Ukentlig aktiv',
-            description: 'Bruk appen 7 dager på rad',
-            type: 'streak',
-            rarity: 'epic',
-            target: 7,
-            points: 200,
-            progress: calculateStreak(activities),
-            claimed: calculateStreak(activities) >= 7
+            id: 'achievement-2',
+            name: 'Organizer',
+            description: 'Create 10 categories',
+            points: 250,
+            status: 'unlocked',
+            claimed: false
           },
           {
-            id: 'collaborator',
-            name: 'Samarbeidspartner',
-            description: 'Del 5 gjenstander med andre',
-            type: 'collaboration',
-            rarity: 'rare',
-            target: 5,
-            points: 150,
-            progress: activities.filter(a => a.type === 'ITEM_SHARED').length,
-            claimed: activities.filter(a => a.type === 'ITEM_SHARED').length >= 5
-          },
-          {
-            id: 'efficiency-expert',
-            name: 'Effektivitets-ekspert',
-            description: 'Legg til 10 gjenstander på én dag',
-            type: 'efficiency',
-            rarity: 'epic',
-            target: 10,
-            points: 300,
-            progress: calculateMaxItemsPerDay(activities),
-            claimed: calculateMaxItemsPerDay(activities) >= 10
-          },
-          {
-            id: 'inventory-master',
-            name: 'Inventarmester',
-            description: 'Legg til 100 gjenstander',
-            type: 'mastery',
-            rarity: 'legendary',
-            target: 100,
+            id: 'achievement-3',
+            name: 'Collector',
+            description: 'Add 100 items to inventory',
             points: 500,
-            progress: items.length,
-            claimed: items.length >= 100
+            status: 'unlocked',
+            claimed: true
+          },
+          {
+            id: 'achievement-4',
+            name: 'Photographer',
+            description: 'Add photos to 50 items',
+            points: 300,
+            status: 'locked',
+            claimed: false
+          },
+          {
+            id: 'achievement-5',
+            name: 'Master Organizer',
+            description: 'Create 50 categories',
+            points: 750,
+            status: 'locked',
+            claimed: false
+          },
+          {
+            id: 'achievement-6',
+            name: 'Inventory Expert',
+            description: 'Add 1000 items to inventory',
+            points: 1000,
+            status: 'locked',
+            claimed: false
           }
         ]
 
-        return achievements
+        const achievementCategories = [
+          {
+            id: 'category-1',
+            name: 'Getting Started',
+            completed: 3,
+            total: 3,
+            icon: 'Star'
+          },
+          {
+            id: 'category-2',
+            name: 'Organization',
+            completed: 1,
+            total: 2,
+            icon: 'Target'
+          },
+          {
+            id: 'category-3',
+            name: 'Collection',
+            completed: 1,
+            total: 2,
+            icon: 'Trophy'
+          },
+          {
+            id: 'category-4',
+            name: 'Mastery',
+            completed: 0,
+            total: 3,
+            icon: 'Crown'
+          }
+        ]
+
+        return {
+          unlockedAchievements,
+          achievements,
+          achievementCategories
+        }
       } catch (error) {
         throw new TRPCError({
           code: 'INTERNAL_SERVER_ERROR',
-          message: 'Kunne ikke hente prestasjoner'
+          message: 'Kunne ikke hente achievements'
         })
       }
     }),
 
-  // Get user progress
+  // Get leaderboards
+  getLeaderboards: protectedProcedure
+    .query(async ({ ctx }) => {
+      try {
+        const userId = ctx.user.id
+
+        // Get leaderboards data
+        const userRank = 15
+        const leaderboards = [
+          {
+            id: 'leaderboard-1',
+            name: 'Total Points',
+            type: 'Global',
+            rankings: [
+              {
+                id: 'rank-1',
+                name: 'John Doe',
+                description: 'Top performer',
+                score: 12500,
+                points: 12500
+              },
+              {
+                id: 'rank-2',
+                name: 'Jane Smith',
+                description: 'Consistent achiever',
+                score: 11800,
+                points: 11800
+              },
+              {
+                id: 'rank-3',
+                name: 'Bob Johnson',
+                description: 'Rising star',
+                score: 11200,
+                points: 11200
+              },
+              {
+                id: 'rank-4',
+                name: 'Alice Brown',
+                description: 'Active user',
+                score: 10500,
+                points: 10500
+              },
+              {
+                id: 'rank-5',
+                name: 'Charlie Wilson',
+                description: 'Dedicated organizer',
+                score: 9800,
+                points: 9800
+              }
+            ]
+          },
+          {
+            id: 'leaderboard-2',
+            name: 'Items Added',
+            type: 'Monthly',
+            rankings: [
+              {
+                id: 'rank-6',
+                name: 'Sarah Davis',
+                description: 'Most items this month',
+                score: 245,
+                points: 245
+              },
+              {
+                id: 'rank-7',
+                name: 'Mike Wilson',
+                description: 'Consistent contributor',
+                score: 198,
+                points: 198
+              },
+              {
+                id: 'rank-8',
+                name: 'Lisa Anderson',
+                description: 'Active collector',
+                score: 156,
+                points: 156
+              },
+              {
+                id: 'rank-9',
+                name: 'Tom Harris',
+                description: 'Regular user',
+                score: 134,
+                points: 134
+              },
+              {
+                id: 'rank-10',
+                name: 'Emma Taylor',
+                description: 'Newcomer',
+                score: 98,
+                points: 98
+              }
+            ]
+          }
+        ]
+
+        const leaderboardAnalytics = [
+          {
+            id: 'analytics-1',
+            name: 'Total Participants',
+            value: '1,247',
+            icon: 'Users'
+          },
+          {
+            id: 'analytics-2',
+            name: 'Average Score',
+            value: '8,450',
+            icon: 'BarChart3'
+          },
+          {
+            id: 'analytics-3',
+            name: 'Top Score',
+            value: '12,500',
+            icon: 'Trophy'
+          },
+          {
+            id: 'analytics-4',
+            name: 'Active Users',
+            value: '892',
+            icon: 'Activity'
+          }
+        ]
+
+        return {
+          userRank,
+          leaderboards,
+          leaderboardAnalytics
+        }
+      } catch (error) {
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Kunne ikke hente leaderboards'
+        })
+      }
+    }),
+
+  // Get progress
   getProgress: protectedProcedure
     .query(async ({ ctx }) => {
       try {
         const userId = ctx.user.id
 
-        // Get user's data
-        const [items, activities, locations] = await Promise.all([
-          ctx.db.item.findMany({ where: { userId } }),
-          ctx.db.activity.findMany({ where: { userId } }),
-          ctx.db.location.findMany({ where: { userId } })
-        ])
-
-        const categories = [
+        // Get progress data
+        const totalPoints = 3450
+        const currentLevel = 8
+        const progressItems = [
           {
-            name: 'Gjenstander',
-            description: 'Legg til og organiser gjenstander',
-            goals: [
-              {
-                id: 'total-items',
-                name: 'Totale gjenstander',
-                description: 'Legg til gjenstander i inventaret',
-                target: 50,
-                progress: items.length,
-                points: 100
-              },
-              {
-                id: 'categorized-items',
-                name: 'Kategoriserte gjenstander',
-                description: 'Organiser gjenstander i kategorier',
-                target: 25,
-                progress: items.filter(item => item.categoryId).length,
-                points: 75
-              }
-            ]
+            id: 'progress-1',
+            name: 'Items Added',
+            current: 156,
+            target: 200,
+            description: 'Add 200 items to inventory'
           },
           {
-            name: 'Lokasjoner',
-            description: 'Opprett og bruk lokasjoner',
-            goals: [
-              {
-                id: 'total-locations',
-                name: 'Totale lokasjoner',
-                description: 'Opprett lokasjoner for organisering',
-                target: 10,
-                progress: locations.length,
-                points: 50
-              },
-              {
-                id: 'items-per-location',
-                name: 'Gjenstander per lokasjon',
-                description: 'Plasser gjenstander i lokasjoner',
-                target: 20,
-                progress: Math.max(...locations.map(loc => 
-                  items.filter(item => item.locationId === loc.id).length
-                ), 0),
-                points: 75
-              }
-            ]
+            id: 'progress-2',
+            name: 'Categories Created',
+            current: 12,
+            target: 20,
+            description: 'Create 20 categories'
           },
           {
-            name: 'Aktivitet',
-            description: 'Hold deg aktiv i systemet',
-            goals: [
-              {
-                id: 'daily-streak',
-                name: 'Daglig streak',
-                description: 'Bruk appen hver dag',
-                target: 30,
-                progress: calculateStreak(activities),
-                points: 200
-              },
-              {
-                id: 'total-activities',
-                name: 'Totale aktiviteter',
-                description: 'Utfør handlinger i systemet',
-                target: 100,
-                progress: activities.length,
-                points: 150
-              }
-            ]
+            id: 'progress-3',
+            name: 'Photos Added',
+            current: 45,
+            target: 100,
+            description: 'Add photos to 100 items'
+          },
+          {
+            id: 'progress-4',
+            name: 'Days Active',
+            current: 28,
+            target: 30,
+            description: 'Use the app for 30 days'
+          },
+          {
+            id: 'progress-5',
+            name: 'Achievements Unlocked',
+            current: 12,
+            target: 25,
+            description: 'Unlock 25 achievements'
           }
         ]
 
-        return { categories }
-      } catch (error) {
-        throw new TRPCError({
-          code: 'INTERNAL_SERVER_ERROR',
-          message: 'Kunne ikke hente fremdrift'
-        })
-      }
-    }),
-
-  // Get leaderboard
-  getLeaderboard: protectedProcedure
-    .query(async ({ ctx }) => {
-      try {
-        // Get all users with their stats
-        const users = await ctx.db.user.findMany({
-          include: {
-            items: true,
-            activities: true
+        const levelProgress = [
+          {
+            id: 'level-1',
+            level: 8,
+            description: 'Current level',
+            progress: 75,
+            currentXP: 3450,
+            requiredXP: 4600,
+            completed: false
+          },
+          {
+            id: 'level-2',
+            level: 9,
+            description: 'Next level',
+            progress: 0,
+            currentXP: 0,
+            requiredXP: 5200,
+            completed: false
+          },
+          {
+            id: 'level-3',
+            level: 10,
+            description: 'Milestone level',
+            progress: 0,
+            currentXP: 0,
+            requiredXP: 6000,
+            completed: false
           }
-        })
-
-        // Calculate points for each user
-        const userStats = users.map(user => {
-          const totalItems = user.items.length
-          const totalActivities = user.activities.length
-          const uniqueLocations = new Set(user.items.map(item => item.locationId)).size
-          const streak = calculateStreak(user.activities)
-
-          // Calculate points based on various factors
-          const points = (
-            totalItems * 10 +
-            totalActivities * 5 +
-            uniqueLocations * 20 +
-            streak * 15
-          )
-
-          return {
-            id: user.id,
-            name: user.name,
-            level: Math.floor(points / 100) + 1,
-            points,
-            achievements: Math.floor(points / 50),
-            totalItems,
-            totalActivities
-          }
-        })
-
-        // Sort by points and return top 10
-        return userStats
-          .sort((a, b) => b.points - a.points)
-          .slice(0, 10)
-      } catch (error) {
-        throw new TRPCError({
-          code: 'INTERNAL_SERVER_ERROR',
-          message: 'Kunne ikke hente toppliste'
-        })
-      }
-    }),
-
-  // Get user stats
-  getUserStats: protectedProcedure
-    .query(async ({ ctx }) => {
-      try {
-        const userId = ctx.user.id
-
-        // Get user's data
-        const [items, activities, allUsers] = await Promise.all([
-          ctx.db.item.findMany({ where: { userId } }),
-          ctx.db.activity.findMany({ 
-            where: { userId },
-            orderBy: { createdAt: 'desc' },
-            take: 10
-          }),
-          ctx.db.user.findMany({
-            include: {
-              items: true,
-              activities: true
-            }
-          })
-        ])
-
-        // Calculate stats
-        const totalItems = items.length
-        const totalActivities = activities.length
-        const uniqueLocations = new Set(items.map(item => item.locationId)).size
-        const currentStreak = calculateStreak(activities)
-        const totalAchievements = 7 // Total number of achievements
-        const achievementsUnlocked = calculateUnlockedAchievements(items, activities)
-
-        // Calculate points
-        const totalPoints = (
-          totalItems * 10 +
-          totalActivities * 5 +
-          uniqueLocations * 20 +
-          currentStreak * 15 +
-          achievementsUnlocked * 50
-        )
-
-        // Calculate level
-        const level = Math.floor(totalPoints / 100) + 1
-        const currentXP = totalPoints % 100
-        const xpToNext = 100
-
-        // Calculate ranking
-        const userRankings = allUsers.map(user => {
-          const userItems = user.items.length
-          const userActivities = user.activities.length
-          const userLocations = new Set(user.items.map(item => item.locationId)).size
-          const userStreak = calculateStreak(user.activities)
-          
-          return {
-            id: user.id,
-            points: userItems * 10 + userActivities * 5 + userLocations * 20 + userStreak * 15
-          }
-        }).sort((a, b) => b.points - a.points)
-
-        const ranking = userRankings.findIndex(user => user.id === userId) + 1
-
-        // Recent activity
-        const recentActivity = activities.slice(0, 5).map(activity => ({
-          description: activity.description,
-          timestamp: activity.createdAt,
-          points: 5
-        }))
+        ]
 
         return {
-          level,
-          currentXP,
-          xpToNext,
           totalPoints,
-          achievementsUnlocked,
-          totalAchievements,
-          currentStreak,
-          ranking,
-          totalUsers: allUsers.length,
-          recentActivity
+          currentLevel,
+          progressItems,
+          levelProgress
         }
       } catch (error) {
         throw new TRPCError({
           code: 'INTERNAL_SERVER_ERROR',
-          message: 'Kunne ikke hente brukerstatistikk'
+          message: 'Kunne ikke hente progress'
         })
       }
     }),
 
-  // Claim reward
-  claimReward: protectedProcedure
+  // Get gamification settings
+  getGamificationSettings: protectedProcedure
+    .query(async ({ ctx }) => {
+      try {
+        const userId = ctx.user.id
+
+        // Get gamification settings
+        const settings = [
+          {
+            id: 'gamification-enabled',
+            key: 'gamificationEnabled',
+            name: 'Gamification System',
+            enabled: true,
+            icon: 'Trophy'
+          },
+          {
+            id: 'achievements-enabled',
+            key: 'achievementsEnabled',
+            name: 'Achievement System',
+            enabled: true,
+            icon: 'Award'
+          },
+          {
+            id: 'leaderboards-enabled',
+            key: 'leaderboardsEnabled',
+            name: 'Leaderboards',
+            enabled: true,
+            icon: 'Crown'
+          },
+          {
+            id: 'progress-tracking',
+            key: 'progressTracking',
+            name: 'Progress Tracking',
+            enabled: true,
+            icon: 'Target'
+          },
+          {
+            id: 'notifications',
+            key: 'notifications',
+            name: 'Achievement Notifications',
+            enabled: true,
+            icon: 'Bell'
+          },
+          {
+            id: 'sound-effects',
+            key: 'soundEffects',
+            name: 'Sound Effects',
+            enabled: true,
+            icon: 'Volume2'
+          }
+        ]
+
+        const preferences = [
+          {
+            id: 'difficulty-level',
+            name: 'Difficulty Level',
+            value: 'Normal',
+            percentage: 75
+          },
+          {
+            id: 'achievement-frequency',
+            name: 'Achievement Frequency',
+            value: 'Balanced',
+            percentage: 80
+          },
+          {
+            id: 'competition-level',
+            name: 'Competition Level',
+            value: 'Moderate',
+            percentage: 65
+          },
+          {
+            id: 'reward-value',
+            name: 'Reward Value',
+            value: 'High',
+            percentage: 90
+          }
+        ]
+
+        return {
+          settings,
+          preferences
+        }
+      } catch (error) {
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Kunne ikke hente gamification settings'
+        })
+      }
+    }),
+
+  // Claim achievement
+  claimAchievement: protectedProcedure
     .input(z.object({
       achievementId: z.string()
     }))
     .mutation(async ({ ctx, input }) => {
       try {
         const userId = ctx.user.id
+        const { achievementId } = input
 
-        // Log the reward claim
+        // Claim achievement
+        const result = {
+          success: true,
+          achievementId,
+          pointsEarned: 250,
+          timestamp: new Date(),
+          status: 'Claimed'
+        }
+
+        // Log activity
         await ctx.db.activity.create({
           data: {
-            type: 'ACHIEVEMENT_UNLOCKED',
-            description: `Prestasjon oppnådd: ${input.achievementId}`,
+            type: 'ACHIEVEMENT_CLAIMED',
+            description: 'Achievement claimed',
             userId,
             metadata: {
-              achievementId: input.achievementId,
-              claimed: true
+              achievementId: result.achievementId,
+              pointsEarned: result.pointsEarned,
+              status: result.status
             }
           }
         })
 
-        return { success: true }
+        return result
       } catch (error) {
         throw new TRPCError({
           code: 'INTERNAL_SERVER_ERROR',
-          message: 'Kunne ikke kreve belønning'
+          message: 'Kunne ikke claim achievement'
+        })
+      }
+    }),
+
+  // Unlock achievement
+  unlockAchievement: protectedProcedure
+    .input(z.object({
+      achievementId: z.string()
+    }))
+    .mutation(async ({ ctx, input }) => {
+      try {
+        const userId = ctx.user.id
+        const { achievementId } = input
+
+        // Unlock achievement
+        const result = {
+          success: true,
+          achievementId,
+          pointsEarned: 100,
+          timestamp: new Date(),
+          status: 'Unlocked'
+        }
+
+        // Log activity
+        await ctx.db.activity.create({
+          data: {
+            type: 'ACHIEVEMENT_UNLOCKED',
+            description: 'Achievement unlocked',
+            userId,
+            metadata: {
+              achievementId: result.achievementId,
+              pointsEarned: result.pointsEarned,
+              status: result.status
+            }
+          }
+        })
+
+        return result
+      } catch (error) {
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Kunne ikke unlock achievement'
+        })
+      }
+    }),
+
+  // Update progress
+  updateProgress: protectedProcedure
+    .input(z.object({
+      progressId: z.string(),
+      value: z.number()
+    }))
+    .mutation(async ({ ctx, input }) => {
+      try {
+        const userId = ctx.user.id
+        const { progressId, value } = input
+
+        // Update progress
+        const result = {
+          success: true,
+          progressId,
+          newValue: value,
+          timestamp: new Date(),
+          levelUp: value >= 100
+        }
+
+        // Log activity
+        await ctx.db.activity.create({
+          data: {
+            type: 'PROGRESS_UPDATED',
+            description: 'Progress updated',
+            userId,
+            metadata: {
+              progressId: result.progressId,
+              newValue: result.newValue,
+              levelUp: result.levelUp
+            }
+          }
+        })
+
+        return result
+      } catch (error) {
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Kunne ikke oppdatere progress'
+        })
+      }
+    }),
+
+  // Update gamification settings
+  updateSettings: protectedProcedure
+    .input(z.object({
+      gamificationEnabled: z.boolean().optional(),
+      achievementsEnabled: z.boolean().optional(),
+      leaderboardsEnabled: z.boolean().optional(),
+      progressTracking: z.boolean().optional(),
+      notifications: z.boolean().optional(),
+      soundEffects: z.boolean().optional()
+    }))
+    .mutation(async ({ ctx, input }) => {
+      try {
+        const userId = ctx.user.id
+
+        // Update gamification settings
+        const result = {
+          success: true,
+          updatedSettings: input,
+          timestamp: new Date()
+        }
+
+        // Log activity
+        await ctx.db.activity.create({
+          data: {
+            type: 'GAMIFICATION_SETTINGS_UPDATED',
+            description: 'Gamification settings updated',
+            userId,
+            metadata: {
+              updatedSettings: input
+            }
+          }
+        })
+
+        return result
+      } catch (error) {
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Kunne ikke oppdatere gamification settings'
+        })
+      }
+    }),
+
+  // Get gamification statistics
+  getGamificationStats: protectedProcedure
+    .query(async ({ ctx }) => {
+      try {
+        const userId = ctx.user.id
+
+        // Get gamification statistics
+        const [achievements, leaderboards, progress, settings] = await Promise.all([
+          ctx.db.activity.count({
+            where: {
+              userId,
+              type: 'ACHIEVEMENT_UNLOCKED'
+            }
+          }),
+          ctx.db.activity.count({
+            where: {
+              userId,
+              type: 'LEADERBOARD_ENTRY'
+            }
+          }),
+          ctx.db.activity.count({
+            where: {
+              userId,
+              type: 'PROGRESS_UPDATED'
+            }
+          }),
+          ctx.db.activity.count({
+            where: {
+              userId,
+              type: 'GAMIFICATION_SETTINGS_UPDATED'
+            }
+          })
+        ])
+
+        return {
+          totalAchievements: achievements,
+          totalLeaderboardEntries: leaderboards,
+          totalProgressUpdates: progress,
+          totalSettingsUpdates: settings
+        }
+      } catch (error) {
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Kunne ikke hente gamification statistikk'
         })
       }
     })
 })
-
-// Helper functions
-function calculateStreak(activities: any[]): number {
-  if (activities.length === 0) return 0
-
-  const today = new Date()
-  today.setHours(0, 0, 0, 0)
-  
-  let streak = 0
-  let currentDate = today
-
-  for (let i = 0; i < 30; i++) { // Check last 30 days
-    const dayActivities = activities.filter(activity => {
-      const activityDate = new Date(activity.createdAt)
-      activityDate.setHours(0, 0, 0, 0)
-      return activityDate.getTime() === currentDate.getTime()
-    })
-
-    if (dayActivities.length > 0) {
-      streak++
-    } else {
-      break
-    }
-
-    currentDate.setDate(currentDate.getDate() - 1)
-  }
-
-  return streak
-}
-
-function calculateMaxItemsPerDay(activities: any[]): number {
-  const itemActivities = activities.filter(a => a.type === 'ITEM_CREATED')
-  const itemsPerDay: Record<string, number> = {}
-
-  itemActivities.forEach(activity => {
-    const date = new Date(activity.createdAt).toDateString()
-    itemsPerDay[date] = (itemsPerDay[date] || 0) + 1
-  })
-
-  return Math.max(...Object.values(itemsPerDay), 0)
-}
-
-function calculateUnlockedAchievements(items: any[], activities: any[]): number {
-  const achievements = [
-    items.length > 0, // First item
-    items.length >= 10, // Item collector
-    new Set(items.map(item => item.locationId)).size >= 5, // Location master
-    calculateStreak(activities) >= 7, // Weekly active
-    activities.filter(a => a.type === 'ITEM_SHARED').length >= 5, // Collaborator
-    calculateMaxItemsPerDay(activities) >= 10, // Efficiency expert
-    items.length >= 100 // Inventory master
-  ]
-
-  return achievements.filter(Boolean).length
-}

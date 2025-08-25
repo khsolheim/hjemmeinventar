@@ -1,11 +1,11 @@
 'use client'
 
-import { GamificationSystem } from '@/components/gamification/GamificationSystem'
+import { AdvancedGamification } from '@/components/gamification/AdvancedGamification'
 
 export default function GamificationPage() {
   return (
     <div className="container mx-auto p-6">
-      <GamificationSystem />
+      <AdvancedGamification />
     </div>
   )
 }
