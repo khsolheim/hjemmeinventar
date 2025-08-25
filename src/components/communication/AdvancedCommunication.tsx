@@ -7,9 +7,11 @@ import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
 import { Switch } from '@/components/ui/switch'
 import {
-  Zap,
+  MessageSquare,
+  Video,
+  Phone,
+  FileText,
   Settings,
-  Clock,
   BarChart3,
   PieChart,
   TrendingUp,
@@ -42,6 +44,7 @@ import {
   Monitor,
   Wifi,
   Bluetooth,
+  Zap,
   Volume2,
   VolumeX,
   Mic,
@@ -104,50 +107,40 @@ import {
   Rocket,
   Sparkles,
   CheckSquare,
-  Target,
-  MessageSquare,
-  Phone,
-  FileText,
-  Music,
-  Video,
-  Gamepad2,
-  Workflow,
-  Cpu,
-  Code,
-  Terminal
+  Clock,
+  Target
 } from 'lucide-react'
 import { trpc } from '@/lib/trpc/client'
 import { useHapticFeedback } from '@/lib/services/haptic-feedback'
 
-interface AdvancedAutomationProps {
+interface AdvancedCommunicationProps {
   className?: string
 }
 
-export function AdvancedAutomation({ className }: AdvancedAutomationProps) {
-  const [selectedTab, setSelectedTab] = useState<'workflows' | 'rules' | 'tasks' | 'settings'>('workflows')
-  const [isRunning, setIsRunning] = useState(false)
-  const [automationEnabled, setAutomationEnabled] = useState(true)
-  const [selectedWorkflow, setSelectedWorkflow] = useState<string | null>(null)
-  const [selectedRule, setSelectedRule] = useState<string | null>(null)
+export function AdvancedCommunication({ className }: AdvancedCommunicationProps) {
+  const [selectedTab, setSelectedTab] = useState<'messages' | 'calls' | 'files' | 'settings'>('messages')
+  const [isStartingCall, setIsStartingCall] = useState(false)
+  const [communicationEnabled, setCommunicationEnabled] = useState(true)
+  const [selectedContact, setSelectedContact] = useState<string | null>(null)
+  const [selectedFile, setSelectedFile] = useState<string | null>(null)
   const haptic = useHapticFeedback()
 
-  // Automation queries
-  const workflowsQuery = trpc.automation.getWorkflowsData.useQuery()
-  const rulesQuery = trpc.automation.getRulesData.useQuery()
-  const tasksQuery = trpc.automation.getTasksData.useQuery()
-  const settingsQuery = trpc.automation.getAutomationSettings.useQuery()
+  // Communication queries
+  const messagesQuery = trpc.communication.getMessagesData.useQuery()
+  const callsQuery = trpc.communication.getCallsData.useQuery()
+  const filesQuery = trpc.communication.getFilesData.useQuery()
+  const settingsQuery = trpc.communication.getCommunicationSettings.useQuery()
 
-  const runWorkflowMutation = trpc.automation.runWorkflow.useMutation()
-  const createRuleMutation = trpc.automation.createRule.useMutation()
-  const scheduleTaskMutation = trpc.automation.scheduleTask.useMutation()
-  const updateSettingsMutation = trpc.automation.updateSettings.useMutation()
+  const sendMessageMutation = trpc.communication.sendMessage.useMutation()
+  const startCallMutation = trpc.communication.startCall.useMutation()
+  const shareFileMutation = trpc.communication.shareFile.useMutation()
+  const updateSettingsMutation = trpc.communication.updateSettings.useMutation()
 
-  const handleRunWorkflow = async (workflowData: any) => {
+  const handleSendMessage = async (messageData: any) => {
     try {
-      setIsRunning(true)
       haptic.selection()
 
-      const result = await runWorkflowMutation.mutateAsync(workflowData)
+      const result = await sendMessageMutation.mutateAsync(messageData)
 
       if (result.success) {
         haptic.success()
@@ -155,18 +148,39 @@ export function AdvancedAutomation({ className }: AdvancedAutomationProps) {
         haptic.error()
       }
     } catch (error) {
-      console.error('Failed to run workflow:', error)
+      console.error('Failed to send message:', error)
+      haptic.error()
+    }
+  }
+
+  const handleStartCall = async (contactId: string, callType: 'video' | 'voice') => {
+    try {
+      setIsStartingCall(true)
+      haptic.selection()
+
+      const result = await startCallMutation.mutateAsync({
+        contactId,
+        callType
+      })
+
+      if (result.success) {
+        haptic.success()
+      } else {
+        haptic.error()
+      }
+    } catch (error) {
+      console.error('Failed to start call:', error)
       haptic.error()
     } finally {
-      setIsRunning(false)
+      setIsStartingCall(false)
     }
   }
 
-  const handleCreateRule = async (ruleData: any) => {
+  const handleShareFile = async (fileData: any) => {
     try {
       haptic.selection()
 
-      const result = await createRuleMutation.mutateAsync(ruleData)
+      const result = await shareFileMutation.mutateAsync(fileData)
 
       if (result.success) {
         haptic.success()
@@ -174,54 +188,37 @@ export function AdvancedAutomation({ className }: AdvancedAutomationProps) {
         haptic.error()
       }
     } catch (error) {
-      console.error('Failed to create rule:', error)
+      console.error('Failed to share file:', error)
       haptic.error()
     }
   }
 
-  const handleScheduleTask = async (taskData: any) => {
-    try {
-      haptic.selection()
-
-      const result = await scheduleTaskMutation.mutateAsync(taskData)
-
-      if (result.success) {
-        haptic.success()
-      } else {
-        haptic.error()
-      }
-    } catch (error) {
-      console.error('Failed to schedule task:', error)
-      haptic.error()
-    }
-  }
-
-  const handleToggleAutomation = async (enabled: boolean) => {
+  const handleToggleCommunication = async (enabled: boolean) => {
     haptic.light()
     try {
-      await updateSettingsMutation.mutateAsync({ automationEnabled: enabled })
-      setAutomationEnabled(enabled)
+      await updateSettingsMutation.mutateAsync({ communicationEnabled: enabled })
+      setCommunicationEnabled(enabled)
     } catch (error) {
-      console.error('Failed to toggle automation:', error)
+      console.error('Failed to toggle communication:', error)
     }
   }
 
-  const getWorkflowStatus = (status: string) => {
+  const getMessageStatus = (status: string) => {
     switch (status) {
-      case 'running': return { color: 'text-green-600', label: 'Running', icon: Play }
-      case 'paused': return { color: 'text-yellow-600', label: 'Paused', icon: Pause }
-      case 'completed': return { color: 'text-blue-600', label: 'Completed', icon: CheckCircle }
+      case 'sent': return { color: 'text-blue-600', label: 'Sent', icon: CheckCircle }
+      case 'delivered': return { color: 'text-green-600', label: 'Delivered', icon: CheckCircle }
+      case 'read': return { color: 'text-purple-600', label: 'Read', icon: CheckCircle }
       case 'failed': return { color: 'text-red-600', label: 'Failed', icon: XCircle }
       default: return { color: 'text-gray-600', label: 'Unknown', icon: Info }
     }
   }
 
-  const getRuleStatus = (status: string) => {
+  const getCallStatus = (status: string) => {
     switch (status) {
-      case 'active': return { color: 'text-green-600', label: 'Active', icon: Zap }
-      case 'inactive': return { color: 'text-gray-600', label: 'Inactive', icon: Pause }
-      case 'error': return { color: 'text-red-600', label: 'Error', icon: XCircle }
-      case 'testing': return { color: 'text-blue-600', label: 'Testing', icon: Code }
+      case 'connected': return { color: 'text-green-600', label: 'Connected', icon: Phone }
+      case 'ringing': return { color: 'text-yellow-600', label: 'Ringing', icon: Phone }
+      case 'missed': return { color: 'text-red-600', label: 'Missed', icon: Phone }
+      case 'ended': return { color: 'text-gray-600', label: 'Ended', icon: Phone }
       default: return { color: 'text-gray-600', label: 'Unknown', icon: Info }
     }
   }
@@ -231,81 +228,81 @@ export function AdvancedAutomation({ className }: AdvancedAutomationProps) {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold">Advanced Automation</h2>
+          <h2 className="text-2xl font-bold">Advanced Communication</h2>
           <p className="text-muted-foreground">
-            Workflow management, smart rules og scheduled tasks
+            Messaging system, video calls og file sharing
           </p>
         </div>
         <div className="flex items-center gap-2">
           <Badge variant="outline" className="flex items-center gap-1">
-            <Zap className="w-3 h-3" />
-            Automation Active
+            <MessageSquare className="w-3 h-3" />
+            Communication Ready
           </Badge>
           <Badge variant="outline" className="flex items-center gap-1">
-            <Workflow className="w-3 h-3" />
-            Workflows Running
+            <Video className="w-3 h-3" />
+            Video Calls Active
           </Badge>
         </div>
       </div>
 
-      {/* Automation Overview */}
+      {/* Communication Overview */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Active Workflows</CardTitle>
-            <Workflow className="h-4 w-4 text-green-600" />
+            <CardTitle className="text-sm font-medium">Total Messages</CardTitle>
+            <MessageSquare className="h-4 w-4 text-green-600" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-green-600">
-              {workflowsQuery.data?.activeWorkflows || 0}
+              {messagesQuery.data?.totalMessages || 0}
             </div>
             <p className="text-xs text-muted-foreground">
-              Currently running
+              This month
             </p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Smart Rules</CardTitle>
-            <Zap className="h-4 w-4 text-blue-600" />
+            <CardTitle className="text-sm font-medium">Total Calls</CardTitle>
+            <Phone className="h-4 w-4 text-blue-600" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-blue-600">
-              {rulesQuery.data?.totalRules || 0}
+              {callsQuery.data?.totalCalls || 0}
             </div>
             <p className="text-xs text-muted-foreground">
-              Active rules
+              This week
             </p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Scheduled Tasks</CardTitle>
-            <Clock className="h-4 w-4 text-purple-600" />
+            <CardTitle className="text-sm font-medium">Shared Files</CardTitle>
+            <FileText className="h-4 w-4 text-purple-600" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-purple-600">
-              {tasksQuery.data?.scheduledTasks || 0}
+              {filesQuery.data?.totalFiles || 0}
             </div>
             <p className="text-xs text-muted-foreground">
-              Pending execution
+              Total shared
             </p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Automation Score</CardTitle>
-            <Star className="h-4 w-4 text-orange-600" />
+            <CardTitle className="text-sm font-medium">Online Contacts</CardTitle>
+            <Users className="h-4 w-4 text-orange-600" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-orange-600">
-              {settingsQuery.data?.automationScore || 0}%
+              {settingsQuery.data?.onlineContacts || 0}
             </div>
             <p className="text-xs text-muted-foreground">
-              Efficiency rating
+              Currently online
             </p>
           </CardContent>
         </Card>
@@ -314,31 +311,31 @@ export function AdvancedAutomation({ className }: AdvancedAutomationProps) {
       {/* Tab Navigation */}
       <div className="flex space-x-1 bg-muted p-1 rounded-lg">
         <Button
-          variant={selectedTab === 'workflows' ? 'default' : 'ghost'}
+          variant={selectedTab === 'messages' ? 'default' : 'ghost'}
           size="sm"
-          onClick={() => setSelectedTab('workflows')}
+          onClick={() => setSelectedTab('messages')}
           className="flex-1"
         >
-          <Workflow className="w-4 h-4 mr-2" />
-          Workflows
+          <MessageSquare className="w-4 h-4 mr-2" />
+          Messages
         </Button>
         <Button
-          variant={selectedTab === 'rules' ? 'default' : 'ghost'}
+          variant={selectedTab === 'calls' ? 'default' : 'ghost'}
           size="sm"
-          onClick={() => setSelectedTab('rules')}
+          onClick={() => setSelectedTab('calls')}
           className="flex-1"
         >
-          <Zap className="w-4 h-4 mr-2" />
-          Rules
+          <Phone className="w-4 h-4 mr-2" />
+          Calls
         </Button>
         <Button
-          variant={selectedTab === 'tasks' ? 'default' : 'ghost'}
+          variant={selectedTab === 'files' ? 'default' : 'ghost'}
           size="sm"
-          onClick={() => setSelectedTab('tasks')}
+          onClick={() => setSelectedTab('files')}
           className="flex-1"
         >
-          <Clock className="w-4 h-4 mr-2" />
-          Tasks
+          <FileText className="w-4 h-4 mr-2" />
+          Files
         </Button>
         <Button
           variant={selectedTab === 'settings' ? 'default' : 'ghost'}
@@ -351,54 +348,54 @@ export function AdvancedAutomation({ className }: AdvancedAutomationProps) {
         </Button>
       </div>
 
-      {/* Workflows Tab */}
-      {selectedTab === 'workflows' && (
+      {/* Messages Tab */}
+      {selectedTab === 'messages' && (
         <div className="space-y-4">
-          {/* Workflow Management */}
+          {/* Recent Messages */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <Workflow className="w-5 h-5" />
-                Workflow Management
+                <MessageSquare className="w-5 h-5" />
+                Recent Messages
               </CardTitle>
               <CardDescription>
-                Manage og monitor your automation workflows
+                View and manage your conversations
               </CardDescription>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {workflowsQuery.data?.workflows?.map((workflow) => (
-                  <div key={workflow.id} className="flex items-center justify-between p-4 border rounded-lg">
+                {messagesQuery.data?.recentMessages?.map((message) => (
+                  <div key={message.id} className="flex items-center justify-between p-4 border rounded-lg">
                     <div className="flex items-center gap-3">
                       <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
-                        <workflow.icon className="w-6 h-6 text-green-600" />
+                        <message.icon className="w-6 h-6 text-green-600" />
                       </div>
                       <div>
-                        <div className="font-medium">{workflow.name}</div>
+                        <div className="font-medium">{message.sender}</div>
                         <div className="text-sm text-muted-foreground">
-                          {workflow.description} • {workflow.steps} steps
+                          {message.content}
                         </div>
                       </div>
                     </div>
 
                     <div className="flex items-center gap-3">
                       <div className="text-right">
-                        <div className="text-sm font-medium">{workflow.lastRun}</div>
+                        <div className="text-sm font-medium">{message.time}</div>
                         <div className="text-xs text-muted-foreground">
-                          {workflow.duration}
+                          {message.date}
                         </div>
                       </div>
 
                       <Button
-                        onClick={() => handleRunWorkflow({ workflowId: workflow.id, action: 'run' })}
+                        onClick={() => handleSendMessage({ recipientId: message.senderId, content: 'Reply' })}
                         variant="outline"
                         size="sm"
                       >
-                        <Play className="w-4 h-4" />
+                        Reply
                       </Button>
 
-                      <Badge variant={workflow.status === 'running' ? 'default' : 'secondary'}>
-                        {workflow.status}
+                      <Badge variant={message.status === 'read' ? 'default' : 'secondary'}>
+                        {message.status}
                       </Badge>
                     </div>
                   </div>
@@ -407,17 +404,17 @@ export function AdvancedAutomation({ className }: AdvancedAutomationProps) {
             </CardContent>
           </Card>
 
-          {/* Workflow Analytics */}
+          {/* Message Analytics */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <BarChart3 className="w-5 h-5" />
-                Workflow Analytics
+                Message Analytics
               </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                {workflowsQuery.data?.workflowAnalytics?.map((analytic) => (
+                {messagesQuery.data?.messageAnalytics?.map((analytic) => (
                   <div key={analytic.id} className="p-4 border rounded-lg text-center">
                     <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-2">
                       <analytic.icon className="w-6 h-6 text-blue-600" />
@@ -434,53 +431,53 @@ export function AdvancedAutomation({ className }: AdvancedAutomationProps) {
         </div>
       )}
 
-      {/* Rules Tab */}
-      {selectedTab === 'rules' && (
+      {/* Calls Tab */}
+      {selectedTab === 'calls' && (
         <div className="space-y-4">
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <Zap className="w-5 h-5" />
-                Smart Rules
+                <Phone className="w-5 h-5" />
+                Recent Calls
               </CardTitle>
               <CardDescription>
-                Create og manage conditional automation rules
+                View your call history and start new calls
               </CardDescription>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {rulesQuery.data?.smartRules?.map((rule) => (
-                  <div key={rule.id} className="flex items-center justify-between p-4 border rounded-lg">
+                {callsQuery.data?.recentCalls?.map((call) => (
+                  <div key={call.id} className="flex items-center justify-between p-4 border rounded-lg">
                     <div className="flex items-center gap-3">
                       <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
-                        <rule.icon className="w-6 h-6 text-blue-600" />
+                        <call.icon className="w-6 h-6 text-blue-600" />
                       </div>
                       <div>
-                        <div className="font-medium">{rule.name}</div>
+                        <div className="font-medium">{call.contact}</div>
                         <div className="text-sm text-muted-foreground">
-                          {rule.condition} → {rule.action}
+                          {call.type} call • {call.duration}
                         </div>
                       </div>
                     </div>
 
                     <div className="flex items-center gap-3">
                       <div className="text-right">
-                        <div className="text-sm font-medium">{rule.triggerCount}</div>
+                        <div className="text-sm font-medium">{call.time}</div>
                         <div className="text-xs text-muted-foreground">
-                          {rule.lastTriggered}
+                          {call.date}
                         </div>
                       </div>
 
                       <Button
-                        onClick={() => handleCreateRule({ ruleId: rule.id, action: 'test' })}
+                        onClick={() => handleStartCall(call.contactId, call.type as 'video' | 'voice')}
                         variant="outline"
                         size="sm"
                       >
-                        <Code className="w-4 h-4" />
+                        <Phone className="w-4 h-4" />
                       </Button>
 
-                      <Badge variant={rule.status === 'active' ? 'default' : 'secondary'}>
-                        {rule.status}
+                      <Badge variant={call.status === 'connected' ? 'default' : 'secondary'}>
+                        {call.status}
                       </Badge>
                     </div>
                   </div>
@@ -489,17 +486,17 @@ export function AdvancedAutomation({ className }: AdvancedAutomationProps) {
             </CardContent>
           </Card>
 
-          {/* Rules Analytics */}
+          {/* Call Analytics */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <PieChart className="w-5 h-5" />
-                Rules Analytics
+                Call Analytics
               </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {rulesQuery.data?.rulesAnalytics?.map((analytic) => (
+                {callsQuery.data?.callAnalytics?.map((analytic) => (
                   <div key={analytic.id} className="space-y-2">
                     <div className="flex items-center justify-between">
                       <span className="text-sm font-medium">{analytic.name}</span>
@@ -514,53 +511,53 @@ export function AdvancedAutomation({ className }: AdvancedAutomationProps) {
         </div>
       )}
 
-      {/* Tasks Tab */}
-      {selectedTab === 'tasks' && (
+      {/* Files Tab */}
+      {selectedTab === 'files' && (
         <div className="space-y-4">
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <Clock className="w-5 h-5" />
-                Scheduled Tasks
+                <FileText className="w-5 h-5" />
+                Shared Files
               </CardTitle>
               <CardDescription>
-                Manage time-based automation tasks
+                Manage and share files with contacts
               </CardDescription>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {tasksQuery.data?.scheduledTasks?.map((task) => (
-                  <div key={task.id} className="flex items-center justify-between p-4 border rounded-lg">
+                {filesQuery.data?.sharedFiles?.map((file) => (
+                  <div key={file.id} className="flex items-center justify-between p-4 border rounded-lg">
                     <div className="flex items-center gap-3">
                       <div className="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center">
-                        <task.icon className="w-6 h-6 text-purple-600" />
+                        <file.icon className="w-6 h-6 text-purple-600" />
                       </div>
                       <div>
-                        <div className="font-medium">{task.name}</div>
+                        <div className="font-medium">{file.name}</div>
                         <div className="text-sm text-muted-foreground">
-                          {task.schedule} • {task.type}
+                          {file.size} • Shared by {file.sharedBy}
                         </div>
                       </div>
                     </div>
 
                     <div className="flex items-center gap-3">
                       <div className="text-right">
-                        <div className="text-sm font-medium">{task.nextRun}</div>
+                        <div className="text-sm font-medium">{file.type}</div>
                         <div className="text-xs text-muted-foreground">
-                          {task.frequency}
+                          {file.date}
                         </div>
                       </div>
 
                       <Button
-                        onClick={() => handleScheduleTask({ taskId: task.id, action: 'schedule' })}
+                        onClick={() => handleShareFile({ fileId: file.id, recipientId: 'contact' })}
                         variant="outline"
                         size="sm"
                       >
-                        <Clock className="w-4 h-4" />
+                        Share
                       </Button>
 
-                      <Badge variant={task.status === 'scheduled' ? 'default' : 'secondary'}>
-                        {task.status}
+                      <Badge variant={file.status === 'shared' ? 'default' : 'secondary'}>
+                        {file.status}
                       </Badge>
                     </div>
                   </div>
@@ -569,17 +566,17 @@ export function AdvancedAutomation({ className }: AdvancedAutomationProps) {
             </CardContent>
           </Card>
 
-          {/* Task Analytics */}
+          {/* File Analytics */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <BarChart3 className="w-5 h-5" />
-                Task Analytics
+                File Analytics
               </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                {tasksQuery.data?.taskAnalytics?.map((analytic) => (
+                {filesQuery.data?.fileAnalytics?.map((analytic) => (
                   <div key={analytic.id} className="p-4 border rounded-lg text-center">
                     <div className="w-12 h-12 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-2">
                       <analytic.icon className="w-6 h-6 text-orange-600" />
@@ -603,10 +600,10 @@ export function AdvancedAutomation({ className }: AdvancedAutomationProps) {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Settings className="w-5 h-5" />
-                Automation Settings
+                Communication Settings
               </CardTitle>
               <CardDescription>
-                Configure your automation preferences
+                Configure your communication preferences
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -620,8 +617,8 @@ export function AdvancedAutomation({ className }: AdvancedAutomationProps) {
                     <Switch
                       checked={setting.enabled}
                       onCheckedChange={(enabled) => {
-                        if (setting.key === 'automationEnabled') {
-                          handleToggleAutomation(enabled)
+                        if (setting.key === 'communicationEnabled') {
+                          handleToggleCommunication(enabled)
                         }
                       }}
                     />
@@ -631,17 +628,17 @@ export function AdvancedAutomation({ className }: AdvancedAutomationProps) {
             </CardContent>
           </Card>
 
-          {/* Automation Goals */}
+          {/* Communication Goals */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Target className="w-5 h-5" />
-                Automation Goals
+                Communication Goals
               </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {settingsQuery.data?.automationGoals?.map((goal) => (
+                {settingsQuery.data?.communicationGoals?.map((goal) => (
                   <div key={goal.id} className="space-y-2">
                     <div className="flex items-center justify-between">
                       <span className="text-sm font-medium">{goal.name}</span>
@@ -670,16 +667,16 @@ export function AdvancedAutomation({ className }: AdvancedAutomationProps) {
         <CardContent>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             <Button variant="outline" className="h-auto p-4 flex flex-col gap-2">
-              <Workflow className="w-5 h-5" />
-              <span className="text-sm">Run Workflow</span>
+              <MessageSquare className="w-5 h-5" />
+              <span className="text-sm">New Message</span>
             </Button>
             <Button variant="outline" className="h-auto p-4 flex flex-col gap-2">
-              <Zap className="w-5 h-5" />
-              <span className="text-sm">Create Rule</span>
+              <Video className="w-5 h-5" />
+              <span className="text-sm">Video Call</span>
             </Button>
             <Button variant="outline" className="h-auto p-4 flex flex-col gap-2">
-              <Clock className="w-5 h-5" />
-              <span className="text-sm">Schedule Task</span>
+              <FileText className="w-5 h-5" />
+              <span className="text-sm">Share File</span>
             </Button>
             <Button variant="outline" className="h-auto p-4 flex flex-col gap-2">
               <Settings className="w-5 h-5" />

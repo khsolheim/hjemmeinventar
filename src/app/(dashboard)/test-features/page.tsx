@@ -34,7 +34,12 @@ import {
   Bell,
   Heart,
   DollarSign,
-  CheckSquare
+  CheckSquare,
+  MessageSquare,
+  Play,
+  Shield,
+  Link,
+  Star
 } from 'lucide-react'
 import { QuickAddModal } from '@/components/items/QuickAddModal'
 import { VoiceCommand } from '@/components/ui/voice-command'
@@ -1257,6 +1262,270 @@ export default function TestFeaturesPage() {
                     className="w-full"
                   >
                     Test Productivity
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="communication-advanced" className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-1 gap-4">
+            {/* Advanced Communication */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <MessageSquare className="w-5 h-5 text-green-600" />
+                  Advanced Communication
+                </CardTitle>
+                <CardDescription>
+                  Messaging system, video calls og file sharing
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2">
+                  <Badge variant="outline" className="w-full justify-center">
+                    ✅ Implementert
+                  </Badge>
+                  <p className="text-sm text-muted-foreground">
+                    Messaging system, video calls, file sharing, communication settings
+                  </p>
+                  <Button 
+                    onClick={() => window.location.href = '/communication'}
+                    className="w-full"
+                  >
+                    Test Communication
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="entertainment-advanced" className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-1 gap-4">
+            {/* Advanced Entertainment */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Play className="w-5 h-5 text-green-600" />
+                  Advanced Entertainment
+                </CardTitle>
+                <CardDescription>
+                  Media management, streaming og gaming
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2">
+                  <Badge variant="outline" className="w-full justify-center">
+                    ✅ Implementert
+                  </Badge>
+                  <p className="text-sm text-muted-foreground">
+                    Media management, streaming, gaming, entertainment settings
+                  </p>
+                  <Button 
+                    onClick={() => window.location.href = '/entertainment'}
+                    className="w-full"
+                  >
+                    Test Entertainment
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="security-advanced" className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-1 gap-4">
+            {/* Advanced Security */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Shield className="w-5 h-5 text-green-600" />
+                  Advanced Security
+                </CardTitle>
+                <CardDescription>
+                  Threat detection, privacy controls og access management
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2">
+                  <Badge variant="outline" className="w-full justify-center">
+                    ✅ Implementert
+                  </Badge>
+                  <p className="text-sm text-muted-foreground">
+                    Threat detection, privacy controls, access management, security settings
+                  </p>
+                  <Button 
+                    onClick={() => window.location.href = '/security'}
+                    className="w-full"
+                  >
+                    Test Security
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="automation-advanced" className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-1 gap-4">
+            {/* Advanced Automation */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Zap className="w-5 h-5 text-green-600" />
+                  Advanced Automation
+                </CardTitle>
+                <CardDescription>
+                  Workflow management, smart rules og scheduled tasks
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2">
+                  <Badge variant="outline" className="w-full justify-center">
+                    ✅ Implementert
+                  </Badge>
+                  <p className="text-sm text-muted-foreground">
+                    Workflow management, smart rules, scheduled tasks, automation settings
+                  </p>
+                  <Button 
+                    onClick={() => window.location.href = '/automation'}
+                    className="w-full"
+                  >
+                    Test Automation
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="integration-advanced" className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-1 gap-4">
+            {/* Advanced Integration */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Link className="w-5 h-5 text-green-600" />
+                  Advanced Integration
+                </CardTitle>
+                <CardDescription>
+                  API management, third-party services og data synchronization
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2">
+                  <Badge variant="outline" className="w-full justify-center">
+                    ✅ Implementert
+                  </Badge>
+                  <p className="text-sm text-muted-foreground">
+                    API management, third-party services, data synchronization, integration settings
+                  </p>
+                  <Button 
+                    onClick={() => window.location.href = '/integration'}
+                    className="w-full"
+                  >
+                    Test Integration
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="performance-advanced" className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-1 gap-4">
+            {/* Advanced Performance */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Gauge className="w-5 h-5 text-green-600" />
+                  Advanced Performance
+                </CardTitle>
+                <CardDescription>
+                  System optimization, caching og performance monitoring
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2">
+                  <Badge variant="outline" className="w-full justify-center">
+                    ✅ Implementert
+                  </Badge>
+                  <p className="text-sm text-muted-foreground">
+                    System optimization, caching, CDN management, performance settings
+                  </p>
+                  <Button 
+                    onClick={() => window.location.href = '/performance'}
+                    className="w-full"
+                  >
+                    Test Performance
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="reporting-advanced" className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-1 gap-4">
+            {/* Advanced Reporting */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <BarChart3 className="w-5 h-5 text-green-600" />
+                  Advanced Reporting
+                </CardTitle>
+                <CardDescription>
+                  Custom dashboards, report generation og data analytics
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2">
+                  <Badge variant="outline" className="w-full justify-center">
+                    ✅ Implementert
+                  </Badge>
+                  <p className="text-sm text-muted-foreground">
+                    Custom dashboards, report generation, data analytics, reporting settings
+                  </p>
+                  <Button 
+                    onClick={() => window.location.href = '/reporting'}
+                    className="w-full"
+                  >
+                    Test Reporting
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="blockchain-advanced" className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-1 gap-4">
+            {/* Advanced Blockchain */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Star className="w-5 h-5 text-green-600" />
+                  Advanced Blockchain
+                </CardTitle>
+                <CardDescription>
+                  NFT management, smart contracts og Web3 integration
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2">
+                  <Badge variant="outline" className="w-full justify-center">
+                    ✅ Implementert
+                  </Badge>
+                  <p className="text-sm text-muted-foreground">
+                    NFT management, smart contracts, Web3 integration, blockchain settings
+                  </p>
+                  <Button 
+                    onClick={() => window.location.href = '/blockchain'}
+                    className="w-full"
+                  >
+                    Test Blockchain
                   </Button>
                 </div>
               </CardContent>

@@ -7,11 +7,8 @@ import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
 import { Switch } from '@/components/ui/switch'
 import {
-  Zap,
-  Settings,
-  Clock,
   BarChart3,
-  PieChart,
+  Settings,
   TrendingUp,
   Calendar,
   Plus,
@@ -114,40 +111,214 @@ import {
   Workflow,
   Cpu,
   Code,
-  Terminal
+  Terminal,
+  Clock,
+  Webhook,
+  Api,
+  Database as Db,
+  Network,
+  Gauge,
+  HardDrive,
+  Memory,
+  Cpu as Processor,
+  Wifi as NetworkIcon,
+  HardDrive as Storage,
+  Activity as Performance,
+  PieChart,
+  LineChart,
+  TrendingDown,
+  Download as Export,
+  FileText as Report,
+  BarChart,
+  PieChart as Chart,
+  Activity as Analytics,
+  Link,
+  Wallet,
+  Coins,
+  Bitcoin,
+  Ethereum,
+  Zap as Lightning,
+  Shield as Security,
+  Lock as Privacy,
+  Globe as Web3,
+  Database as Blockchain,
+  Network as DeFi,
+  Activity as Mining,
+  Timer as Gas,
+  DollarSign as Token,
+  Star as NFT,
+  Award as SmartContract,
+  Trophy as Governance,
+  Crown as DAO,
+  Rocket as Deploy,
+  Sparkles as Mint,
+  CheckSquare as Verify,
+  Target as Consensus,
+  MessageSquare as Transaction,
+  Phone as Mobile,
+  FileText as Document,
+  Music as Audio,
+  Video as Media,
+  Gamepad2 as Gaming,
+  Workflow as Workflow,
+  Cpu as Compute,
+  Code as Code,
+  Terminal as CLI,
+  Clock as Time,
+  Webhook as Webhook,
+  Api as API,
+  Database as Storage,
+  Network as Network,
+  Gauge as Metrics,
+  HardDrive as Storage,
+  Memory as Memory,
+  Cpu as CPU,
+  Wifi as WiFi,
+  HardDrive as Disk,
+  Activity as Activity,
+  PieChart as Chart,
+  LineChart as Trend,
+  TrendingDown as Decline,
+  Download as Download,
+  FileText as File,
+  BarChart as Graph,
+  PieChart as Circle,
+  Activity as Monitor,
+  Link as Connect,
+  Wallet as Wallet,
+  Coins as Coins,
+  Bitcoin as BTC,
+  Ethereum as ETH,
+  Zap as Lightning,
+  Shield as Security,
+  Lock as Privacy,
+  Globe as Web3,
+  Database as Chain,
+  Network as Network,
+  Activity as Mining,
+  Timer as Gas,
+  DollarSign as Money,
+  Star as NFT,
+  Award as Contract,
+  Trophy as Governance,
+  Crown as DAO,
+  Rocket as Deploy,
+  Sparkles as Mint,
+  CheckSquare as Verify,
+  Target as Consensus,
+  MessageSquare as Message,
+  Phone as Mobile,
+  FileText as Document,
+  Music as Audio,
+  Video as Media,
+  Gamepad2 as Gaming,
+  Workflow as Workflow,
+  Cpu as Compute,
+  Code as Code,
+  Terminal as CLI,
+  Clock as Time,
+  Webhook as Webhook,
+  Api as API,
+  Database as Storage,
+  Network as Network,
+  Gauge as Metrics,
+  HardDrive as Storage,
+  Memory as Memory,
+  Cpu as CPU,
+  Wifi as WiFi,
+  HardDrive as Disk,
+  Activity as Activity,
+  PieChart as Chart,
+  LineChart as Trend,
+  TrendingDown as Decline,
+  Download as Download,
+  FileText as File,
+  BarChart as Graph,
+  PieChart as Circle,
+  Activity as Monitor,
+  Zap,
+  Wifi as IoT,
+  Bluetooth as Sensor,
+  Home as SmartHome,
+  Shield as IoTSecurity,
+  Lock as IoTPrivacy,
+  Globe as IoTNetwork,
+  Database as IoTDatabase,
+  Network as IoTSensor,
+  Activity as IoTAnalytics,
+  Timer as IoTTimer,
+  DollarSign as IoTCost,
+  Star as IoTDevice,
+  Award as IoTSystem,
+  Trophy as IoTAchievement,
+  Crown as IoTCrown,
+  Rocket as IoTDeploy,
+  Sparkles as IoTMagic,
+  CheckSquare as IoTCheck,
+  Target as IoTTarget,
+  MessageSquare as IoTMessage,
+  Phone as IoTSmartphone,
+  FileText as IoTDocument,
+  Music as IoTMusic,
+  Video as IoTVideo,
+  Gamepad2 as IoTGame,
+  Workflow as IoTWorkflow,
+  Cpu as IoTCpu,
+  Code as IoTCode,
+  Terminal as IoTTerminal,
+  Clock as IoTClock,
+  Webhook as IoTWebhook,
+  Api as IoTApi,
+  Database as IoTStorage,
+  Network as IoTNetwork2,
+  Gauge as IoTGauge,
+  HardDrive as IoTStorage2,
+  Memory as IoTMemory,
+  Cpu as IoTCpu2,
+  Wifi as IoTWifi,
+  HardDrive as IoTDisk,
+  Activity as IoTActivity,
+  PieChart as IoTChart,
+  LineChart as IoTTrend,
+  TrendingDown as IoTDecline,
+  Download as IoTDownload,
+  FileText as IoTFile,
+  BarChart as IoTGraph,
+  PieChart as IoTCircle,
+  Activity as IoTMonitor
 } from 'lucide-react'
 import { trpc } from '@/lib/trpc/client'
 import { useHapticFeedback } from '@/lib/services/haptic-feedback'
 
-interface AdvancedAutomationProps {
+interface AdvancedIoTProps {
   className?: string
 }
 
-export function AdvancedAutomation({ className }: AdvancedAutomationProps) {
-  const [selectedTab, setSelectedTab] = useState<'workflows' | 'rules' | 'tasks' | 'settings'>('workflows')
-  const [isRunning, setIsRunning] = useState(false)
-  const [automationEnabled, setAutomationEnabled] = useState(true)
-  const [selectedWorkflow, setSelectedWorkflow] = useState<string | null>(null)
-  const [selectedRule, setSelectedRule] = useState<string | null>(null)
+export function AdvancedIoT({ className }: AdvancedIoTProps) {
+  const [selectedTab, setSelectedTab] = useState<'devices' | 'sensors' | 'smart-home' | 'settings'>('devices')
+  const [isConnecting, setIsConnecting] = useState(false)
+  const [iotEnabled, setIotEnabled] = useState(true)
+  const [selectedDevice, setSelectedDevice] = useState<string | null>(null)
+  const [selectedSensor, setSelectedSensor] = useState<string | null>(null)
   const haptic = useHapticFeedback()
 
-  // Automation queries
-  const workflowsQuery = trpc.automation.getWorkflowsData.useQuery()
-  const rulesQuery = trpc.automation.getRulesData.useQuery()
-  const tasksQuery = trpc.automation.getTasksData.useQuery()
-  const settingsQuery = trpc.automation.getAutomationSettings.useQuery()
+  // IoT queries
+  const devicesQuery = trpc.iot.getDevicesData.useQuery()
+  const sensorsQuery = trpc.iot.getSensorsData.useQuery()
+  const smartHomeQuery = trpc.iot.getSmartHomeData.useQuery()
+  const settingsQuery = trpc.iot.getIoTSettings.useQuery()
 
-  const runWorkflowMutation = trpc.automation.runWorkflow.useMutation()
-  const createRuleMutation = trpc.automation.createRule.useMutation()
-  const scheduleTaskMutation = trpc.automation.scheduleTask.useMutation()
-  const updateSettingsMutation = trpc.automation.updateSettings.useMutation()
+  const connectDeviceMutation = trpc.iot.connectDevice.useMutation()
+  const monitorSensorMutation = trpc.iot.monitorSensor.useMutation()
+  const controlSmartHomeMutation = trpc.iot.controlSmartHome.useMutation()
+  const updateSettingsMutation = trpc.iot.updateSettings.useMutation()
 
-  const handleRunWorkflow = async (workflowData: any) => {
+  const handleConnectDevice = async (deviceData: any) => {
     try {
-      setIsRunning(true)
+      setIsConnecting(true)
       haptic.selection()
 
-      const result = await runWorkflowMutation.mutateAsync(workflowData)
+      const result = await connectDeviceMutation.mutateAsync(deviceData)
 
       if (result.success) {
         haptic.success()
@@ -155,18 +326,18 @@ export function AdvancedAutomation({ className }: AdvancedAutomationProps) {
         haptic.error()
       }
     } catch (error) {
-      console.error('Failed to run workflow:', error)
+      console.error('Failed to connect device:', error)
       haptic.error()
     } finally {
-      setIsRunning(false)
+      setIsConnecting(false)
     }
   }
 
-  const handleCreateRule = async (ruleData: any) => {
+  const handleMonitorSensor = async (sensorData: any) => {
     try {
       haptic.selection()
 
-      const result = await createRuleMutation.mutateAsync(ruleData)
+      const result = await monitorSensorMutation.mutateAsync(sensorData)
 
       if (result.success) {
         haptic.success()
@@ -174,16 +345,16 @@ export function AdvancedAutomation({ className }: AdvancedAutomationProps) {
         haptic.error()
       }
     } catch (error) {
-      console.error('Failed to create rule:', error)
+      console.error('Failed to monitor sensor:', error)
       haptic.error()
     }
   }
 
-  const handleScheduleTask = async (taskData: any) => {
+  const handleControlSmartHome = async (smartHomeData: any) => {
     try {
       haptic.selection()
 
-      const result = await scheduleTaskMutation.mutateAsync(taskData)
+      const result = await controlSmartHomeMutation.mutateAsync(smartHomeData)
 
       if (result.success) {
         haptic.success()
@@ -191,37 +362,37 @@ export function AdvancedAutomation({ className }: AdvancedAutomationProps) {
         haptic.error()
       }
     } catch (error) {
-      console.error('Failed to schedule task:', error)
+      console.error('Failed to control smart home:', error)
       haptic.error()
     }
   }
 
-  const handleToggleAutomation = async (enabled: boolean) => {
+  const handleToggleIoT = async (enabled: boolean) => {
     haptic.light()
     try {
-      await updateSettingsMutation.mutateAsync({ automationEnabled: enabled })
-      setAutomationEnabled(enabled)
+      await updateSettingsMutation.mutateAsync({ iotEnabled: enabled })
+      setIotEnabled(enabled)
     } catch (error) {
-      console.error('Failed to toggle automation:', error)
+      console.error('Failed to toggle IoT:', error)
     }
   }
 
-  const getWorkflowStatus = (status: string) => {
+  const getDeviceStatus = (status: string) => {
     switch (status) {
-      case 'running': return { color: 'text-green-600', label: 'Running', icon: Play }
-      case 'paused': return { color: 'text-yellow-600', label: 'Paused', icon: Pause }
-      case 'completed': return { color: 'text-blue-600', label: 'Completed', icon: CheckCircle }
-      case 'failed': return { color: 'text-red-600', label: 'Failed', icon: XCircle }
+      case 'connected': return { color: 'text-green-600', label: 'Connected', icon: CheckCircle }
+      case 'connecting': return { color: 'text-blue-600', label: 'Connecting', icon: RefreshCw }
+      case 'disconnected': return { color: 'text-gray-600', label: 'Disconnected', icon: XCircle }
+      case 'error': return { color: 'text-red-600', label: 'Error', icon: AlertTriangle }
       default: return { color: 'text-gray-600', label: 'Unknown', icon: Info }
     }
   }
 
-  const getRuleStatus = (status: string) => {
+  const getSensorStatus = (status: string) => {
     switch (status) {
-      case 'active': return { color: 'text-green-600', label: 'Active', icon: Zap }
+      case 'active': return { color: 'text-green-600', label: 'Active', icon: CheckCircle }
       case 'inactive': return { color: 'text-gray-600', label: 'Inactive', icon: Pause }
       case 'error': return { color: 'text-red-600', label: 'Error', icon: XCircle }
-      case 'testing': return { color: 'text-blue-600', label: 'Testing', icon: Code }
+      case 'calibrating': return { color: 'text-blue-600', label: 'Calibrating', icon: RefreshCw }
       default: return { color: 'text-gray-600', label: 'Unknown', icon: Info }
     }
   }
@@ -231,81 +402,81 @@ export function AdvancedAutomation({ className }: AdvancedAutomationProps) {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold">Advanced Automation</h2>
+          <h2 className="text-2xl font-bold">Advanced IoT</h2>
           <p className="text-muted-foreground">
-            Workflow management, smart rules og scheduled tasks
+            Device management, sensor monitoring og smart home integration
           </p>
         </div>
         <div className="flex items-center gap-2">
           <Badge variant="outline" className="flex items-center gap-1">
-            <Zap className="w-3 h-3" />
-            Automation Active
+            <IoT className="w-3 h-3" />
+            IoT Active
           </Badge>
           <Badge variant="outline" className="flex items-center gap-1">
-            <Workflow className="w-3 h-3" />
-            Workflows Running
+            <SmartHome className="w-3 h-3" />
+            Smart Home Ready
           </Badge>
         </div>
       </div>
 
-      {/* Automation Overview */}
+      {/* IoT Overview */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Active Workflows</CardTitle>
-            <Workflow className="h-4 w-4 text-green-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-green-600">
-              {workflowsQuery.data?.activeWorkflows || 0}
-            </div>
-            <p className="text-xs text-muted-foreground">
-              Currently running
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Smart Rules</CardTitle>
-            <Zap className="h-4 w-4 text-blue-600" />
+            <CardTitle className="text-sm font-medium">Connected Devices</CardTitle>
+            <IoTDevice className="h-4 w-4 text-blue-600" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-blue-600">
-              {rulesQuery.data?.totalRules || 0}
+              {devicesQuery.data?.connectedDevices || 0}
             </div>
             <p className="text-xs text-muted-foreground">
-              Active rules
+              Active devices
             </p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Scheduled Tasks</CardTitle>
-            <Clock className="h-4 w-4 text-purple-600" />
+            <CardTitle className="text-sm font-medium">Active Sensors</CardTitle>
+            <Sensor className="h-4 w-4 text-green-600" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-green-600">
+              {sensorsQuery.data?.activeSensors || 0}
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Monitoring sensors
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Smart Home Devices</CardTitle>
+            <SmartHome className="h-4 w-4 text-purple-600" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-purple-600">
-              {tasksQuery.data?.scheduledTasks || 0}
+              {smartHomeQuery.data?.smartHomeDevices || 0}
             </div>
             <p className="text-xs text-muted-foreground">
-              Pending execution
+              Connected devices
             </p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Automation Score</CardTitle>
-            <Star className="h-4 w-4 text-orange-600" />
+            <CardTitle className="text-sm font-medium">IoT Score</CardTitle>
+            <IoTSystem className="h-4 w-4 text-orange-600" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-orange-600">
-              {settingsQuery.data?.automationScore || 0}%
+              {settingsQuery.data?.iotScore || 0}%
             </div>
             <p className="text-xs text-muted-foreground">
-              Efficiency rating
+              System health
             </p>
           </CardContent>
         </Card>
@@ -314,31 +485,31 @@ export function AdvancedAutomation({ className }: AdvancedAutomationProps) {
       {/* Tab Navigation */}
       <div className="flex space-x-1 bg-muted p-1 rounded-lg">
         <Button
-          variant={selectedTab === 'workflows' ? 'default' : 'ghost'}
+          variant={selectedTab === 'devices' ? 'default' : 'ghost'}
           size="sm"
-          onClick={() => setSelectedTab('workflows')}
+          onClick={() => setSelectedTab('devices')}
           className="flex-1"
         >
-          <Workflow className="w-4 h-4 mr-2" />
-          Workflows
+          <IoTDevice className="w-4 h-4 mr-2" />
+          Devices
         </Button>
         <Button
-          variant={selectedTab === 'rules' ? 'default' : 'ghost'}
+          variant={selectedTab === 'sensors' ? 'default' : 'ghost'}
           size="sm"
-          onClick={() => setSelectedTab('rules')}
+          onClick={() => setSelectedTab('sensors')}
           className="flex-1"
         >
-          <Zap className="w-4 h-4 mr-2" />
-          Rules
+          <Sensor className="w-4 h-4 mr-2" />
+          Sensors
         </Button>
         <Button
-          variant={selectedTab === 'tasks' ? 'default' : 'ghost'}
+          variant={selectedTab === 'smart-home' ? 'default' : 'ghost'}
           size="sm"
-          onClick={() => setSelectedTab('tasks')}
+          onClick={() => setSelectedTab('smart-home')}
           className="flex-1"
         >
-          <Clock className="w-4 h-4 mr-2" />
-          Tasks
+          <SmartHome className="w-4 h-4 mr-2" />
+          Smart Home
         </Button>
         <Button
           variant={selectedTab === 'settings' ? 'default' : 'ghost'}
@@ -351,54 +522,54 @@ export function AdvancedAutomation({ className }: AdvancedAutomationProps) {
         </Button>
       </div>
 
-      {/* Workflows Tab */}
-      {selectedTab === 'workflows' && (
+      {/* Devices Tab */}
+      {selectedTab === 'devices' && (
         <div className="space-y-4">
-          {/* Workflow Management */}
+          {/* Device Management */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <Workflow className="w-5 h-5" />
-                Workflow Management
+                <IoTDevice className="w-5 h-5" />
+                Device Management
               </CardTitle>
               <CardDescription>
-                Manage og monitor your automation workflows
+                Connect og manage IoT devices
               </CardDescription>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {workflowsQuery.data?.workflows?.map((workflow) => (
-                  <div key={workflow.id} className="flex items-center justify-between p-4 border rounded-lg">
+                {devicesQuery.data?.devices?.map((device) => (
+                  <div key={device.id} className="flex items-center justify-between p-4 border rounded-lg">
                     <div className="flex items-center gap-3">
-                      <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
-                        <workflow.icon className="w-6 h-6 text-green-600" />
+                      <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
+                        <device.icon className="w-6 h-6 text-blue-600" />
                       </div>
                       <div>
-                        <div className="font-medium">{workflow.name}</div>
+                        <div className="font-medium">{device.name}</div>
                         <div className="text-sm text-muted-foreground">
-                          {workflow.description} • {workflow.steps} steps
+                          {device.description} • {device.type}
                         </div>
                       </div>
                     </div>
 
                     <div className="flex items-center gap-3">
                       <div className="text-right">
-                        <div className="text-sm font-medium">{workflow.lastRun}</div>
+                        <div className="text-sm font-medium">{device.lastSeen}</div>
                         <div className="text-xs text-muted-foreground">
-                          {workflow.duration}
+                          {device.battery}% battery
                         </div>
                       </div>
 
                       <Button
-                        onClick={() => handleRunWorkflow({ workflowId: workflow.id, action: 'run' })}
+                        onClick={() => handleConnectDevice({ deviceId: device.id, action: 'connect' })}
                         variant="outline"
                         size="sm"
                       >
-                        <Play className="w-4 h-4" />
+                        <Link className="w-4 h-4" />
                       </Button>
 
-                      <Badge variant={workflow.status === 'running' ? 'default' : 'secondary'}>
-                        {workflow.status}
+                      <Badge variant={device.status === 'connected' ? 'default' : 'secondary'}>
+                        {device.status}
                       </Badge>
                     </div>
                   </div>
@@ -407,17 +578,17 @@ export function AdvancedAutomation({ className }: AdvancedAutomationProps) {
             </CardContent>
           </Card>
 
-          {/* Workflow Analytics */}
+          {/* Device Analytics */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <BarChart3 className="w-5 h-5" />
-                Workflow Analytics
+                Device Analytics
               </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                {workflowsQuery.data?.workflowAnalytics?.map((analytic) => (
+                {devicesQuery.data?.deviceAnalytics?.map((analytic) => (
                   <div key={analytic.id} className="p-4 border rounded-lg text-center">
                     <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-2">
                       <analytic.icon className="w-6 h-6 text-blue-600" />
@@ -434,53 +605,53 @@ export function AdvancedAutomation({ className }: AdvancedAutomationProps) {
         </div>
       )}
 
-      {/* Rules Tab */}
-      {selectedTab === 'rules' && (
+      {/* Sensors Tab */}
+      {selectedTab === 'sensors' && (
         <div className="space-y-4">
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <Zap className="w-5 h-5" />
-                Smart Rules
+                <Sensor className="w-5 h-5" />
+                Sensor Monitoring
               </CardTitle>
               <CardDescription>
-                Create og manage conditional automation rules
+                Monitor og manage sensors
               </CardDescription>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {rulesQuery.data?.smartRules?.map((rule) => (
-                  <div key={rule.id} className="flex items-center justify-between p-4 border rounded-lg">
+                {sensorsQuery.data?.sensors?.map((sensor) => (
+                  <div key={sensor.id} className="flex items-center justify-between p-4 border rounded-lg">
                     <div className="flex items-center gap-3">
-                      <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
-                        <rule.icon className="w-6 h-6 text-blue-600" />
+                      <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
+                        <sensor.icon className="w-6 h-6 text-green-600" />
                       </div>
                       <div>
-                        <div className="font-medium">{rule.name}</div>
+                        <div className="font-medium">{sensor.name}</div>
                         <div className="text-sm text-muted-foreground">
-                          {rule.condition} → {rule.action}
+                          {sensor.description} • {sensor.value} {sensor.unit}
                         </div>
                       </div>
                     </div>
 
                     <div className="flex items-center gap-3">
                       <div className="text-right">
-                        <div className="text-sm font-medium">{rule.triggerCount}</div>
+                        <div className="text-sm font-medium">{sensor.lastReading}</div>
                         <div className="text-xs text-muted-foreground">
-                          {rule.lastTriggered}
+                          {sensor.location}
                         </div>
                       </div>
 
                       <Button
-                        onClick={() => handleCreateRule({ ruleId: rule.id, action: 'test' })}
+                        onClick={() => handleMonitorSensor({ sensorId: sensor.id, action: 'monitor' })}
                         variant="outline"
                         size="sm"
                       >
-                        <Code className="w-4 h-4" />
+                        <Sensor className="w-4 h-4" />
                       </Button>
 
-                      <Badge variant={rule.status === 'active' ? 'default' : 'secondary'}>
-                        {rule.status}
+                      <Badge variant={sensor.status === 'active' ? 'default' : 'secondary'}>
+                        {sensor.status}
                       </Badge>
                     </div>
                   </div>
@@ -489,17 +660,17 @@ export function AdvancedAutomation({ className }: AdvancedAutomationProps) {
             </CardContent>
           </Card>
 
-          {/* Rules Analytics */}
+          {/* Sensor Analytics */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <PieChart className="w-5 h-5" />
-                Rules Analytics
+                Sensor Analytics
               </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {rulesQuery.data?.rulesAnalytics?.map((analytic) => (
+                {sensorsQuery.data?.sensorAnalytics?.map((analytic) => (
                   <div key={analytic.id} className="space-y-2">
                     <div className="flex items-center justify-between">
                       <span className="text-sm font-medium">{analytic.name}</span>
@@ -514,53 +685,53 @@ export function AdvancedAutomation({ className }: AdvancedAutomationProps) {
         </div>
       )}
 
-      {/* Tasks Tab */}
-      {selectedTab === 'tasks' && (
+      {/* Smart Home Tab */}
+      {selectedTab === 'smart-home' && (
         <div className="space-y-4">
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <Clock className="w-5 h-5" />
-                Scheduled Tasks
+                <SmartHome className="w-5 h-5" />
+                Smart Home Control
               </CardTitle>
               <CardDescription>
-                Manage time-based automation tasks
+                Control smart home devices
               </CardDescription>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {tasksQuery.data?.scheduledTasks?.map((task) => (
-                  <div key={task.id} className="flex items-center justify-between p-4 border rounded-lg">
+                {smartHomeQuery.data?.smartHomeDevices?.map((device) => (
+                  <div key={device.id} className="flex items-center justify-between p-4 border rounded-lg">
                     <div className="flex items-center gap-3">
                       <div className="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center">
-                        <task.icon className="w-6 h-6 text-purple-600" />
+                        <device.icon className="w-6 h-6 text-purple-600" />
                       </div>
                       <div>
-                        <div className="font-medium">{task.name}</div>
+                        <div className="font-medium">{device.name}</div>
                         <div className="text-sm text-muted-foreground">
-                          {task.schedule} • {task.type}
+                          {device.description} • {device.room}
                         </div>
                       </div>
                     </div>
 
                     <div className="flex items-center gap-3">
                       <div className="text-right">
-                        <div className="text-sm font-medium">{task.nextRun}</div>
+                        <div className="text-sm font-medium">{device.status}</div>
                         <div className="text-xs text-muted-foreground">
-                          {task.frequency}
+                          {device.lastAction}
                         </div>
                       </div>
 
                       <Button
-                        onClick={() => handleScheduleTask({ taskId: task.id, action: 'schedule' })}
+                        onClick={() => handleControlSmartHome({ deviceId: device.id, action: 'control' })}
                         variant="outline"
                         size="sm"
                       >
-                        <Clock className="w-4 h-4" />
+                        <SmartHome className="w-4 h-4" />
                       </Button>
 
-                      <Badge variant={task.status === 'scheduled' ? 'default' : 'secondary'}>
-                        {task.status}
+                      <Badge variant={device.status === 'on' ? 'default' : 'secondary'}>
+                        {device.status}
                       </Badge>
                     </div>
                   </div>
@@ -569,17 +740,17 @@ export function AdvancedAutomation({ className }: AdvancedAutomationProps) {
             </CardContent>
           </Card>
 
-          {/* Task Analytics */}
+          {/* Smart Home Analytics */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <BarChart3 className="w-5 h-5" />
-                Task Analytics
+                Smart Home Analytics
               </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                {tasksQuery.data?.taskAnalytics?.map((analytic) => (
+                {smartHomeQuery.data?.smartHomeAnalytics?.map((analytic) => (
                   <div key={analytic.id} className="p-4 border rounded-lg text-center">
                     <div className="w-12 h-12 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-2">
                       <analytic.icon className="w-6 h-6 text-orange-600" />
@@ -603,10 +774,10 @@ export function AdvancedAutomation({ className }: AdvancedAutomationProps) {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Settings className="w-5 h-5" />
-                Automation Settings
+                IoT Settings
               </CardTitle>
               <CardDescription>
-                Configure your automation preferences
+                Configure your IoT preferences
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -620,8 +791,8 @@ export function AdvancedAutomation({ className }: AdvancedAutomationProps) {
                     <Switch
                       checked={setting.enabled}
                       onCheckedChange={(enabled) => {
-                        if (setting.key === 'automationEnabled') {
-                          handleToggleAutomation(enabled)
+                        if (setting.key === 'iotEnabled') {
+                          handleToggleIoT(enabled)
                         }
                       }}
                     />
@@ -631,17 +802,17 @@ export function AdvancedAutomation({ className }: AdvancedAutomationProps) {
             </CardContent>
           </Card>
 
-          {/* Automation Goals */}
+          {/* IoT Goals */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Target className="w-5 h-5" />
-                Automation Goals
+                IoT Goals
               </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {settingsQuery.data?.automationGoals?.map((goal) => (
+                {settingsQuery.data?.iotGoals?.map((goal) => (
                   <div key={goal.id} className="space-y-2">
                     <div className="flex items-center justify-between">
                       <span className="text-sm font-medium">{goal.name}</span>
@@ -670,16 +841,16 @@ export function AdvancedAutomation({ className }: AdvancedAutomationProps) {
         <CardContent>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             <Button variant="outline" className="h-auto p-4 flex flex-col gap-2">
-              <Workflow className="w-5 h-5" />
-              <span className="text-sm">Run Workflow</span>
+              <IoTDevice className="w-5 h-5" />
+              <span className="text-sm">Connect Device</span>
             </Button>
             <Button variant="outline" className="h-auto p-4 flex flex-col gap-2">
-              <Zap className="w-5 h-5" />
-              <span className="text-sm">Create Rule</span>
+              <Sensor className="w-5 h-5" />
+              <span className="text-sm">Monitor Sensor</span>
             </Button>
             <Button variant="outline" className="h-auto p-4 flex flex-col gap-2">
-              <Clock className="w-5 h-5" />
-              <span className="text-sm">Schedule Task</span>
+              <SmartHome className="w-5 h-5" />
+              <span className="text-sm">Control Home</span>
             </Button>
             <Button variant="outline" className="h-auto p-4 flex flex-col gap-2">
               <Settings className="w-5 h-5" />

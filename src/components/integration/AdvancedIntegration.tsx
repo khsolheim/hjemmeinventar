@@ -7,9 +7,8 @@ import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
 import { Switch } from '@/components/ui/switch'
 import {
-  Zap,
+  Link,
   Settings,
-  Clock,
   BarChart3,
   PieChart,
   TrendingUp,
@@ -114,40 +113,46 @@ import {
   Workflow,
   Cpu,
   Code,
-  Terminal
+  Terminal,
+  Zap,
+  Clock,
+  Webhook,
+  Api,
+  Database as Db,
+  Network
 } from 'lucide-react'
 import { trpc } from '@/lib/trpc/client'
 import { useHapticFeedback } from '@/lib/services/haptic-feedback'
 
-interface AdvancedAutomationProps {
+interface AdvancedIntegrationProps {
   className?: string
 }
 
-export function AdvancedAutomation({ className }: AdvancedAutomationProps) {
-  const [selectedTab, setSelectedTab] = useState<'workflows' | 'rules' | 'tasks' | 'settings'>('workflows')
-  const [isRunning, setIsRunning] = useState(false)
-  const [automationEnabled, setAutomationEnabled] = useState(true)
-  const [selectedWorkflow, setSelectedWorkflow] = useState<string | null>(null)
-  const [selectedRule, setSelectedRule] = useState<string | null>(null)
+export function AdvancedIntegration({ className }: AdvancedIntegrationProps) {
+  const [selectedTab, setSelectedTab] = useState<'apis' | 'services' | 'sync' | 'settings'>('apis')
+  const [isConnecting, setIsConnecting] = useState(false)
+  const [integrationEnabled, setIntegrationEnabled] = useState(true)
+  const [selectedApi, setSelectedApi] = useState<string | null>(null)
+  const [selectedService, setSelectedService] = useState<string | null>(null)
   const haptic = useHapticFeedback()
 
-  // Automation queries
-  const workflowsQuery = trpc.automation.getWorkflowsData.useQuery()
-  const rulesQuery = trpc.automation.getRulesData.useQuery()
-  const tasksQuery = trpc.automation.getTasksData.useQuery()
-  const settingsQuery = trpc.automation.getAutomationSettings.useQuery()
+  // Integration queries
+  const apisQuery = trpc.integration.getAPIsData.useQuery()
+  const servicesQuery = trpc.integration.getServicesData.useQuery()
+  const syncQuery = trpc.integration.getSyncData.useQuery()
+  const settingsQuery = trpc.integration.getIntegrationSettings.useQuery()
 
-  const runWorkflowMutation = trpc.automation.runWorkflow.useMutation()
-  const createRuleMutation = trpc.automation.createRule.useMutation()
-  const scheduleTaskMutation = trpc.automation.scheduleTask.useMutation()
-  const updateSettingsMutation = trpc.automation.updateSettings.useMutation()
+  const connectAPIMutation = trpc.integration.connectAPI.useMutation()
+  const connectServiceMutation = trpc.integration.connectService.useMutation()
+  const syncDataMutation = trpc.integration.syncData.useMutation()
+  const updateSettingsMutation = trpc.integration.updateSettings.useMutation()
 
-  const handleRunWorkflow = async (workflowData: any) => {
+  const handleConnectAPI = async (apiData: any) => {
     try {
-      setIsRunning(true)
+      setIsConnecting(true)
       haptic.selection()
 
-      const result = await runWorkflowMutation.mutateAsync(workflowData)
+      const result = await connectAPIMutation.mutateAsync(apiData)
 
       if (result.success) {
         haptic.success()
@@ -155,18 +160,18 @@ export function AdvancedAutomation({ className }: AdvancedAutomationProps) {
         haptic.error()
       }
     } catch (error) {
-      console.error('Failed to run workflow:', error)
+      console.error('Failed to connect API:', error)
       haptic.error()
     } finally {
-      setIsRunning(false)
+      setIsConnecting(false)
     }
   }
 
-  const handleCreateRule = async (ruleData: any) => {
+  const handleConnectService = async (serviceData: any) => {
     try {
       haptic.selection()
 
-      const result = await createRuleMutation.mutateAsync(ruleData)
+      const result = await connectServiceMutation.mutateAsync(serviceData)
 
       if (result.success) {
         haptic.success()
@@ -174,16 +179,16 @@ export function AdvancedAutomation({ className }: AdvancedAutomationProps) {
         haptic.error()
       }
     } catch (error) {
-      console.error('Failed to create rule:', error)
+      console.error('Failed to connect service:', error)
       haptic.error()
     }
   }
 
-  const handleScheduleTask = async (taskData: any) => {
+  const handleSyncData = async (syncData: any) => {
     try {
       haptic.selection()
 
-      const result = await scheduleTaskMutation.mutateAsync(taskData)
+      const result = await syncDataMutation.mutateAsync(syncData)
 
       if (result.success) {
         haptic.success()
@@ -191,37 +196,37 @@ export function AdvancedAutomation({ className }: AdvancedAutomationProps) {
         haptic.error()
       }
     } catch (error) {
-      console.error('Failed to schedule task:', error)
+      console.error('Failed to sync data:', error)
       haptic.error()
     }
   }
 
-  const handleToggleAutomation = async (enabled: boolean) => {
+  const handleToggleIntegration = async (enabled: boolean) => {
     haptic.light()
     try {
-      await updateSettingsMutation.mutateAsync({ automationEnabled: enabled })
-      setAutomationEnabled(enabled)
+      await updateSettingsMutation.mutateAsync({ integrationEnabled: enabled })
+      setIntegrationEnabled(enabled)
     } catch (error) {
-      console.error('Failed to toggle automation:', error)
+      console.error('Failed to toggle integration:', error)
     }
   }
 
-  const getWorkflowStatus = (status: string) => {
+  const getAPIStatus = (status: string) => {
     switch (status) {
-      case 'running': return { color: 'text-green-600', label: 'Running', icon: Play }
-      case 'paused': return { color: 'text-yellow-600', label: 'Paused', icon: Pause }
-      case 'completed': return { color: 'text-blue-600', label: 'Completed', icon: CheckCircle }
-      case 'failed': return { color: 'text-red-600', label: 'Failed', icon: XCircle }
+      case 'connected': return { color: 'text-green-600', label: 'Connected', icon: CheckCircle }
+      case 'connecting': return { color: 'text-blue-600', label: 'Connecting', icon: RefreshCw }
+      case 'disconnected': return { color: 'text-gray-600', label: 'Disconnected', icon: XCircle }
+      case 'error': return { color: 'text-red-600', label: 'Error', icon: AlertTriangle }
       default: return { color: 'text-gray-600', label: 'Unknown', icon: Info }
     }
   }
 
-  const getRuleStatus = (status: string) => {
+  const getServiceStatus = (status: string) => {
     switch (status) {
-      case 'active': return { color: 'text-green-600', label: 'Active', icon: Zap }
+      case 'active': return { color: 'text-green-600', label: 'Active', icon: CheckCircle }
       case 'inactive': return { color: 'text-gray-600', label: 'Inactive', icon: Pause }
       case 'error': return { color: 'text-red-600', label: 'Error', icon: XCircle }
-      case 'testing': return { color: 'text-blue-600', label: 'Testing', icon: Code }
+      case 'syncing': return { color: 'text-blue-600', label: 'Syncing', icon: RefreshCw }
       default: return { color: 'text-gray-600', label: 'Unknown', icon: Info }
     }
   }
@@ -231,81 +236,81 @@ export function AdvancedAutomation({ className }: AdvancedAutomationProps) {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold">Advanced Automation</h2>
+          <h2 className="text-2xl font-bold">Advanced Integration</h2>
           <p className="text-muted-foreground">
-            Workflow management, smart rules og scheduled tasks
+            API management, third-party services og data synchronization
           </p>
         </div>
         <div className="flex items-center gap-2">
           <Badge variant="outline" className="flex items-center gap-1">
-            <Zap className="w-3 h-3" />
-            Automation Active
+            <Link className="w-3 h-3" />
+            Integration Active
           </Badge>
           <Badge variant="outline" className="flex items-center gap-1">
-            <Workflow className="w-3 h-3" />
-            Workflows Running
+            <Api className="w-3 h-3" />
+            APIs Connected
           </Badge>
         </div>
       </div>
 
-      {/* Automation Overview */}
+      {/* Integration Overview */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Active Workflows</CardTitle>
-            <Workflow className="h-4 w-4 text-green-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-green-600">
-              {workflowsQuery.data?.activeWorkflows || 0}
-            </div>
-            <p className="text-xs text-muted-foreground">
-              Currently running
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Smart Rules</CardTitle>
-            <Zap className="h-4 w-4 text-blue-600" />
+            <CardTitle className="text-sm font-medium">Connected APIs</CardTitle>
+            <Api className="h-4 w-4 text-blue-600" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-blue-600">
-              {rulesQuery.data?.totalRules || 0}
+              {apisQuery.data?.connectedAPIs || 0}
             </div>
             <p className="text-xs text-muted-foreground">
-              Active rules
+              Active connections
             </p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Scheduled Tasks</CardTitle>
-            <Clock className="h-4 w-4 text-purple-600" />
+            <CardTitle className="text-sm font-medium">Third-party Services</CardTitle>
+            <Globe className="h-4 w-4 text-green-600" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-green-600">
+              {servicesQuery.data?.activeServices || 0}
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Integrated services
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Data Sync Status</CardTitle>
+            <RefreshCw className="h-4 w-4 text-purple-600" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-purple-600">
-              {tasksQuery.data?.scheduledTasks || 0}
+              {syncQuery.data?.syncStatus || 'OK'}
             </div>
             <p className="text-xs text-muted-foreground">
-              Pending execution
+              Last sync: {syncQuery.data?.lastSync || '2 min ago'}
             </p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Automation Score</CardTitle>
+            <CardTitle className="text-sm font-medium">Integration Score</CardTitle>
             <Star className="h-4 w-4 text-orange-600" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-orange-600">
-              {settingsQuery.data?.automationScore || 0}%
+              {settingsQuery.data?.integrationScore || 0}%
             </div>
             <p className="text-xs text-muted-foreground">
-              Efficiency rating
+              Connection health
             </p>
           </CardContent>
         </Card>
@@ -314,31 +319,31 @@ export function AdvancedAutomation({ className }: AdvancedAutomationProps) {
       {/* Tab Navigation */}
       <div className="flex space-x-1 bg-muted p-1 rounded-lg">
         <Button
-          variant={selectedTab === 'workflows' ? 'default' : 'ghost'}
+          variant={selectedTab === 'apis' ? 'default' : 'ghost'}
           size="sm"
-          onClick={() => setSelectedTab('workflows')}
+          onClick={() => setSelectedTab('apis')}
           className="flex-1"
         >
-          <Workflow className="w-4 h-4 mr-2" />
-          Workflows
+          <Api className="w-4 h-4 mr-2" />
+          APIs
         </Button>
         <Button
-          variant={selectedTab === 'rules' ? 'default' : 'ghost'}
+          variant={selectedTab === 'services' ? 'default' : 'ghost'}
           size="sm"
-          onClick={() => setSelectedTab('rules')}
+          onClick={() => setSelectedTab('services')}
           className="flex-1"
         >
-          <Zap className="w-4 h-4 mr-2" />
-          Rules
+          <Globe className="w-4 h-4 mr-2" />
+          Services
         </Button>
         <Button
-          variant={selectedTab === 'tasks' ? 'default' : 'ghost'}
+          variant={selectedTab === 'sync' ? 'default' : 'ghost'}
           size="sm"
-          onClick={() => setSelectedTab('tasks')}
+          onClick={() => setSelectedTab('sync')}
           className="flex-1"
         >
-          <Clock className="w-4 h-4 mr-2" />
-          Tasks
+          <RefreshCw className="w-4 h-4 mr-2" />
+          Sync
         </Button>
         <Button
           variant={selectedTab === 'settings' ? 'default' : 'ghost'}
@@ -351,54 +356,54 @@ export function AdvancedAutomation({ className }: AdvancedAutomationProps) {
         </Button>
       </div>
 
-      {/* Workflows Tab */}
-      {selectedTab === 'workflows' && (
+      {/* APIs Tab */}
+      {selectedTab === 'apis' && (
         <div className="space-y-4">
-          {/* Workflow Management */}
+          {/* API Management */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <Workflow className="w-5 h-5" />
-                Workflow Management
+                <Api className="w-5 h-5" />
+                API Management
               </CardTitle>
               <CardDescription>
-                Manage og monitor your automation workflows
+                Manage og monitor your API connections
               </CardDescription>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {workflowsQuery.data?.workflows?.map((workflow) => (
-                  <div key={workflow.id} className="flex items-center justify-between p-4 border rounded-lg">
+                {apisQuery.data?.apis?.map((api) => (
+                  <div key={api.id} className="flex items-center justify-between p-4 border rounded-lg">
                     <div className="flex items-center gap-3">
-                      <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
-                        <workflow.icon className="w-6 h-6 text-green-600" />
+                      <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
+                        <api.icon className="w-6 h-6 text-blue-600" />
                       </div>
                       <div>
-                        <div className="font-medium">{workflow.name}</div>
+                        <div className="font-medium">{api.name}</div>
                         <div className="text-sm text-muted-foreground">
-                          {workflow.description} • {workflow.steps} steps
+                          {api.endpoint} • {api.method}
                         </div>
                       </div>
                     </div>
 
                     <div className="flex items-center gap-3">
                       <div className="text-right">
-                        <div className="text-sm font-medium">{workflow.lastRun}</div>
+                        <div className="text-sm font-medium">{api.calls}</div>
                         <div className="text-xs text-muted-foreground">
-                          {workflow.duration}
+                          {api.responseTime}ms avg
                         </div>
                       </div>
 
                       <Button
-                        onClick={() => handleRunWorkflow({ workflowId: workflow.id, action: 'run' })}
+                        onClick={() => handleConnectAPI({ apiId: api.id, action: 'connect' })}
                         variant="outline"
                         size="sm"
                       >
-                        <Play className="w-4 h-4" />
+                        <Link className="w-4 h-4" />
                       </Button>
 
-                      <Badge variant={workflow.status === 'running' ? 'default' : 'secondary'}>
-                        {workflow.status}
+                      <Badge variant={api.status === 'connected' ? 'default' : 'secondary'}>
+                        {api.status}
                       </Badge>
                     </div>
                   </div>
@@ -407,17 +412,17 @@ export function AdvancedAutomation({ className }: AdvancedAutomationProps) {
             </CardContent>
           </Card>
 
-          {/* Workflow Analytics */}
+          {/* API Analytics */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <BarChart3 className="w-5 h-5" />
-                Workflow Analytics
+                API Analytics
               </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                {workflowsQuery.data?.workflowAnalytics?.map((analytic) => (
+                {apisQuery.data?.apiAnalytics?.map((analytic) => (
                   <div key={analytic.id} className="p-4 border rounded-lg text-center">
                     <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-2">
                       <analytic.icon className="w-6 h-6 text-blue-600" />
@@ -434,53 +439,53 @@ export function AdvancedAutomation({ className }: AdvancedAutomationProps) {
         </div>
       )}
 
-      {/* Rules Tab */}
-      {selectedTab === 'rules' && (
+      {/* Services Tab */}
+      {selectedTab === 'services' && (
         <div className="space-y-4">
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <Zap className="w-5 h-5" />
-                Smart Rules
+                <Globe className="w-5 h-5" />
+                Third-party Services
               </CardTitle>
               <CardDescription>
-                Create og manage conditional automation rules
+                Connect og manage external services
               </CardDescription>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {rulesQuery.data?.smartRules?.map((rule) => (
-                  <div key={rule.id} className="flex items-center justify-between p-4 border rounded-lg">
+                {servicesQuery.data?.services?.map((service) => (
+                  <div key={service.id} className="flex items-center justify-between p-4 border rounded-lg">
                     <div className="flex items-center gap-3">
-                      <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
-                        <rule.icon className="w-6 h-6 text-blue-600" />
+                      <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
+                        <service.icon className="w-6 h-6 text-green-600" />
                       </div>
                       <div>
-                        <div className="font-medium">{rule.name}</div>
+                        <div className="font-medium">{service.name}</div>
                         <div className="text-sm text-muted-foreground">
-                          {rule.condition} → {rule.action}
+                          {service.description} • {service.type}
                         </div>
                       </div>
                     </div>
 
                     <div className="flex items-center gap-3">
                       <div className="text-right">
-                        <div className="text-sm font-medium">{rule.triggerCount}</div>
+                        <div className="text-sm font-medium">{service.lastSync}</div>
                         <div className="text-xs text-muted-foreground">
-                          {rule.lastTriggered}
+                          {service.syncFrequency}
                         </div>
                       </div>
 
                       <Button
-                        onClick={() => handleCreateRule({ ruleId: rule.id, action: 'test' })}
+                        onClick={() => handleConnectService({ serviceId: service.id, action: 'connect' })}
                         variant="outline"
                         size="sm"
                       >
-                        <Code className="w-4 h-4" />
+                        <Globe className="w-4 h-4" />
                       </Button>
 
-                      <Badge variant={rule.status === 'active' ? 'default' : 'secondary'}>
-                        {rule.status}
+                      <Badge variant={service.status === 'active' ? 'default' : 'secondary'}>
+                        {service.status}
                       </Badge>
                     </div>
                   </div>
@@ -489,17 +494,17 @@ export function AdvancedAutomation({ className }: AdvancedAutomationProps) {
             </CardContent>
           </Card>
 
-          {/* Rules Analytics */}
+          {/* Services Analytics */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <PieChart className="w-5 h-5" />
-                Rules Analytics
+                Services Analytics
               </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {rulesQuery.data?.rulesAnalytics?.map((analytic) => (
+                {servicesQuery.data?.servicesAnalytics?.map((analytic) => (
                   <div key={analytic.id} className="space-y-2">
                     <div className="flex items-center justify-between">
                       <span className="text-sm font-medium">{analytic.name}</span>
@@ -514,53 +519,53 @@ export function AdvancedAutomation({ className }: AdvancedAutomationProps) {
         </div>
       )}
 
-      {/* Tasks Tab */}
-      {selectedTab === 'tasks' && (
+      {/* Sync Tab */}
+      {selectedTab === 'sync' && (
         <div className="space-y-4">
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <Clock className="w-5 h-5" />
-                Scheduled Tasks
+                <RefreshCw className="w-5 h-5" />
+                Data Synchronization
               </CardTitle>
               <CardDescription>
-                Manage time-based automation tasks
+                Manage data sync og real-time updates
               </CardDescription>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {tasksQuery.data?.scheduledTasks?.map((task) => (
-                  <div key={task.id} className="flex items-center justify-between p-4 border rounded-lg">
+                {syncQuery.data?.syncJobs?.map((job) => (
+                  <div key={job.id} className="flex items-center justify-between p-4 border rounded-lg">
                     <div className="flex items-center gap-3">
                       <div className="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center">
-                        <task.icon className="w-6 h-6 text-purple-600" />
+                        <job.icon className="w-6 h-6 text-purple-600" />
                       </div>
                       <div>
-                        <div className="font-medium">{task.name}</div>
+                        <div className="font-medium">{job.name}</div>
                         <div className="text-sm text-muted-foreground">
-                          {task.schedule} • {task.type}
+                          {job.description} • {job.type}
                         </div>
                       </div>
                     </div>
 
                     <div className="flex items-center gap-3">
                       <div className="text-right">
-                        <div className="text-sm font-medium">{task.nextRun}</div>
+                        <div className="text-sm font-medium">{job.lastSync}</div>
                         <div className="text-xs text-muted-foreground">
-                          {task.frequency}
+                          {job.syncStatus}
                         </div>
                       </div>
 
                       <Button
-                        onClick={() => handleScheduleTask({ taskId: task.id, action: 'schedule' })}
+                        onClick={() => handleSyncData({ jobId: job.id, action: 'sync' })}
                         variant="outline"
                         size="sm"
                       >
-                        <Clock className="w-4 h-4" />
+                        <RefreshCw className="w-4 h-4" />
                       </Button>
 
-                      <Badge variant={task.status === 'scheduled' ? 'default' : 'secondary'}>
-                        {task.status}
+                      <Badge variant={job.status === 'synced' ? 'default' : 'secondary'}>
+                        {job.status}
                       </Badge>
                     </div>
                   </div>
@@ -569,17 +574,17 @@ export function AdvancedAutomation({ className }: AdvancedAutomationProps) {
             </CardContent>
           </Card>
 
-          {/* Task Analytics */}
+          {/* Sync Analytics */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <BarChart3 className="w-5 h-5" />
-                Task Analytics
+                Sync Analytics
               </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                {tasksQuery.data?.taskAnalytics?.map((analytic) => (
+                {syncQuery.data?.syncAnalytics?.map((analytic) => (
                   <div key={analytic.id} className="p-4 border rounded-lg text-center">
                     <div className="w-12 h-12 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-2">
                       <analytic.icon className="w-6 h-6 text-orange-600" />
@@ -603,10 +608,10 @@ export function AdvancedAutomation({ className }: AdvancedAutomationProps) {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Settings className="w-5 h-5" />
-                Automation Settings
+                Integration Settings
               </CardTitle>
               <CardDescription>
-                Configure your automation preferences
+                Configure your integration preferences
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -620,8 +625,8 @@ export function AdvancedAutomation({ className }: AdvancedAutomationProps) {
                     <Switch
                       checked={setting.enabled}
                       onCheckedChange={(enabled) => {
-                        if (setting.key === 'automationEnabled') {
-                          handleToggleAutomation(enabled)
+                        if (setting.key === 'integrationEnabled') {
+                          handleToggleIntegration(enabled)
                         }
                       }}
                     />
@@ -631,17 +636,17 @@ export function AdvancedAutomation({ className }: AdvancedAutomationProps) {
             </CardContent>
           </Card>
 
-          {/* Automation Goals */}
+          {/* Integration Goals */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Target className="w-5 h-5" />
-                Automation Goals
+                Integration Goals
               </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {settingsQuery.data?.automationGoals?.map((goal) => (
+                {settingsQuery.data?.integrationGoals?.map((goal) => (
                   <div key={goal.id} className="space-y-2">
                     <div className="flex items-center justify-between">
                       <span className="text-sm font-medium">{goal.name}</span>
@@ -670,16 +675,16 @@ export function AdvancedAutomation({ className }: AdvancedAutomationProps) {
         <CardContent>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             <Button variant="outline" className="h-auto p-4 flex flex-col gap-2">
-              <Workflow className="w-5 h-5" />
-              <span className="text-sm">Run Workflow</span>
+              <Api className="w-5 h-5" />
+              <span className="text-sm">Connect API</span>
             </Button>
             <Button variant="outline" className="h-auto p-4 flex flex-col gap-2">
-              <Zap className="w-5 h-5" />
-              <span className="text-sm">Create Rule</span>
+              <Globe className="w-5 h-5" />
+              <span className="text-sm">Add Service</span>
             </Button>
             <Button variant="outline" className="h-auto p-4 flex flex-col gap-2">
-              <Clock className="w-5 h-5" />
-              <span className="text-sm">Schedule Task</span>
+              <RefreshCw className="w-5 h-5" />
+              <span className="text-sm">Sync Data</span>
             </Button>
             <Button variant="outline" className="h-auto p-4 flex flex-col gap-2">
               <Settings className="w-5 h-5" />

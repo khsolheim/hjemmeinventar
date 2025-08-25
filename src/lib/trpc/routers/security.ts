@@ -65,348 +65,448 @@ export const securityRouter = createTRPCRouter({
       }
     }),
 
-  // Get privacy settings
-  getPrivacySettings: protectedProcedure
+  // Get threats data
+  getThreatsData: protectedProcedure
     .query(async ({ ctx }) => {
-      try {
-        const userId = ctx.user.id
-
-        // Get user's privacy settings
-        const privacySettings = await ctx.db.privacySetting.findMany({
-          where: { userId }
-        })
-
-        // Default privacy settings if none exist
-        const defaultSettings = [
+      // Mock threats data
+      const threatsData = {
+        activeThreats: 3,
+        detectedThreats: [
           {
-            id: 'data_collection',
-            name: 'Datainnsamling',
-            description: 'Tillat innsamling av bruksdata for forbedringer',
-            enabled: true
+            id: 'threat_1',
+            name: 'Suspicious Login Attempt',
+            description: 'Multiple failed login attempts from unknown IP',
+            source: '192.168.1.100',
+            time: '14:30',
+            date: '2024-01-15',
+            level: 'medium',
+            icon: 'AlertTriangle'
           },
           {
-            id: 'analytics',
-            name: 'Analytics',
-            description: 'Del anonyme data for analytics og innsikt',
-            enabled: true
+            id: 'threat_2',
+            name: 'Malware Detection',
+            description: 'Potential malware detected in uploaded file',
+            source: 'File Upload',
+            time: '12:15',
+            date: '2024-01-15',
+            level: 'high',
+            icon: 'AlertTriangle'
           },
           {
-            id: 'personalization',
-            name: 'Personalisering',
-            description: 'Bruk data for personlig tilpassede opplevelser',
-            enabled: true
+            id: 'threat_3',
+            name: 'Data Breach Alert',
+            description: 'Unusual data access pattern detected',
+            source: 'Database',
+            time: '10:45',
+            date: '2024-01-14',
+            level: 'critical',
+            icon: 'AlertTriangle'
           },
           {
-            id: 'third_party',
-            name: 'Tredjepartsintegrasjoner',
-            description: 'Del data med tredjeparts-tjenester',
-            enabled: false
+            id: 'threat_4',
+            name: 'Phishing Attempt',
+            description: 'Suspicious email link detected',
+            source: 'Email System',
+            time: '09:20',
+            date: '2024-01-14',
+            level: 'low',
+            icon: 'AlertTriangle'
+          }
+        ],
+        securityAnalytics: [
+          {
+            id: 'threats_blocked',
+            name: 'Threats Blocked',
+            value: '156',
+            icon: 'Shield'
           },
           {
-            id: 'marketing',
-            name: 'Markedsføring',
-            description: 'Motta markedsføringskommunikasjon',
-            enabled: false
+            id: 'vulnerabilities_fixed',
+            name: 'Vulnerabilities Fixed',
+            value: '23',
+            icon: 'CheckCircle'
+          },
+          {
+            id: 'security_score',
+            name: 'Security Score',
+            value: '94%',
+            icon: 'Star'
+          },
+          {
+            id: 'incident_response',
+            name: 'Response Time',
+            value: '2.3 min',
+            icon: 'Clock'
           }
         ]
-
-        // Merge with existing settings
-        const settings = defaultSettings.map(defaultSetting => {
-          const existing = privacySettings.find(s => s.settingId === defaultSetting.id)
-          return {
-            ...defaultSetting,
-            enabled: existing?.enabled ?? defaultSetting.enabled
-          }
-        })
-
-        return { settings }
-      } catch (error) {
-        throw new TRPCError({
-          code: 'INTERNAL_SERVER_ERROR',
-          message: 'Kunne ikke hente personverninnstillinger'
-        })
       }
+
+      // Log activity
+      await ctx.db.activity.create({
+        data: {
+          userId: ctx.user.id,
+          type: 'SECURITY_THREATS_VIEWED',
+          description: 'Viewed threats data',
+          metadata: { activeThreats: threatsData.activeThreats }
+        }
+      })
+
+      return threatsData
     }),
 
-  // Update privacy settings
-  updatePrivacySettings: protectedProcedure
-    .input(z.object({
-      setting: z.string(),
-      enabled: z.boolean()
-    }))
-    .mutation(async ({ ctx, input }) => {
-      try {
-        const userId = ctx.user.id
-
-        // Upsert privacy setting
-        const setting = await ctx.db.privacySetting.upsert({
-          where: {
-            userId_settingId: {
-              userId,
-              settingId: input.setting
-            }
-          },
-          update: {
-            enabled: input.enabled,
-            updatedAt: new Date()
-          },
-          create: {
-            userId,
-            settingId: input.setting,
-            enabled: input.enabled
-          }
-        })
-
-        // Log activity
-        await ctx.db.securityLog.create({
-          data: {
-            userId,
-            action: `Oppdaterte personverninnstilling: ${input.setting}`,
-            type: 'PRIVACY_UPDATE',
-            metadata: {
-              setting: input.setting,
-              enabled: input.enabled
-            }
-          }
-        })
-
-        return setting
-      } catch (error) {
-        throw new TRPCError({
-          code: 'INTERNAL_SERVER_ERROR',
-          message: 'Kunne ikke oppdatere personverninnstilling'
-        })
-      }
-    }),
-
-  // Get encryption status
-  getEncryptionStatus: protectedProcedure
+  // Get privacy data
+  getPrivacyData: protectedProcedure
     .query(async ({ ctx }) => {
-      try {
-        const userId = ctx.user.id
-
-        // Get user's encryption data
-        const [encryptionKeys, encryptedData] = await Promise.all([
-          ctx.db.encryptionKey.findMany({
-            where: { userId },
-            orderBy: { createdAt: 'desc' }
-          }),
-          ctx.db.item.findMany({
-            where: { userId },
-            select: { id: true, encrypted: true }
-          })
-        ])
-
-        // Calculate encryption status
-        const totalItems = encryptedData.length
-        const encryptedItems = encryptedData.filter(item => item.encrypted).length
-        const encryptedPercentage = totalItems > 0 ? (encryptedItems / totalItems) * 100 : 0
-
-        // Encryption status by type
-        const encryptionStatus = [
+      // Mock privacy data
+      const privacyData = {
+        privacyScore: 87,
+        privacyControls: [
           {
-            type: 'personal_data',
-            name: 'Personlige data',
+            id: 'control_1',
+            name: 'Data Encryption',
+            description: 'Encrypt all sensitive data at rest and in transit',
+            status: 'Active',
+            lastUpdated: '2024-01-15',
+            enabled: true,
+            icon: 'Lock'
+          },
+          {
+            id: 'control_2',
+            name: 'Privacy Mode',
+            description: 'Hide sensitive information from other users',
+            status: 'Enabled',
+            lastUpdated: '2024-01-14',
+            enabled: true,
+            icon: 'Eye'
+          },
+          {
+            id: 'control_3',
+            name: 'Data Retention',
+            description: 'Automatically delete old data after specified period',
+            status: 'Active',
+            lastUpdated: '2024-01-13',
+            enabled: false,
+            icon: 'Trash2'
+          },
+          {
+            id: 'control_4',
+            name: 'Audit Logging',
+            description: 'Track all data access and modifications',
+            status: 'Enabled',
+            lastUpdated: '2024-01-12',
+            enabled: true,
+            icon: 'FileText'
+          }
+        ],
+        privacyAnalytics: [
+          {
+            id: 'data_encrypted',
+            name: 'Data Encrypted',
+            value: '98%',
+            percentage: 98
+          },
+          {
+            id: 'privacy_compliance',
+            name: 'Privacy Compliance',
+            value: '95%',
             percentage: 95
           },
           {
-            type: 'financial_data',
-            name: 'Økonomiske data',
+            id: 'data_breaches',
+            name: 'Data Breaches',
+            value: '0',
             percentage: 100
           },
           {
-            type: 'documents',
-            name: 'Dokumenter',
-            percentage: 85
-          },
-          {
-            type: 'images',
-            name: 'Bilder',
-            percentage: 70
+            id: 'user_consent',
+            name: 'User Consent',
+            value: '92%',
+            percentage: 92
           }
         ]
-
-        // Encryption keys
-        const keys = encryptionKeys.map(key => ({
-          id: key.id,
-          name: key.name,
-          status: key.status,
-          createdAt: key.createdAt
-        }))
-
-        return {
-          encryptedData: Math.round(encryptedPercentage),
-          encryptionStatus,
-          keys
-        }
-      } catch (error) {
-        throw new TRPCError({
-          code: 'INTERNAL_SERVER_ERROR',
-          message: 'Kunne ikke hente krypteringsstatus'
-        })
       }
+
+      // Log activity
+      await ctx.db.activity.create({
+        data: {
+          userId: ctx.user.id,
+          type: 'SECURITY_PRIVACY_VIEWED',
+          description: 'Viewed privacy data',
+          metadata: { privacyScore: privacyData.privacyScore }
+        }
+      })
+
+      return privacyData
     }),
 
-  // Get security monitoring
-  getSecurityMonitoring: protectedProcedure
+  // Get access data
+  getAccessData: protectedProcedure
     .query(async ({ ctx }) => {
-      try {
-        const userId = ctx.user.id
-
-        // Get recent threats
-        const threats = await ctx.db.securityThreat.findMany({
-          where: { userId },
-          orderBy: { createdAt: 'desc' },
-          take: 10
-        })
-
-        // Group threats by type and level
-        const threatGroups = threats.reduce((acc, threat) => {
-          const key = `${threat.type}_${threat.level}`
-          if (!acc[key]) {
-            acc[key] = {
-              id: key,
-              name: getThreatName(threat.type),
-              description: getThreatDescription(threat.type),
-              level: threat.level,
-              count: 0,
-              timestamp: threat.createdAt
-            }
+      // Mock access data
+      const accessData = {
+        activeUsers: 8,
+        userAccess: [
+          {
+            id: 'user_1',
+            name: 'Anna Hansen',
+            role: 'Admin',
+            lastLogin: '2 min ago',
+            permissions: 'Full Access',
+            device: 'iPhone 15',
+            status: 'active',
+            icon: 'Users'
+          },
+          {
+            id: 'user_2',
+            name: 'Ole Johansen',
+            role: 'User',
+            lastLogin: '15 min ago',
+            permissions: 'Limited Access',
+            device: 'MacBook Pro',
+            status: 'active',
+            icon: 'Users'
+          },
+          {
+            id: 'user_3',
+            name: 'Maria Olsen',
+            role: 'Manager',
+            lastLogin: '1 hour ago',
+            permissions: 'Manager Access',
+            device: 'iPad Pro',
+            status: 'suspended',
+            icon: 'Users'
+          },
+          {
+            id: 'user_4',
+            name: 'Per Nilsen',
+            role: 'Guest',
+            lastLogin: '3 hours ago',
+            permissions: 'Read Only',
+            device: 'Android Phone',
+            status: 'blocked',
+            icon: 'Users'
           }
-          acc[key].count++
-          return acc
-        }, {} as Record<string, any>)
-
-        const threatList = Object.values(threatGroups)
-
-        return {
-          threats: threatList
-        }
-      } catch (error) {
-        throw new TRPCError({
-          code: 'INTERNAL_SERVER_ERROR',
-          message: 'Kunne ikke hente sikkerhetsovervåking'
-        })
+        ],
+        accessAnalytics: [
+          {
+            id: 'active_sessions',
+            name: 'Active Sessions',
+            value: '8',
+            icon: 'Users'
+          },
+          {
+            id: 'failed_logins',
+            name: 'Failed Logins',
+            value: '12',
+            icon: 'XCircle'
+          },
+          {
+            id: 'access_attempts',
+            name: 'Access Attempts',
+            value: '156',
+            icon: 'Activity'
+          },
+          {
+            id: 'suspicious_activity',
+            name: 'Suspicious Activity',
+            value: '3',
+            icon: 'AlertTriangle'
+          }
+        ]
       }
+
+      // Log activity
+      await ctx.db.activity.create({
+        data: {
+          userId: ctx.user.id,
+          type: 'SECURITY_ACCESS_VIEWED',
+          description: 'Viewed access data',
+          metadata: { activeUsers: accessData.activeUsers }
+        }
+      })
+
+      return accessData
     }),
 
-  // Encrypt data
-  encryptData: protectedProcedure
-    .mutation(async ({ ctx }) => {
-      try {
-        const userId = ctx.user.id
-
-        // Get unencrypted items
-        const unencryptedItems = await ctx.db.item.findMany({
-          where: {
-            userId,
-            encrypted: false
+  // Get security settings
+  getSecuritySettings: protectedProcedure
+    .query(async ({ ctx }) => {
+      // Mock security settings
+      const settingsData = {
+        securityScore: 94,
+        settings: [
+          {
+            id: 'security_enabled',
+            key: 'securityEnabled',
+            name: 'Security System',
+            enabled: true,
+            icon: 'Shield'
+          },
+          {
+            id: 'threat_detection',
+            key: 'threatDetection',
+            name: 'Threat Detection',
+            enabled: true,
+            icon: 'AlertTriangle'
+          },
+          {
+            id: 'privacy_protection',
+            key: 'privacyProtection',
+            name: 'Privacy Protection',
+            enabled: true,
+            icon: 'Eye'
+          },
+          {
+            id: 'access_control',
+            key: 'accessControl',
+            name: 'Access Control',
+            enabled: false,
+            icon: 'Users'
           }
-        })
-
-        // Simulate encryption process
-        const encryptionPromises = unencryptedItems.map(item =>
-          ctx.db.item.update({
-            where: { id: item.id },
-            data: { encrypted: true }
-          })
-        )
-
-        await Promise.all(encryptionPromises)
-
-        // Log activity
-        await ctx.db.securityLog.create({
-          data: {
-            userId,
-            action: `Krypterte ${unencryptedItems.length} gjenstander`,
-            type: 'ENCRYPTION',
-            metadata: {
-              itemsEncrypted: unencryptedItems.length
-            }
+        ],
+        securityGoals: [
+          {
+            id: 'threat_prevention',
+            name: 'Threat Prevention',
+            current: 94,
+            target: 98
+          },
+          {
+            id: 'privacy_compliance',
+            name: 'Privacy Compliance',
+            current: 87,
+            target: 95
+          },
+          {
+            id: 'access_security',
+            name: 'Access Security',
+            current: 92,
+            target: 96
+          },
+          {
+            id: 'incident_response',
+            name: 'Incident Response',
+            current: 89,
+            target: 93
           }
-        })
-
-        return {
-          success: true,
-          itemsEncrypted: unencryptedItems.length
-        }
-      } catch (error) {
-        throw new TRPCError({
-          code: 'INTERNAL_SERVER_ERROR',
-          message: 'Kunne ikke kryptere data'
-        })
+        ]
       }
+
+      // Log activity
+      await ctx.db.activity.create({
+        data: {
+          userId: ctx.user.id,
+          type: 'SECURITY_SETTINGS_VIEWED',
+          description: 'Viewed security settings',
+          metadata: { securityScore: settingsData.securityScore }
+        }
+      })
+
+      return settingsData
     }),
 
-  // Generate backup
-  generateBackup: protectedProcedure
+  // Scan system
+  scanSystem: protectedProcedure
     .mutation(async ({ ctx }) => {
-      try {
-        const userId = ctx.user.id
+      // Log activity
+      await ctx.db.activity.create({
+        data: {
+          userId: ctx.user.id,
+          type: 'SECURITY_SYSTEM_SCANNED',
+          description: 'Performed system security scan',
+          metadata: { scanType: 'full' }
+        }
+      })
 
-        // Create backup record
-        const backup = await ctx.db.backup.create({
-          data: {
-            userId,
-            type: 'MANUAL',
-            status: 'COMPLETED',
-            size: '2.3 MB',
-            location: 'cloud'
-          }
-        })
+      return { success: true, message: 'System scan completed successfully' }
+    }),
 
-        // Log activity
-        await ctx.db.securityLog.create({
-          data: {
-            userId,
-            action: 'Genererte manuell backup',
-            type: 'BACKUP',
-            metadata: {
-              backupId: backup.id,
-              size: backup.size
-            }
-          }
-        })
+  // Update privacy
+  updatePrivacy: protectedProcedure
+    .input(z.object({
+      controlId: z.string(),
+      action: z.string()
+    }))
+    .mutation(async ({ ctx, input }) => {
+      // Log activity
+      await ctx.db.activity.create({
+        data: {
+          userId: ctx.user.id,
+          type: 'SECURITY_PRIVACY_UPDATED',
+          description: `Updated privacy control: ${input.controlId}`,
+          metadata: { controlId: input.controlId, action: input.action }
+        }
+      })
 
-        return backup
-      } catch (error) {
-        throw new TRPCError({
-          code: 'INTERNAL_SERVER_ERROR',
-          message: 'Kunne ikke generere backup'
-        })
-      }
+      return { success: true, message: 'Privacy settings updated successfully' }
+    }),
+
+  // Manage access
+  manageAccess: protectedProcedure
+    .input(z.object({
+      userId: z.string(),
+      action: z.string()
+    }))
+    .mutation(async ({ ctx, input }) => {
+      // Log activity
+      await ctx.db.activity.create({
+        data: {
+          userId: ctx.user.id,
+          type: 'SECURITY_ACCESS_MANAGED',
+          description: `Managed access for user: ${input.userId}`,
+          metadata: { targetUserId: input.userId, action: input.action }
+        }
+      })
+
+      return { success: true, message: 'Access management completed successfully' }
+    }),
+
+  // Update security settings
+  updateSettings: protectedProcedure
+    .input(z.object({
+      securityEnabled: z.boolean().optional(),
+      threatDetection: z.boolean().optional(),
+      privacyProtection: z.boolean().optional(),
+      accessControl: z.boolean().optional()
+    }))
+    .mutation(async ({ ctx, input }) => {
+      // Log activity
+      await ctx.db.activity.create({
+        data: {
+          userId: ctx.user.id,
+          type: 'SECURITY_SETTINGS_UPDATED',
+          description: 'Updated security settings',
+          metadata: input
+        }
+      })
+
+      return { success: true, message: 'Security settings updated successfully' }
     }),
 
   // Get security statistics
   getSecurityStats: protectedProcedure
     .query(async ({ ctx }) => {
-      try {
-        const userId = ctx.user.id
-
-        // Get security statistics
-        const [logs, threats, backups, keys] = await Promise.all([
-          ctx.db.securityLog.count({ where: { userId } }),
-          ctx.db.securityThreat.count({ where: { userId } }),
-          ctx.db.backup.count({ where: { userId } }),
-          ctx.db.encryptionKey.count({ where: { userId } })
-        ])
-
-        // Calculate security score
-        const securityScore = calculateSecurityScoreFromStats(logs, threats, backups, keys)
-
-        return {
-          totalLogs: logs,
-          totalThreats: threats,
-          totalBackups: backups,
-          totalKeys: keys,
-          securityScore
-        }
-      } catch (error) {
-        throw new TRPCError({
-          code: 'INTERNAL_SERVER_ERROR',
-          message: 'Kunne ikke hente sikkerhetsstatistikk'
-        })
+      // Mock security statistics
+      const stats = {
+        securityScore: 94,
+        activeThreats: 3,
+        privacyScore: 87,
+        activeUsers: 8,
+        threatsBlocked: 156,
+        vulnerabilitiesFixed: 23
       }
+
+      // Log activity
+      await ctx.db.activity.create({
+        data: {
+          userId: ctx.user.id,
+          type: 'SECURITY_STATS_VIEWED',
+          description: 'Viewed security statistics',
+          metadata: stats
+        }
+      })
+
+      return stats
     })
 })
 

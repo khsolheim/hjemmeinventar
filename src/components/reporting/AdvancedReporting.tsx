@@ -1,101 +1,137 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
-import { 
+import { Switch } from '@/components/ui/switch'
+import {
   BarChart3,
-  PieChart,
-  LineChart,
-  TrendingUp,
-  TrendingDown,
-  Calendar,
-  Clock,
-  Download,
-  Share2,
   Settings,
-  Eye,
-  Filter,
-  RefreshCw,
+  TrendingUp,
+  Calendar,
   Plus,
   Edit,
   Trash2,
-  Save,
-  FileText,
-  Database,
-  Activity,
+  Play,
+  Pause,
+  Stop,
+  Timer,
   Users,
-  DollarSign,
-  Package,
+  UserPlus,
+  UserMinus,
+  UserCheck,
+  UserX,
+  File,
+  Folder,
+  Database,
+  Server,
+  Cloud,
+  Globe,
   MapPin,
+  Navigation,
+  Compass,
+  Bell,
+  Mail,
+  Smartphone,
+  Tablet,
+  Monitor,
+  Wifi,
+  Bluetooth,
+  Volume2,
+  VolumeX,
+  Mic,
+  MicOff,
+  Camera,
+  CameraOff,
+  Bookmark,
+  Tag,
+  Hash,
+  AtSign,
+  Search,
+  Filter,
+  Grid3x3,
+  List,
+  Layers,
+  Crosshair,
+  Aim,
+  Magic,
+  Launch,
+  King,
+  Victory,
+  Prize,
+  Favorite,
+  Details,
+  Error,
+  Warning,
+  Success,
+  Update,
+  Config,
+  Goal,
+  Fitness,
+  Pulse,
+  Eye,
+  EyeOff,
+  Shield,
+  Lock,
+  Unlock,
+  Download,
+  Upload,
+  Share2,
+  Heart,
+  DollarSign,
+  Activity,
+  Brain,
+  Home,
+  ExternalLink,
+  AlertTriangle,
+  Leaf,
+  LayoutDashboard,
+  BookOpen,
+  MapPin as Location,
+  RefreshCw,
+  CheckCircle,
+  XCircle,
+  Info,
   Star,
   Award,
   Trophy,
   Crown,
   Rocket,
   Sparkles,
-  BarChart3 as Chart,
-  PieChart as Donut,
-  LineChart as Trend,
-  TrendingUp as Growth,
-  TrendingDown as Decline,
-  Calendar as Schedule,
-  Clock as Time,
+  CheckSquare,
+  Target,
+  MessageSquare,
+  Phone,
+  FileText,
+  Music,
+  Video,
+  Gamepad2,
+  Workflow,
+  Cpu,
+  Code,
+  Terminal,
+  Clock,
+  Webhook,
+  Api,
+  Database as Db,
+  Network,
+  Gauge,
+  HardDrive,
+  Memory,
+  Cpu as Processor,
+  Wifi as NetworkIcon,
+  HardDrive as Storage,
+  Activity as Performance,
+  PieChart,
+  LineChart,
+  TrendingDown,
   Download as Export,
-  Share2 as Share,
-  Settings as Config,
-  Eye as View,
-  Filter as Search,
-  RefreshCw as Update,
-  Plus as Add,
-  Edit as Modify,
-  Trash2 as Delete,
-  Save as Store,
-  FileText as Document,
-  Database as Storage,
-  Activity as Monitor,
-  Users as People,
-  DollarSign as Money,
-  Package as Box,
-  MapPin as Location,
-  Star as Favorite,
-  Award as Prize,
-  Trophy as Victory,
-  Crown as King,
-  Rocket as Launch,
-  Sparkles as Magic,
-  BarChart3 as Graph,
-  PieChart as Circle,
-  LineChart as Line,
-  TrendingUp as Rise,
-  TrendingDown as Fall,
-  Calendar as Date,
-  Clock as Timer,
-  Download as Get,
-  Share2 as Send,
-  Settings as Setup,
-  Eye as See,
-  Filter as Sort,
-  RefreshCw as Reload,
-  Plus as Create,
-  Edit as Change,
-  Trash2 as Remove,
-  Save as Keep,
   FileText as Report,
-  Database as Data,
-  Activity as Track,
-  Users as Group,
-  DollarSign as Cash,
-  Package as Item,
-  MapPin as Place,
-  Star as Rate,
-  Award as Win,
-  Trophy as Success,
-  Crown as Leader,
-  Rocket as Boost,
-  Sparkles as Shine
+  BarChart,
+  PieChart as Chart,
+  Activity as Analytics
 } from 'lucide-react'
 import { trpc } from '@/lib/trpc/client'
 import { useHapticFeedback } from '@/lib/services/haptic-feedback'
@@ -105,63 +141,105 @@ interface AdvancedReportingProps {
 }
 
 export function AdvancedReporting({ className }: AdvancedReportingProps) {
-  const [selectedTab, setSelectedTab] = useState<'dashboards' | 'reports' | 'analytics' | 'insights'>('dashboards')
-  const [selectedTimeRange, setSelectedTimeRange] = useState<'7d' | '30d' | '90d' | '1y'>('30d')
-  const [showAdvancedFilters, setShowAdvancedFilters] = useState(false)
+  const [selectedTab, setSelectedTab] = useState<'dashboards' | 'reports' | 'analytics' | 'settings'>('dashboards')
+  const [isGenerating, setIsGenerating] = useState(false)
+  const [reportingEnabled, setReportingEnabled] = useState(true)
+  const [selectedDashboard, setSelectedDashboard] = useState<string | null>(null)
+  const [selectedReport, setSelectedReport] = useState<string | null>(null)
   const haptic = useHapticFeedback()
 
   // Reporting queries
-  const dashboardsQuery = trpc.reporting.getDashboards.useQuery()
-  const reportsQuery = trpc.reporting.getReports.useQuery({ timeRange: selectedTimeRange })
-  const analyticsQuery = trpc.reporting.getAnalytics.useQuery({ timeRange: selectedTimeRange })
-  const insightsQuery = trpc.reporting.getInsights.useQuery({ timeRange: selectedTimeRange })
+  const dashboardsQuery = trpc.reporting.getDashboardsData.useQuery()
+  const reportsQuery = trpc.reporting.getReportsData.useQuery()
+  const analyticsQuery = trpc.reporting.getAnalyticsData.useQuery()
+  const settingsQuery = trpc.reporting.getReportingSettings.useQuery()
 
-  const createReportMutation = trpc.reporting.createReport.useMutation()
+  const createDashboardMutation = trpc.reporting.createDashboard.useMutation()
+  const generateReportMutation = trpc.reporting.generateReport.useMutation()
   const exportDataMutation = trpc.reporting.exportData.useMutation()
-  const shareReportMutation = trpc.reporting.shareReport.useMutation()
+  const updateSettingsMutation = trpc.reporting.updateSettings.useMutation()
 
-  const handleCreateReport = async (reportData: any) => {
-    haptic.success()
+  const handleCreateDashboard = async (dashboardData: any) => {
     try {
-      await createReportMutation.mutateAsync(reportData)
+      setIsGenerating(true)
+      haptic.selection()
+
+      const result = await createDashboardMutation.mutateAsync(dashboardData)
+
+      if (result.success) {
+        haptic.success()
+      } else {
+        haptic.error()
+      }
     } catch (error) {
-      console.error('Failed to create report:', error)
+      console.error('Failed to create dashboard:', error)
+      haptic.error()
+    } finally {
+      setIsGenerating(false)
     }
   }
 
-  const handleExportData = async (format: string) => {
-    haptic.light()
+  const handleGenerateReport = async (reportData: any) => {
     try {
-      await exportDataMutation.mutateAsync({ format, timeRange: selectedTimeRange })
+      haptic.selection()
+
+      const result = await generateReportMutation.mutateAsync(reportData)
+
+      if (result.success) {
+        haptic.success()
+      } else {
+        haptic.error()
+      }
+    } catch (error) {
+      console.error('Failed to generate report:', error)
+      haptic.error()
+    }
+  }
+
+  const handleExportData = async (exportData: any) => {
+    try {
+      haptic.selection()
+
+      const result = await exportDataMutation.mutateAsync(exportData)
+
+      if (result.success) {
+        haptic.success()
+      } else {
+        haptic.error()
+      }
     } catch (error) {
       console.error('Failed to export data:', error)
+      haptic.error()
     }
   }
 
-  const handleShareReport = async (reportId: string) => {
-    haptic.selection()
+  const handleToggleReporting = async (enabled: boolean) => {
+    haptic.light()
     try {
-      await shareReportMutation.mutateAsync({ reportId })
+      await updateSettingsMutation.mutateAsync({ reportingEnabled: enabled })
+      setReportingEnabled(enabled)
     } catch (error) {
-      console.error('Failed to share report:', error)
+      console.error('Failed to toggle reporting:', error)
+    }
+  }
+
+  const getDashboardStatus = (status: string) => {
+    switch (status) {
+      case 'active': return { color: 'text-green-600', label: 'Active', icon: CheckCircle }
+      case 'draft': return { color: 'text-yellow-600', label: 'Draft', icon: Edit }
+      case 'archived': return { color: 'text-gray-600', label: 'Archived', icon: Archive }
+      case 'error': return { color: 'text-red-600', label: 'Error', icon: XCircle }
+      default: return { color: 'text-gray-600', label: 'Unknown', icon: Info }
     }
   }
 
   const getReportStatus = (status: string) => {
     switch (status) {
-      case 'completed': return { color: 'text-green-600', label: 'Fullført', icon: TrendingUp }
-      case 'processing': return { color: 'text-yellow-600', label: 'Prosesserer', icon: Clock }
-      case 'failed': return { color: 'text-red-600', label: 'Feilet', icon: TrendingDown }
-      default: return { color: 'text-gray-600', label: 'Ukjent', icon: BarChart3 }
-    }
-  }
-
-  const getInsightPriority = (priority: string) => {
-    switch (priority) {
-      case 'high': return { color: 'bg-red-100 text-red-800', icon: TrendingUp }
-      case 'medium': return { color: 'bg-yellow-100 text-yellow-800', icon: TrendingUp }
-      case 'low': return { color: 'bg-green-100 text-green-800', icon: TrendingDown }
-      default: return { color: 'bg-gray-100 text-gray-800', icon: BarChart3 }
+      case 'completed': return { color: 'text-green-600', label: 'Completed', icon: CheckCircle }
+      case 'generating': return { color: 'text-blue-600', label: 'Generating', icon: RefreshCw }
+      case 'failed': return { color: 'text-red-600', label: 'Failed', icon: XCircle }
+      case 'scheduled': return { color: 'text-purple-600', label: 'Scheduled', icon: Clock }
+      default: return { color: 'text-gray-600', label: 'Unknown', icon: Info }
     }
   }
 
@@ -172,53 +250,18 @@ export function AdvancedReporting({ className }: AdvancedReportingProps) {
         <div>
           <h2 className="text-2xl font-bold">Advanced Reporting</h2>
           <p className="text-muted-foreground">
-            Custom dashboards, data visualization og business intelligence
+            Custom dashboards, report generation og data analytics
           </p>
         </div>
         <div className="flex items-center gap-2">
           <Badge variant="outline" className="flex items-center gap-1">
             <BarChart3 className="w-3 h-3" />
-            BI Ready
+            Reporting Active
           </Badge>
           <Badge variant="outline" className="flex items-center gap-1">
-            <Database className="w-3 h-3" />
-            Real-time
+            <Analytics className="w-3 h-3" />
+            Analytics Ready
           </Badge>
-        </div>
-      </div>
-
-      {/* Time Range Selector */}
-      <div className="flex items-center gap-2">
-        <span className="text-sm font-medium">Tidsperiode:</span>
-        <div className="flex space-x-1 bg-muted p-1 rounded-lg">
-          <Button
-            variant={selectedTimeRange === '7d' ? 'default' : 'ghost'}
-            size="sm"
-            onClick={() => setSelectedTimeRange('7d')}
-          >
-            7 dager
-          </Button>
-          <Button
-            variant={selectedTimeRange === '30d' ? 'default' : 'ghost'}
-            size="sm"
-            onClick={() => setSelectedTimeRange('30d')}
-          >
-            30 dager
-          </Button>
-          <Button
-            variant={selectedTimeRange === '90d' ? 'default' : 'ghost'}
-            size="sm"
-            onClick={() => setSelectedTimeRange('90d')}
-          >
-            90 dager
-          </Button>
-          <Button
-            variant={selectedTimeRange === '1y' ? 'default' : 'ghost'}
-            size="sm"
-            onClick={() => setSelectedTimeRange('1y')}
-          >
-            1 år
-          </Button>
         </div>
       </div>
 
@@ -226,60 +269,60 @@ export function AdvancedReporting({ className }: AdvancedReportingProps) {
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Aktive Dashboards</CardTitle>
-            <BarChart3 className="h-4 w-4 text-blue-600" />
+            <CardTitle className="text-sm font-medium">Active Dashboards</CardTitle>
+            <LayoutDashboard className="h-4 w-4 text-blue-600" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-blue-600">
               {dashboardsQuery.data?.activeDashboards || 0}
             </div>
             <p className="text-xs text-muted-foreground">
-              Konfigurerte dashboards
+              Custom dashboards
             </p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Genererte Rapporter</CardTitle>
-            <FileText className="h-4 w-4 text-green-600" />
+            <CardTitle className="text-sm font-medium">Generated Reports</CardTitle>
+            <Report className="h-4 w-4 text-green-600" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-green-600">
               {reportsQuery.data?.totalReports || 0}
             </div>
             <p className="text-xs text-muted-foreground">
-              Siste {selectedTimeRange}
+              This month
             </p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Data Points</CardTitle>
-            <Database className="h-4 w-4 text-purple-600" />
+            <CardTitle className="text-sm font-medium">Data Analytics</CardTitle>
+            <Analytics className="h-4 w-4 text-purple-600" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-purple-600">
-              {analyticsQuery.data?.totalDataPoints || 0}
+              {analyticsQuery.data?.analyticsScore || 0}%
             </div>
             <p className="text-xs text-muted-foreground">
-              Analyserte datapunkter
+              Analytics accuracy
             </p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">AI Insights</CardTitle>
-            <Sparkles className="h-4 w-4 text-orange-600" />
+            <CardTitle className="text-sm font-medium">Export Volume</CardTitle>
+            <Export className="h-4 w-4 text-orange-600" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-orange-600">
-              {insightsQuery.data?.totalInsights || 0}
+              {reportsQuery.data?.exportVolume || 0}
             </div>
             <p className="text-xs text-muted-foreground">
-              Genererte insights
+              Files exported
             </p>
           </CardContent>
         </Card>
@@ -293,7 +336,7 @@ export function AdvancedReporting({ className }: AdvancedReportingProps) {
           onClick={() => setSelectedTab('dashboards')}
           className="flex-1"
         >
-          <BarChart3 className="w-4 h-4 mr-2" />
+          <LayoutDashboard className="w-4 h-4 mr-2" />
           Dashboards
         </Button>
         <Button
@@ -302,8 +345,8 @@ export function AdvancedReporting({ className }: AdvancedReportingProps) {
           onClick={() => setSelectedTab('reports')}
           className="flex-1"
         >
-          <FileText className="w-4 h-4 mr-2" />
-          Rapporter
+          <Report className="w-4 h-4 mr-2" />
+          Reports
         </Button>
         <Button
           variant={selectedTab === 'analytics' ? 'default' : 'ghost'}
@@ -311,31 +354,32 @@ export function AdvancedReporting({ className }: AdvancedReportingProps) {
           onClick={() => setSelectedTab('analytics')}
           className="flex-1"
         >
-          <Database className="w-4 h-4 mr-2" />
+          <Analytics className="w-4 h-4 mr-2" />
           Analytics
         </Button>
         <Button
-          variant={selectedTab === 'insights' ? 'default' : 'ghost'}
+          variant={selectedTab === 'settings' ? 'default' : 'ghost'}
           size="sm"
-          onClick={() => setSelectedTab('insights')}
+          onClick={() => setSelectedTab('settings')}
           className="flex-1"
         >
-          <Sparkles className="w-4 h-4 mr-2" />
-          Insights
+          <Settings className="w-4 h-4 mr-2" />
+          Settings
         </Button>
       </div>
 
       {/* Dashboards Tab */}
       {selectedTab === 'dashboards' && (
         <div className="space-y-4">
+          {/* Custom Dashboards */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <BarChart3 className="w-5 h-5" />
+                <LayoutDashboard className="w-5 h-5" />
                 Custom Dashboards
               </CardTitle>
               <CardDescription>
-                Konfigurerbare dashboards og visualiseringer
+                Create og manage custom dashboards
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -344,36 +388,60 @@ export function AdvancedReporting({ className }: AdvancedReportingProps) {
                   <div key={dashboard.id} className="flex items-center justify-between p-4 border rounded-lg">
                     <div className="flex items-center gap-3">
                       <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
-                        <BarChart3 className="w-6 h-6 text-blue-600" />
+                        <dashboard.icon className="w-6 h-6 text-blue-600" />
                       </div>
                       <div>
                         <div className="font-medium">{dashboard.name}</div>
                         <div className="text-sm text-muted-foreground">
-                          {dashboard.description}
+                          {dashboard.description} • {dashboard.widgets} widgets
                         </div>
                       </div>
                     </div>
-                    
+
                     <div className="flex items-center gap-3">
                       <div className="text-right">
-                        <div className="text-sm font-medium">{dashboard.widgets} widgets</div>
+                        <div className="text-sm font-medium">{dashboard.lastUpdated}</div>
                         <div className="text-xs text-muted-foreground">
-                          Sist oppdatert: {dashboard.lastUpdated}
+                          {dashboard.views} views
                         </div>
                       </div>
-                      
-                      <div className="flex items-center gap-2">
-                        <Badge variant={dashboard.isPublic ? 'default' : 'secondary'}>
-                          {dashboard.isPublic ? 'Offentlig' : 'Privat'}
-                        </Badge>
-                        
-                        <Button variant="outline" size="sm">
-                          <Eye className="w-4 h-4" />
-                        </Button>
-                        <Button variant="outline" size="sm">
-                          <Edit className="w-4 h-4" />
-                        </Button>
-                      </div>
+
+                      <Button
+                        onClick={() => handleCreateDashboard({ dashboardId: dashboard.id, action: 'edit' })}
+                        variant="outline"
+                        size="sm"
+                      >
+                        <Edit className="w-4 h-4" />
+                      </Button>
+
+                      <Badge variant={dashboard.status === 'active' ? 'default' : 'secondary'}>
+                        {dashboard.status}
+                      </Badge>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Dashboard Analytics */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <BarChart3 className="w-5 h-5" />
+                Dashboard Analytics
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                {dashboardsQuery.data?.dashboardAnalytics?.map((analytic) => (
+                  <div key={analytic.id} className="p-4 border rounded-lg text-center">
+                    <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-2">
+                      <analytic.icon className="w-6 h-6 text-blue-600" />
+                    </div>
+                    <div className="font-medium">{analytic.name}</div>
+                    <div className="text-sm text-muted-foreground">
+                      {analytic.value}
                     </div>
                   </div>
                 ))}
@@ -389,58 +457,74 @@ export function AdvancedReporting({ className }: AdvancedReportingProps) {
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <FileText className="w-5 h-5" />
-                Generated Reports
+                <Report className="w-5 h-5" />
+                Report Generation
               </CardTitle>
               <CardDescription>
-                Automatisk genererte og manuelle rapporter
+                Generate og manage reports
               </CardDescription>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {reportsQuery.data?.reports?.map((report) => {
-                  const status = getReportStatus(report.status)
-                  const StatusIcon = status.icon
-                  
-                  return (
-                    <div key={report.id} className="flex items-center justify-between p-4 border rounded-lg">
-                      <div className="flex items-center gap-3">
-                        <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
-                          <FileText className="w-6 h-6 text-green-600" />
-                        </div>
-                        <div>
-                          <div className="font-medium">{report.name}</div>
-                          <div className="text-sm text-muted-foreground">
-                            {report.type} • {report.format}
-                          </div>
-                        </div>
+                {reportsQuery.data?.reports?.map((report) => (
+                  <div key={report.id} className="flex items-center justify-between p-4 border rounded-lg">
+                    <div className="flex items-center gap-3">
+                      <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
+                        <report.icon className="w-6 h-6 text-green-600" />
                       </div>
-                      
-                      <div className="flex items-center gap-3">
-                        <div className="text-right">
-                          <div className="text-sm font-medium">{report.size}</div>
-                          <div className="text-xs text-muted-foreground">
-                            {report.createdAt}
-                          </div>
-                        </div>
-                        
-                        <div className="flex items-center gap-2">
-                          <Badge className={status.color.replace('text-', 'bg-').replace('-600', '-100') + ' ' + status.color}>
-                            <StatusIcon className="w-3 h-3 mr-1" />
-                            {status.label}
-                          </Badge>
-                          
-                          <Button variant="outline" size="sm" onClick={() => handleExportData(report.format)}>
-                            <Download className="w-4 h-4" />
-                          </Button>
-                          <Button variant="outline" size="sm" onClick={() => handleShareReport(report.id)}>
-                            <Share2 className="w-4 h-4" />
-                          </Button>
+                      <div>
+                        <div className="font-medium">{report.name}</div>
+                        <div className="text-sm text-muted-foreground">
+                          {report.description} • {report.format}
                         </div>
                       </div>
                     </div>
-                  )
-                })}
+
+                    <div className="flex items-center gap-3">
+                      <div className="text-right">
+                        <div className="text-sm font-medium">{report.lastGenerated}</div>
+                        <div className="text-xs text-muted-foreground">
+                          {report.size}
+                        </div>
+                      </div>
+
+                      <Button
+                        onClick={() => handleGenerateReport({ reportId: report.id, action: 'generate' })}
+                        variant="outline"
+                        size="sm"
+                      >
+                        <Report className="w-4 h-4" />
+                      </Button>
+
+                      <Badge variant={report.status === 'completed' ? 'default' : 'secondary'}>
+                        {report.status}
+                      </Badge>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Report Analytics */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <PieChart className="w-5 h-5" />
+                Report Analytics
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                {reportsQuery.data?.reportAnalytics?.map((analytic) => (
+                  <div key={analytic.id} className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-medium">{analytic.name}</span>
+                      <span className="text-sm font-medium">{analytic.value}</span>
+                    </div>
+                    <Progress value={analytic.percentage} className="h-2" />
+                  </div>
+                ))}
               </div>
             </CardContent>
           </Card>
@@ -450,117 +534,142 @@ export function AdvancedReporting({ className }: AdvancedReportingProps) {
       {/* Analytics Tab */}
       {selectedTab === 'analytics' && (
         <div className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* Data Analytics */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Database className="w-5 h-5" />
-                  Data Analytics
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {analyticsQuery.data?.analytics?.map((analytic) => (
-                    <div key={analytic.id} className="space-y-2">
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm font-medium">{analytic.name}</span>
-                        <span className="text-sm font-medium">{analytic.value}</span>
-                      </div>
-                      <Progress value={analytic.percentage} className="h-2" />
-                      <div className="text-xs text-muted-foreground">
-                        {analytic.trend > 0 ? '+' : ''}{analytic.trend}% fra forrige periode
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Visualization Types */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <BarChart3 className="w-5 h-5" />
-                  Visualization Types
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-2 gap-3">
-                  <Button variant="outline" className="h-auto p-4 flex flex-col gap-2">
-                    <BarChart3 className="w-5 h-5" />
-                    <span className="text-sm">Bar Chart</span>
-                  </Button>
-                  <Button variant="outline" className="h-auto p-4 flex flex-col gap-2">
-                    <PieChart className="w-5 h-5" />
-                    <span className="text-sm">Pie Chart</span>
-                  </Button>
-                  <Button variant="outline" className="h-auto p-4 flex flex-col gap-2">
-                    <LineChart className="w-5 h-5" />
-                    <span className="text-sm">Line Chart</span>
-                  </Button>
-                  <Button variant="outline" className="h-auto p-4 flex flex-col gap-2">
-                    <TrendingUp className="w-5 h-5" />
-                    <span className="text-sm">Trend Chart</span>
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        </div>
-      )}
-
-      {/* Insights Tab */}
-      {selectedTab === 'insights' && (
-        <div className="space-y-4">
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <Sparkles className="w-5 h-5" />
-                AI-Generated Insights
+                <Analytics className="w-5 h-5" />
+                Data Analytics
               </CardTitle>
               <CardDescription>
-                Automatisk genererte insights og anbefalinger
+                Advanced data analysis og visualization
               </CardDescription>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {insightsQuery.data?.insights?.map((insight) => {
-                  const priority = getInsightPriority(insight.priority)
-                  const PriorityIcon = priority.icon
-                  
-                  return (
-                    <div key={insight.id} className="flex items-start gap-3 p-4 border rounded-lg">
-                      <div className="w-12 h-12 bg-orange-100 rounded-full flex items-center justify-center">
-                        <Sparkles className="w-6 h-6 text-orange-600" />
+                {analyticsQuery.data?.analyticsTools?.map((tool) => (
+                  <div key={tool.id} className="flex items-center justify-between p-4 border rounded-lg">
+                    <div className="flex items-center gap-3">
+                      <div className="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center">
+                        <tool.icon className="w-6 h-6 text-purple-600" />
                       </div>
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-2">
-                          <div className="font-medium">{insight.title}</div>
-                          <Badge className={priority.color}>
-                            <PriorityIcon className="w-3 h-3 mr-1" />
-                            {insight.priority}
-                          </Badge>
+                      <div>
+                        <div className="font-medium">{tool.name}</div>
+                        <div className="text-sm text-muted-foreground">
+                          {tool.description} • {tool.type}
                         </div>
-                        <div className="text-sm text-muted-foreground mb-2">
-                          {insight.description}
-                        </div>
-                        <div className="text-xs text-muted-foreground">
-                          Confidence: {insight.confidence}% • Generated: {insight.generatedAt}
-                        </div>
-                      </div>
-                      
-                      <div className="flex items-center gap-2">
-                        <Button variant="outline" size="sm">
-                          <Eye className="w-4 h-4" />
-                        </Button>
-                        <Button variant="outline" size="sm">
-                          <Share2 className="w-4 h-4" />
-                        </Button>
                       </div>
                     </div>
-                  )
-                })}
+
+                    <div className="flex items-center gap-3">
+                      <div className="text-right">
+                        <div className="text-sm font-medium">{tool.accuracy}%</div>
+                        <div className="text-xs text-muted-foreground">
+                          {tool.lastRun}
+                        </div>
+                      </div>
+
+                      <Button
+                        onClick={() => handleExportData({ toolId: tool.id, action: 'analyze' })}
+                        variant="outline"
+                        size="sm"
+                      >
+                        <Analytics className="w-4 h-4" />
+                      </Button>
+
+                      <Badge variant={tool.status === 'active' ? 'default' : 'secondary'}>
+                        {tool.status}
+                      </Badge>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Analytics Insights */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <BarChart3 className="w-5 h-5" />
+                Analytics Insights
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                {analyticsQuery.data?.analyticsInsights?.map((insight) => (
+                  <div key={insight.id} className="p-4 border rounded-lg text-center">
+                    <div className="w-12 h-12 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-2">
+                      <insight.icon className="w-6 h-6 text-orange-600" />
+                    </div>
+                    <div className="font-medium">{insight.name}</div>
+                    <div className="text-sm text-muted-foreground">
+                      {insight.value}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {/* Settings Tab */}
+      {selectedTab === 'settings' && (
+        <div className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Settings className="w-5 h-5" />
+                Reporting Settings
+              </CardTitle>
+              <CardDescription>
+                Configure your reporting preferences
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                {settingsQuery.data?.settings?.map((setting) => (
+                  <div key={setting.id} className="flex items-center justify-between p-3 border rounded-lg">
+                    <div className="flex items-center gap-2">
+                      <setting.icon className="w-4 h-4 text-green-600" />
+                      <span className="text-sm font-medium">{setting.name}</span>
+                    </div>
+                    <Switch
+                      checked={setting.enabled}
+                      onCheckedChange={(enabled) => {
+                        if (setting.key === 'reportingEnabled') {
+                          handleToggleReporting(enabled)
+                        }
+                      }}
+                    />
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Reporting Goals */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Target className="w-5 h-5" />
+                Reporting Goals
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                {settingsQuery.data?.reportingGoals?.map((goal) => (
+                  <div key={goal.id} className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-medium">{goal.name}</span>
+                      <span className="text-sm font-medium">{goal.current}%</span>
+                    </div>
+                    <Progress value={goal.current} className="h-2" />
+                    <div className="text-xs text-muted-foreground">
+                      Target: {goal.target}%
+                    </div>
+                  </div>
+                ))}
               </div>
             </CardContent>
           </Card>
@@ -578,20 +687,20 @@ export function AdvancedReporting({ className }: AdvancedReportingProps) {
         <CardContent>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             <Button variant="outline" className="h-auto p-4 flex flex-col gap-2">
-              <Plus className="w-5 h-5" />
-              <span className="text-sm">New Dashboard</span>
+              <LayoutDashboard className="w-5 h-5" />
+              <span className="text-sm">Create Dashboard</span>
             </Button>
             <Button variant="outline" className="h-auto p-4 flex flex-col gap-2">
-              <FileText className="w-5 h-5" />
-              <span className="text-sm">Create Report</span>
+              <Report className="w-5 h-5" />
+              <span className="text-sm">Generate Report</span>
             </Button>
             <Button variant="outline" className="h-auto p-4 flex flex-col gap-2">
-              <Download className="w-5 h-5" />
-              <span className="text-sm">Export Data</span>
+              <Analytics className="w-5 h-5" />
+              <span className="text-sm">Run Analytics</span>
             </Button>
             <Button variant="outline" className="h-auto p-4 flex flex-col gap-2">
-              <Share2 className="w-5 h-5" />
-              <span className="text-sm">Share Report</span>
+              <Settings className="w-5 h-5" />
+              <span className="text-sm">Settings</span>
             </Button>
           </div>
         </CardContent>

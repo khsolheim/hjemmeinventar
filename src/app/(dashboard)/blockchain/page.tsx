@@ -1,11 +1,11 @@
 'use client'
 
-import { BlockchainIntegration } from '@/components/blockchain/BlockchainIntegration'
+import { AdvancedBlockchain } from '@/components/blockchain/AdvancedBlockchain'
 
 export default function BlockchainPage() {
   return (
     <div className="container mx-auto p-6">
-      <BlockchainIntegration />
+      <AdvancedBlockchain />
     </div>
   )
 }

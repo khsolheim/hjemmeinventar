@@ -7,9 +7,11 @@ import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
 import { Switch } from '@/components/ui/switch'
 import {
-  Zap,
+  Play,
+  Music,
+  Video,
+  Gamepad2,
   Settings,
-  Clock,
   BarChart3,
   PieChart,
   TrendingUp,
@@ -17,7 +19,6 @@ import {
   Plus,
   Edit,
   Trash2,
-  Play,
   Pause,
   Stop,
   Timer,
@@ -42,6 +43,7 @@ import {
   Monitor,
   Wifi,
   Bluetooth,
+  Zap,
   Volume2,
   VolumeX,
   Mic,
@@ -104,50 +106,44 @@ import {
   Rocket,
   Sparkles,
   CheckSquare,
+  Clock,
   Target,
   MessageSquare,
   Phone,
-  FileText,
-  Music,
-  Video,
-  Gamepad2,
-  Workflow,
-  Cpu,
-  Code,
-  Terminal
+  FileText
 } from 'lucide-react'
 import { trpc } from '@/lib/trpc/client'
 import { useHapticFeedback } from '@/lib/services/haptic-feedback'
 
-interface AdvancedAutomationProps {
+interface AdvancedEntertainmentProps {
   className?: string
 }
 
-export function AdvancedAutomation({ className }: AdvancedAutomationProps) {
-  const [selectedTab, setSelectedTab] = useState<'workflows' | 'rules' | 'tasks' | 'settings'>('workflows')
-  const [isRunning, setIsRunning] = useState(false)
-  const [automationEnabled, setAutomationEnabled] = useState(true)
-  const [selectedWorkflow, setSelectedWorkflow] = useState<string | null>(null)
-  const [selectedRule, setSelectedRule] = useState<string | null>(null)
+export function AdvancedEntertainment({ className }: AdvancedEntertainmentProps) {
+  const [selectedTab, setSelectedTab] = useState<'media' | 'streaming' | 'gaming' | 'settings'>('media')
+  const [isPlayingMedia, setIsPlayingMedia] = useState(false)
+  const [entertainmentEnabled, setEntertainmentEnabled] = useState(true)
+  const [selectedMedia, setSelectedMedia] = useState<string | null>(null)
+  const [selectedGame, setSelectedGame] = useState<string | null>(null)
   const haptic = useHapticFeedback()
 
-  // Automation queries
-  const workflowsQuery = trpc.automation.getWorkflowsData.useQuery()
-  const rulesQuery = trpc.automation.getRulesData.useQuery()
-  const tasksQuery = trpc.automation.getTasksData.useQuery()
-  const settingsQuery = trpc.automation.getAutomationSettings.useQuery()
+  // Entertainment queries
+  const mediaQuery = trpc.entertainment.getMediaData.useQuery()
+  const streamingQuery = trpc.entertainment.getStreamingData.useQuery()
+  const gamingQuery = trpc.entertainment.getGamingData.useQuery()
+  const settingsQuery = trpc.entertainment.getEntertainmentSettings.useQuery()
 
-  const runWorkflowMutation = trpc.automation.runWorkflow.useMutation()
-  const createRuleMutation = trpc.automation.createRule.useMutation()
-  const scheduleTaskMutation = trpc.automation.scheduleTask.useMutation()
-  const updateSettingsMutation = trpc.automation.updateSettings.useMutation()
+  const playMediaMutation = trpc.entertainment.playMedia.useMutation()
+  const startStreamingMutation = trpc.entertainment.startStreaming.useMutation()
+  const startGameMutation = trpc.entertainment.startGame.useMutation()
+  const updateSettingsMutation = trpc.entertainment.updateSettings.useMutation()
 
-  const handleRunWorkflow = async (workflowData: any) => {
+  const handlePlayMedia = async (mediaData: any) => {
     try {
-      setIsRunning(true)
+      setIsPlayingMedia(true)
       haptic.selection()
 
-      const result = await runWorkflowMutation.mutateAsync(workflowData)
+      const result = await playMediaMutation.mutateAsync(mediaData)
 
       if (result.success) {
         haptic.success()
@@ -155,18 +151,18 @@ export function AdvancedAutomation({ className }: AdvancedAutomationProps) {
         haptic.error()
       }
     } catch (error) {
-      console.error('Failed to run workflow:', error)
+      console.error('Failed to play media:', error)
       haptic.error()
     } finally {
-      setIsRunning(false)
+      setIsPlayingMedia(false)
     }
   }
 
-  const handleCreateRule = async (ruleData: any) => {
+  const handleStartStreaming = async (streamingData: any) => {
     try {
       haptic.selection()
 
-      const result = await createRuleMutation.mutateAsync(ruleData)
+      const result = await startStreamingMutation.mutateAsync(streamingData)
 
       if (result.success) {
         haptic.success()
@@ -174,16 +170,16 @@ export function AdvancedAutomation({ className }: AdvancedAutomationProps) {
         haptic.error()
       }
     } catch (error) {
-      console.error('Failed to create rule:', error)
+      console.error('Failed to start streaming:', error)
       haptic.error()
     }
   }
 
-  const handleScheduleTask = async (taskData: any) => {
+  const handleStartGame = async (gameData: any) => {
     try {
       haptic.selection()
 
-      const result = await scheduleTaskMutation.mutateAsync(taskData)
+      const result = await startGameMutation.mutateAsync(gameData)
 
       if (result.success) {
         haptic.success()
@@ -191,37 +187,37 @@ export function AdvancedAutomation({ className }: AdvancedAutomationProps) {
         haptic.error()
       }
     } catch (error) {
-      console.error('Failed to schedule task:', error)
+      console.error('Failed to start game:', error)
       haptic.error()
     }
   }
 
-  const handleToggleAutomation = async (enabled: boolean) => {
+  const handleToggleEntertainment = async (enabled: boolean) => {
     haptic.light()
     try {
-      await updateSettingsMutation.mutateAsync({ automationEnabled: enabled })
-      setAutomationEnabled(enabled)
+      await updateSettingsMutation.mutateAsync({ entertainmentEnabled: enabled })
+      setEntertainmentEnabled(enabled)
     } catch (error) {
-      console.error('Failed to toggle automation:', error)
+      console.error('Failed to toggle entertainment:', error)
     }
   }
 
-  const getWorkflowStatus = (status: string) => {
+  const getMediaStatus = (status: string) => {
     switch (status) {
-      case 'running': return { color: 'text-green-600', label: 'Running', icon: Play }
+      case 'playing': return { color: 'text-green-600', label: 'Playing', icon: Play }
       case 'paused': return { color: 'text-yellow-600', label: 'Paused', icon: Pause }
-      case 'completed': return { color: 'text-blue-600', label: 'Completed', icon: CheckCircle }
-      case 'failed': return { color: 'text-red-600', label: 'Failed', icon: XCircle }
+      case 'stopped': return { color: 'text-red-600', label: 'Stopped', icon: Stop }
+      case 'queued': return { color: 'text-blue-600', label: 'Queued', icon: Clock }
       default: return { color: 'text-gray-600', label: 'Unknown', icon: Info }
     }
   }
 
-  const getRuleStatus = (status: string) => {
+  const getGameStatus = (status: string) => {
     switch (status) {
-      case 'active': return { color: 'text-green-600', label: 'Active', icon: Zap }
-      case 'inactive': return { color: 'text-gray-600', label: 'Inactive', icon: Pause }
-      case 'error': return { color: 'text-red-600', label: 'Error', icon: XCircle }
-      case 'testing': return { color: 'text-blue-600', label: 'Testing', icon: Code }
+      case 'active': return { color: 'text-green-600', label: 'Active', icon: Gamepad2 }
+      case 'paused': return { color: 'text-yellow-600', label: 'Paused', icon: Pause }
+      case 'completed': return { color: 'text-blue-600', label: 'Completed', icon: Trophy }
+      case 'abandoned': return { color: 'text-red-600', label: 'Abandoned', icon: XCircle }
       default: return { color: 'text-gray-600', label: 'Unknown', icon: Info }
     }
   }
@@ -231,81 +227,81 @@ export function AdvancedAutomation({ className }: AdvancedAutomationProps) {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold">Advanced Automation</h2>
+          <h2 className="text-2xl font-bold">Advanced Entertainment</h2>
           <p className="text-muted-foreground">
-            Workflow management, smart rules og scheduled tasks
+            Media management, streaming og gaming
           </p>
         </div>
         <div className="flex items-center gap-2">
           <Badge variant="outline" className="flex items-center gap-1">
-            <Zap className="w-3 h-3" />
-            Automation Active
+            <Play className="w-3 h-3" />
+            Entertainment Ready
           </Badge>
           <Badge variant="outline" className="flex items-center gap-1">
-            <Workflow className="w-3 h-3" />
-            Workflows Running
+            <Music className="w-3 h-3" />
+            Media Active
           </Badge>
         </div>
       </div>
 
-      {/* Automation Overview */}
+      {/* Entertainment Overview */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Active Workflows</CardTitle>
-            <Workflow className="h-4 w-4 text-green-600" />
+            <CardTitle className="text-sm font-medium">Total Media</CardTitle>
+            <Music className="h-4 w-4 text-green-600" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-green-600">
-              {workflowsQuery.data?.activeWorkflows || 0}
+              {mediaQuery.data?.totalMedia || 0}
             </div>
             <p className="text-xs text-muted-foreground">
-              Currently running
+              Songs, videos, podcasts
             </p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Smart Rules</CardTitle>
-            <Zap className="h-4 w-4 text-blue-600" />
+            <CardTitle className="text-sm font-medium">Streaming Time</CardTitle>
+            <Video className="h-4 w-4 text-blue-600" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-blue-600">
-              {rulesQuery.data?.totalRules || 0}
+              {streamingQuery.data?.totalStreamingTime || 0}h
             </div>
             <p className="text-xs text-muted-foreground">
-              Active rules
+              This week
             </p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Scheduled Tasks</CardTitle>
-            <Clock className="h-4 w-4 text-purple-600" />
+            <CardTitle className="text-sm font-medium">Games Played</CardTitle>
+            <Gamepad2 className="h-4 w-4 text-purple-600" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-purple-600">
-              {tasksQuery.data?.scheduledTasks || 0}
+              {gamingQuery.data?.totalGamesPlayed || 0}
             </div>
             <p className="text-xs text-muted-foreground">
-              Pending execution
+              This month
             </p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Automation Score</CardTitle>
+            <CardTitle className="text-sm font-medium">Entertainment Score</CardTitle>
             <Star className="h-4 w-4 text-orange-600" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-orange-600">
-              {settingsQuery.data?.automationScore || 0}%
+              {settingsQuery.data?.entertainmentScore || 0}%
             </div>
             <p className="text-xs text-muted-foreground">
-              Efficiency rating
+              Overall satisfaction
             </p>
           </CardContent>
         </Card>
@@ -314,31 +310,31 @@ export function AdvancedAutomation({ className }: AdvancedAutomationProps) {
       {/* Tab Navigation */}
       <div className="flex space-x-1 bg-muted p-1 rounded-lg">
         <Button
-          variant={selectedTab === 'workflows' ? 'default' : 'ghost'}
+          variant={selectedTab === 'media' ? 'default' : 'ghost'}
           size="sm"
-          onClick={() => setSelectedTab('workflows')}
+          onClick={() => setSelectedTab('media')}
           className="flex-1"
         >
-          <Workflow className="w-4 h-4 mr-2" />
-          Workflows
+          <Music className="w-4 h-4 mr-2" />
+          Media
         </Button>
         <Button
-          variant={selectedTab === 'rules' ? 'default' : 'ghost'}
+          variant={selectedTab === 'streaming' ? 'default' : 'ghost'}
           size="sm"
-          onClick={() => setSelectedTab('rules')}
+          onClick={() => setSelectedTab('streaming')}
           className="flex-1"
         >
-          <Zap className="w-4 h-4 mr-2" />
-          Rules
+          <Video className="w-4 h-4 mr-2" />
+          Streaming
         </Button>
         <Button
-          variant={selectedTab === 'tasks' ? 'default' : 'ghost'}
+          variant={selectedTab === 'gaming' ? 'default' : 'ghost'}
           size="sm"
-          onClick={() => setSelectedTab('tasks')}
+          onClick={() => setSelectedTab('gaming')}
           className="flex-1"
         >
-          <Clock className="w-4 h-4 mr-2" />
-          Tasks
+          <Gamepad2 className="w-4 h-4 mr-2" />
+          Gaming
         </Button>
         <Button
           variant={selectedTab === 'settings' ? 'default' : 'ghost'}
@@ -351,54 +347,54 @@ export function AdvancedAutomation({ className }: AdvancedAutomationProps) {
         </Button>
       </div>
 
-      {/* Workflows Tab */}
-      {selectedTab === 'workflows' && (
+      {/* Media Tab */}
+      {selectedTab === 'media' && (
         <div className="space-y-4">
-          {/* Workflow Management */}
+          {/* Media Library */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <Workflow className="w-5 h-5" />
-                Workflow Management
+                <Music className="w-5 h-5" />
+                Media Library
               </CardTitle>
               <CardDescription>
-                Manage og monitor your automation workflows
+                Manage your music, videos og podcasts
               </CardDescription>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {workflowsQuery.data?.workflows?.map((workflow) => (
-                  <div key={workflow.id} className="flex items-center justify-between p-4 border rounded-lg">
+                {mediaQuery.data?.mediaLibrary?.map((media) => (
+                  <div key={media.id} className="flex items-center justify-between p-4 border rounded-lg">
                     <div className="flex items-center gap-3">
                       <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
-                        <workflow.icon className="w-6 h-6 text-green-600" />
+                        <media.icon className="w-6 h-6 text-green-600" />
                       </div>
                       <div>
-                        <div className="font-medium">{workflow.name}</div>
+                        <div className="font-medium">{media.title}</div>
                         <div className="text-sm text-muted-foreground">
-                          {workflow.description} • {workflow.steps} steps
+                          {media.artist} • {media.duration}
                         </div>
                       </div>
                     </div>
 
                     <div className="flex items-center gap-3">
                       <div className="text-right">
-                        <div className="text-sm font-medium">{workflow.lastRun}</div>
+                        <div className="text-sm font-medium">{media.genre}</div>
                         <div className="text-xs text-muted-foreground">
-                          {workflow.duration}
+                          {media.year}
                         </div>
                       </div>
 
                       <Button
-                        onClick={() => handleRunWorkflow({ workflowId: workflow.id, action: 'run' })}
+                        onClick={() => handlePlayMedia({ mediaId: media.id, action: 'play' })}
                         variant="outline"
                         size="sm"
                       >
                         <Play className="w-4 h-4" />
                       </Button>
 
-                      <Badge variant={workflow.status === 'running' ? 'default' : 'secondary'}>
-                        {workflow.status}
+                      <Badge variant={media.status === 'playing' ? 'default' : 'secondary'}>
+                        {media.status}
                       </Badge>
                     </div>
                   </div>
@@ -407,17 +403,17 @@ export function AdvancedAutomation({ className }: AdvancedAutomationProps) {
             </CardContent>
           </Card>
 
-          {/* Workflow Analytics */}
+          {/* Media Analytics */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <BarChart3 className="w-5 h-5" />
-                Workflow Analytics
+                Media Analytics
               </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                {workflowsQuery.data?.workflowAnalytics?.map((analytic) => (
+                {mediaQuery.data?.mediaAnalytics?.map((analytic) => (
                   <div key={analytic.id} className="p-4 border rounded-lg text-center">
                     <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-2">
                       <analytic.icon className="w-6 h-6 text-blue-600" />
@@ -434,53 +430,53 @@ export function AdvancedAutomation({ className }: AdvancedAutomationProps) {
         </div>
       )}
 
-      {/* Rules Tab */}
-      {selectedTab === 'rules' && (
+      {/* Streaming Tab */}
+      {selectedTab === 'streaming' && (
         <div className="space-y-4">
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <Zap className="w-5 h-5" />
-                Smart Rules
+                <Video className="w-5 h-5" />
+                Streaming Services
               </CardTitle>
               <CardDescription>
-                Create og manage conditional automation rules
+                Manage your streaming subscriptions og content
               </CardDescription>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {rulesQuery.data?.smartRules?.map((rule) => (
-                  <div key={rule.id} className="flex items-center justify-between p-4 border rounded-lg">
+                {streamingQuery.data?.streamingServices?.map((service) => (
+                  <div key={service.id} className="flex items-center justify-between p-4 border rounded-lg">
                     <div className="flex items-center gap-3">
                       <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
-                        <rule.icon className="w-6 h-6 text-blue-600" />
+                        <service.icon className="w-6 h-6 text-blue-600" />
                       </div>
                       <div>
-                        <div className="font-medium">{rule.name}</div>
+                        <div className="font-medium">{service.name}</div>
                         <div className="text-sm text-muted-foreground">
-                          {rule.condition} → {rule.action}
+                          {service.content} • {service.watchTime}
                         </div>
                       </div>
                     </div>
 
                     <div className="flex items-center gap-3">
                       <div className="text-right">
-                        <div className="text-sm font-medium">{rule.triggerCount}</div>
+                        <div className="text-sm font-medium">{service.subscription}</div>
                         <div className="text-xs text-muted-foreground">
-                          {rule.lastTriggered}
+                          {service.nextBilling}
                         </div>
                       </div>
 
                       <Button
-                        onClick={() => handleCreateRule({ ruleId: rule.id, action: 'test' })}
+                        onClick={() => handleStartStreaming({ serviceId: service.id, content: 'latest' })}
                         variant="outline"
                         size="sm"
                       >
-                        <Code className="w-4 h-4" />
+                        <Play className="w-4 h-4" />
                       </Button>
 
-                      <Badge variant={rule.status === 'active' ? 'default' : 'secondary'}>
-                        {rule.status}
+                      <Badge variant={service.status === 'active' ? 'default' : 'secondary'}>
+                        {service.status}
                       </Badge>
                     </div>
                   </div>
@@ -489,17 +485,17 @@ export function AdvancedAutomation({ className }: AdvancedAutomationProps) {
             </CardContent>
           </Card>
 
-          {/* Rules Analytics */}
+          {/* Streaming Analytics */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <PieChart className="w-5 h-5" />
-                Rules Analytics
+                Streaming Analytics
               </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {rulesQuery.data?.rulesAnalytics?.map((analytic) => (
+                {streamingQuery.data?.streamingAnalytics?.map((analytic) => (
                   <div key={analytic.id} className="space-y-2">
                     <div className="flex items-center justify-between">
                       <span className="text-sm font-medium">{analytic.name}</span>
@@ -514,53 +510,53 @@ export function AdvancedAutomation({ className }: AdvancedAutomationProps) {
         </div>
       )}
 
-      {/* Tasks Tab */}
-      {selectedTab === 'tasks' && (
+      {/* Gaming Tab */}
+      {selectedTab === 'gaming' && (
         <div className="space-y-4">
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <Clock className="w-5 h-5" />
-                Scheduled Tasks
+                <Gamepad2 className="w-5 h-5" />
+                Gaming Library
               </CardTitle>
               <CardDescription>
-                Manage time-based automation tasks
+                Manage your games og gaming progress
               </CardDescription>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {tasksQuery.data?.scheduledTasks?.map((task) => (
-                  <div key={task.id} className="flex items-center justify-between p-4 border rounded-lg">
+                {gamingQuery.data?.gamingLibrary?.map((game) => (
+                  <div key={game.id} className="flex items-center justify-between p-4 border rounded-lg">
                     <div className="flex items-center gap-3">
                       <div className="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center">
-                        <task.icon className="w-6 h-6 text-purple-600" />
+                        <game.icon className="w-6 h-6 text-purple-600" />
                       </div>
                       <div>
-                        <div className="font-medium">{task.name}</div>
+                        <div className="font-medium">{game.title}</div>
                         <div className="text-sm text-muted-foreground">
-                          {task.schedule} • {task.type}
+                          {game.platform} • {game.playTime}
                         </div>
                       </div>
                     </div>
 
                     <div className="flex items-center gap-3">
                       <div className="text-right">
-                        <div className="text-sm font-medium">{task.nextRun}</div>
+                        <div className="text-sm font-medium">{game.progress}%</div>
                         <div className="text-xs text-muted-foreground">
-                          {task.frequency}
+                          {game.achievements} achievements
                         </div>
                       </div>
 
                       <Button
-                        onClick={() => handleScheduleTask({ taskId: task.id, action: 'schedule' })}
+                        onClick={() => handleStartGame({ gameId: game.id, action: 'play' })}
                         variant="outline"
                         size="sm"
                       >
-                        <Clock className="w-4 h-4" />
+                        <Play className="w-4 h-4" />
                       </Button>
 
-                      <Badge variant={task.status === 'scheduled' ? 'default' : 'secondary'}>
-                        {task.status}
+                      <Badge variant={game.status === 'active' ? 'default' : 'secondary'}>
+                        {game.status}
                       </Badge>
                     </div>
                   </div>
@@ -569,17 +565,17 @@ export function AdvancedAutomation({ className }: AdvancedAutomationProps) {
             </CardContent>
           </Card>
 
-          {/* Task Analytics */}
+          {/* Gaming Analytics */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <BarChart3 className="w-5 h-5" />
-                Task Analytics
+                Gaming Analytics
               </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                {tasksQuery.data?.taskAnalytics?.map((analytic) => (
+                {gamingQuery.data?.gamingAnalytics?.map((analytic) => (
                   <div key={analytic.id} className="p-4 border rounded-lg text-center">
                     <div className="w-12 h-12 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-2">
                       <analytic.icon className="w-6 h-6 text-orange-600" />
@@ -603,10 +599,10 @@ export function AdvancedAutomation({ className }: AdvancedAutomationProps) {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Settings className="w-5 h-5" />
-                Automation Settings
+                Entertainment Settings
               </CardTitle>
               <CardDescription>
-                Configure your automation preferences
+                Configure your entertainment preferences
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -620,8 +616,8 @@ export function AdvancedAutomation({ className }: AdvancedAutomationProps) {
                     <Switch
                       checked={setting.enabled}
                       onCheckedChange={(enabled) => {
-                        if (setting.key === 'automationEnabled') {
-                          handleToggleAutomation(enabled)
+                        if (setting.key === 'entertainmentEnabled') {
+                          handleToggleEntertainment(enabled)
                         }
                       }}
                     />
@@ -631,17 +627,17 @@ export function AdvancedAutomation({ className }: AdvancedAutomationProps) {
             </CardContent>
           </Card>
 
-          {/* Automation Goals */}
+          {/* Entertainment Goals */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Target className="w-5 h-5" />
-                Automation Goals
+                Entertainment Goals
               </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {settingsQuery.data?.automationGoals?.map((goal) => (
+                {settingsQuery.data?.entertainmentGoals?.map((goal) => (
                   <div key={goal.id} className="space-y-2">
                     <div className="flex items-center justify-between">
                       <span className="text-sm font-medium">{goal.name}</span>
@@ -670,16 +666,16 @@ export function AdvancedAutomation({ className }: AdvancedAutomationProps) {
         <CardContent>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             <Button variant="outline" className="h-auto p-4 flex flex-col gap-2">
-              <Workflow className="w-5 h-5" />
-              <span className="text-sm">Run Workflow</span>
+              <Play className="w-5 h-5" />
+              <span className="text-sm">Play Media</span>
             </Button>
             <Button variant="outline" className="h-auto p-4 flex flex-col gap-2">
-              <Zap className="w-5 h-5" />
-              <span className="text-sm">Create Rule</span>
+              <Video className="w-5 h-5" />
+              <span className="text-sm">Start Streaming</span>
             </Button>
             <Button variant="outline" className="h-auto p-4 flex flex-col gap-2">
-              <Clock className="w-5 h-5" />
-              <span className="text-sm">Schedule Task</span>
+              <Gamepad2 className="w-5 h-5" />
+              <span className="text-sm">Start Game</span>
             </Button>
             <Button variant="outline" className="h-auto p-4 flex flex-col gap-2">
               <Settings className="w-5 h-5" />

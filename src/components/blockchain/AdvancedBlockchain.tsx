@@ -7,11 +7,8 @@ import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
 import { Switch } from '@/components/ui/switch'
 import {
-  Zap,
-  Settings,
-  Clock,
   BarChart3,
-  PieChart,
+  Settings,
   TrendingUp,
   Calendar,
   Plus,
@@ -114,40 +111,164 @@ import {
   Workflow,
   Cpu,
   Code,
-  Terminal
+  Terminal,
+  Clock,
+  Webhook,
+  Api,
+  Database as Db,
+  Network,
+  Gauge,
+  HardDrive,
+  Memory,
+  Cpu as Processor,
+  Wifi as NetworkIcon,
+  HardDrive as Storage,
+  Activity as Performance,
+  PieChart,
+  LineChart,
+  TrendingDown,
+  Download as Export,
+  FileText as Report,
+  BarChart,
+  PieChart as Chart,
+  Activity as Analytics,
+  Link,
+  Wallet,
+  Coins,
+  Bitcoin,
+  Ethereum,
+  Zap as Lightning,
+  Shield as Security,
+  Lock as Privacy,
+  Globe as Web3,
+  Database as Blockchain,
+  Network as DeFi,
+  Activity as Mining,
+  Timer as Gas,
+  DollarSign as Token,
+  Star as NFT,
+  Award as SmartContract,
+  Trophy as Governance,
+  Crown as DAO,
+  Rocket as Deploy,
+  Sparkles as Mint,
+  CheckSquare as Verify,
+  Target as Consensus,
+  MessageSquare as Transaction,
+  Phone as Mobile,
+  FileText as Document,
+  Music as Audio,
+  Video as Media,
+  Gamepad2 as Gaming,
+  Workflow as Workflow,
+  Cpu as Compute,
+  Code as Code,
+  Terminal as CLI,
+  Clock as Time,
+  Webhook as Webhook,
+  Api as API,
+  Database as Storage,
+  Network as Network,
+  Gauge as Metrics,
+  HardDrive as Storage,
+  Memory as Memory,
+  Cpu as CPU,
+  Wifi as WiFi,
+  HardDrive as Disk,
+  Activity as Activity,
+  PieChart as Chart,
+  LineChart as Trend,
+  TrendingDown as Decline,
+  Download as Download,
+  FileText as File,
+  BarChart as Graph,
+  PieChart as Circle,
+  Activity as Monitor,
+  Link as Connect,
+  Wallet as Wallet,
+  Coins as Coins,
+  Bitcoin as BTC,
+  Ethereum as ETH,
+  Zap as Lightning,
+  Shield as Security,
+  Lock as Privacy,
+  Globe as Web3,
+  Database as Chain,
+  Network as Network,
+  Activity as Mining,
+  Timer as Gas,
+  DollarSign as Money,
+  Star as NFT,
+  Award as Contract,
+  Trophy as Governance,
+  Crown as DAO,
+  Rocket as Deploy,
+  Sparkles as Mint,
+  CheckSquare as Verify,
+  Target as Consensus,
+  MessageSquare as Message,
+  Phone as Mobile,
+  FileText as Document,
+  Music as Audio,
+  Video as Media,
+  Gamepad2 as Gaming,
+  Workflow as Workflow,
+  Cpu as Compute,
+  Code as Code,
+  Terminal as CLI,
+  Clock as Time,
+  Webhook as Webhook,
+  Api as API,
+  Database as Storage,
+  Network as Network,
+  Gauge as Metrics,
+  HardDrive as Storage,
+  Memory as Memory,
+  Cpu as CPU,
+  Wifi as WiFi,
+  HardDrive as Disk,
+  Activity as Activity,
+  PieChart as Chart,
+  LineChart as Trend,
+  TrendingDown as Decline,
+  Download as Download,
+  FileText as File,
+  BarChart as Graph,
+  PieChart as Circle,
+  Activity as Monitor
 } from 'lucide-react'
 import { trpc } from '@/lib/trpc/client'
 import { useHapticFeedback } from '@/lib/services/haptic-feedback'
 
-interface AdvancedAutomationProps {
+interface AdvancedBlockchainProps {
   className?: string
 }
 
-export function AdvancedAutomation({ className }: AdvancedAutomationProps) {
-  const [selectedTab, setSelectedTab] = useState<'workflows' | 'rules' | 'tasks' | 'settings'>('workflows')
-  const [isRunning, setIsRunning] = useState(false)
-  const [automationEnabled, setAutomationEnabled] = useState(true)
-  const [selectedWorkflow, setSelectedWorkflow] = useState<string | null>(null)
-  const [selectedRule, setSelectedRule] = useState<string | null>(null)
+export function AdvancedBlockchain({ className }: AdvancedBlockchainProps) {
+  const [selectedTab, setSelectedTab] = useState<'nfts' | 'contracts' | 'web3' | 'settings'>('nfts')
+  const [isMinting, setIsMinting] = useState(false)
+  const [blockchainEnabled, setBlockchainEnabled] = useState(true)
+  const [selectedNFT, setSelectedNFT] = useState<string | null>(null)
+  const [selectedContract, setSelectedContract] = useState<string | null>(null)
   const haptic = useHapticFeedback()
 
-  // Automation queries
-  const workflowsQuery = trpc.automation.getWorkflowsData.useQuery()
-  const rulesQuery = trpc.automation.getRulesData.useQuery()
-  const tasksQuery = trpc.automation.getTasksData.useQuery()
-  const settingsQuery = trpc.automation.getAutomationSettings.useQuery()
+  // Blockchain queries
+  const nftsQuery = trpc.blockchain.getNFTsData.useQuery()
+  const contractsQuery = trpc.blockchain.getContractsData.useQuery()
+  const web3Query = trpc.blockchain.getWeb3Data.useQuery()
+  const settingsQuery = trpc.blockchain.getBlockchainSettings.useQuery()
 
-  const runWorkflowMutation = trpc.automation.runWorkflow.useMutation()
-  const createRuleMutation = trpc.automation.createRule.useMutation()
-  const scheduleTaskMutation = trpc.automation.scheduleTask.useMutation()
-  const updateSettingsMutation = trpc.automation.updateSettings.useMutation()
+  const mintNFTMutation = trpc.blockchain.mintNFT.useMutation()
+  const deployContractMutation = trpc.blockchain.deployContract.useMutation()
+  const connectWalletMutation = trpc.blockchain.connectWallet.useMutation()
+  const updateSettingsMutation = trpc.blockchain.updateSettings.useMutation()
 
-  const handleRunWorkflow = async (workflowData: any) => {
+  const handleMintNFT = async (nftData: any) => {
     try {
-      setIsRunning(true)
+      setIsMinting(true)
       haptic.selection()
 
-      const result = await runWorkflowMutation.mutateAsync(workflowData)
+      const result = await mintNFTMutation.mutateAsync(nftData)
 
       if (result.success) {
         haptic.success()
@@ -155,18 +276,18 @@ export function AdvancedAutomation({ className }: AdvancedAutomationProps) {
         haptic.error()
       }
     } catch (error) {
-      console.error('Failed to run workflow:', error)
+      console.error('Failed to mint NFT:', error)
       haptic.error()
     } finally {
-      setIsRunning(false)
+      setIsMinting(false)
     }
   }
 
-  const handleCreateRule = async (ruleData: any) => {
+  const handleDeployContract = async (contractData: any) => {
     try {
       haptic.selection()
 
-      const result = await createRuleMutation.mutateAsync(ruleData)
+      const result = await deployContractMutation.mutateAsync(contractData)
 
       if (result.success) {
         haptic.success()
@@ -174,16 +295,16 @@ export function AdvancedAutomation({ className }: AdvancedAutomationProps) {
         haptic.error()
       }
     } catch (error) {
-      console.error('Failed to create rule:', error)
+      console.error('Failed to deploy contract:', error)
       haptic.error()
     }
   }
 
-  const handleScheduleTask = async (taskData: any) => {
+  const handleConnectWallet = async (walletData: any) => {
     try {
       haptic.selection()
 
-      const result = await scheduleTaskMutation.mutateAsync(taskData)
+      const result = await connectWalletMutation.mutateAsync(walletData)
 
       if (result.success) {
         haptic.success()
@@ -191,37 +312,37 @@ export function AdvancedAutomation({ className }: AdvancedAutomationProps) {
         haptic.error()
       }
     } catch (error) {
-      console.error('Failed to schedule task:', error)
+      console.error('Failed to connect wallet:', error)
       haptic.error()
     }
   }
 
-  const handleToggleAutomation = async (enabled: boolean) => {
+  const handleToggleBlockchain = async (enabled: boolean) => {
     haptic.light()
     try {
-      await updateSettingsMutation.mutateAsync({ automationEnabled: enabled })
-      setAutomationEnabled(enabled)
+      await updateSettingsMutation.mutateAsync({ blockchainEnabled: enabled })
+      setBlockchainEnabled(enabled)
     } catch (error) {
-      console.error('Failed to toggle automation:', error)
+      console.error('Failed to toggle blockchain:', error)
     }
   }
 
-  const getWorkflowStatus = (status: string) => {
+  const getNFTStatus = (status: string) => {
     switch (status) {
-      case 'running': return { color: 'text-green-600', label: 'Running', icon: Play }
-      case 'paused': return { color: 'text-yellow-600', label: 'Paused', icon: Pause }
-      case 'completed': return { color: 'text-blue-600', label: 'Completed', icon: CheckCircle }
+      case 'minted': return { color: 'text-green-600', label: 'Minted', icon: CheckCircle }
+      case 'minting': return { color: 'text-blue-600', label: 'Minting', icon: RefreshCw }
       case 'failed': return { color: 'text-red-600', label: 'Failed', icon: XCircle }
+      case 'pending': return { color: 'text-yellow-600', label: 'Pending', icon: Clock }
       default: return { color: 'text-gray-600', label: 'Unknown', icon: Info }
     }
   }
 
-  const getRuleStatus = (status: string) => {
+  const getContractStatus = (status: string) => {
     switch (status) {
-      case 'active': return { color: 'text-green-600', label: 'Active', icon: Zap }
-      case 'inactive': return { color: 'text-gray-600', label: 'Inactive', icon: Pause }
-      case 'error': return { color: 'text-red-600', label: 'Error', icon: XCircle }
-      case 'testing': return { color: 'text-blue-600', label: 'Testing', icon: Code }
+      case 'deployed': return { color: 'text-green-600', label: 'Deployed', icon: CheckCircle }
+      case 'deploying': return { color: 'text-blue-600', label: 'Deploying', icon: RefreshCw }
+      case 'failed': return { color: 'text-red-600', label: 'Failed', icon: XCircle }
+      case 'testing': return { color: 'text-purple-600', label: 'Testing', icon: Code }
       default: return { color: 'text-gray-600', label: 'Unknown', icon: Info }
     }
   }
@@ -231,81 +352,81 @@ export function AdvancedAutomation({ className }: AdvancedAutomationProps) {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold">Advanced Automation</h2>
+          <h2 className="text-2xl font-bold">Advanced Blockchain</h2>
           <p className="text-muted-foreground">
-            Workflow management, smart rules og scheduled tasks
+            NFT management, smart contracts og Web3 integration
           </p>
         </div>
         <div className="flex items-center gap-2">
           <Badge variant="outline" className="flex items-center gap-1">
-            <Zap className="w-3 h-3" />
-            Automation Active
+            <Blockchain className="w-3 h-3" />
+            Blockchain Active
           </Badge>
           <Badge variant="outline" className="flex items-center gap-1">
-            <Workflow className="w-3 h-3" />
-            Workflows Running
+            <Web3 className="w-3 h-3" />
+            Web3 Ready
           </Badge>
         </div>
       </div>
 
-      {/* Automation Overview */}
+      {/* Blockchain Overview */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Active Workflows</CardTitle>
-            <Workflow className="h-4 w-4 text-green-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-green-600">
-              {workflowsQuery.data?.activeWorkflows || 0}
-            </div>
-            <p className="text-xs text-muted-foreground">
-              Currently running
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Smart Rules</CardTitle>
-            <Zap className="h-4 w-4 text-blue-600" />
+            <CardTitle className="text-sm font-medium">Total NFTs</CardTitle>
+            <Star className="h-4 w-4 text-blue-600" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-blue-600">
-              {rulesQuery.data?.totalRules || 0}
+              {nftsQuery.data?.totalNFTs || 0}
             </div>
             <p className="text-xs text-muted-foreground">
-              Active rules
+              Minted NFTs
             </p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Scheduled Tasks</CardTitle>
-            <Clock className="h-4 w-4 text-purple-600" />
+            <CardTitle className="text-sm font-medium">Smart Contracts</CardTitle>
+            <Award className="h-4 w-4 text-green-600" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-green-600">
+              {contractsQuery.data?.totalContracts || 0}
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Deployed contracts
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Connected Wallets</CardTitle>
+            <Wallet className="h-4 w-4 text-purple-600" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-purple-600">
-              {tasksQuery.data?.scheduledTasks || 0}
+              {web3Query.data?.connectedWallets || 0}
             </div>
             <p className="text-xs text-muted-foreground">
-              Pending execution
+              Active connections
             </p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Automation Score</CardTitle>
-            <Star className="h-4 w-4 text-orange-600" />
+            <CardTitle className="text-sm font-medium">Gas Price</CardTitle>
+            <Timer className="h-4 w-4 text-orange-600" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-orange-600">
-              {settingsQuery.data?.automationScore || 0}%
+              {web3Query.data?.gasPrice || 0} Gwei
             </div>
             <p className="text-xs text-muted-foreground">
-              Efficiency rating
+              Current gas price
             </p>
           </CardContent>
         </Card>
@@ -314,31 +435,31 @@ export function AdvancedAutomation({ className }: AdvancedAutomationProps) {
       {/* Tab Navigation */}
       <div className="flex space-x-1 bg-muted p-1 rounded-lg">
         <Button
-          variant={selectedTab === 'workflows' ? 'default' : 'ghost'}
+          variant={selectedTab === 'nfts' ? 'default' : 'ghost'}
           size="sm"
-          onClick={() => setSelectedTab('workflows')}
+          onClick={() => setSelectedTab('nfts')}
           className="flex-1"
         >
-          <Workflow className="w-4 h-4 mr-2" />
-          Workflows
+          <Star className="w-4 h-4 mr-2" />
+          NFTs
         </Button>
         <Button
-          variant={selectedTab === 'rules' ? 'default' : 'ghost'}
+          variant={selectedTab === 'contracts' ? 'default' : 'ghost'}
           size="sm"
-          onClick={() => setSelectedTab('rules')}
+          onClick={() => setSelectedTab('contracts')}
           className="flex-1"
         >
-          <Zap className="w-4 h-4 mr-2" />
-          Rules
+          <Award className="w-4 h-4 mr-2" />
+          Contracts
         </Button>
         <Button
-          variant={selectedTab === 'tasks' ? 'default' : 'ghost'}
+          variant={selectedTab === 'web3' ? 'default' : 'ghost'}
           size="sm"
-          onClick={() => setSelectedTab('tasks')}
+          onClick={() => setSelectedTab('web3')}
           className="flex-1"
         >
-          <Clock className="w-4 h-4 mr-2" />
-          Tasks
+          <Web3 className="w-4 h-4 mr-2" />
+          Web3
         </Button>
         <Button
           variant={selectedTab === 'settings' ? 'default' : 'ghost'}
@@ -351,54 +472,54 @@ export function AdvancedAutomation({ className }: AdvancedAutomationProps) {
         </Button>
       </div>
 
-      {/* Workflows Tab */}
-      {selectedTab === 'workflows' && (
+      {/* NFTs Tab */}
+      {selectedTab === 'nfts' && (
         <div className="space-y-4">
-          {/* Workflow Management */}
+          {/* NFT Management */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <Workflow className="w-5 h-5" />
-                Workflow Management
+                <Star className="w-5 h-5" />
+                NFT Management
               </CardTitle>
               <CardDescription>
-                Manage og monitor your automation workflows
+                Create og manage your NFTs
               </CardDescription>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {workflowsQuery.data?.workflows?.map((workflow) => (
-                  <div key={workflow.id} className="flex items-center justify-between p-4 border rounded-lg">
+                {nftsQuery.data?.nfts?.map((nft) => (
+                  <div key={nft.id} className="flex items-center justify-between p-4 border rounded-lg">
                     <div className="flex items-center gap-3">
-                      <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
-                        <workflow.icon className="w-6 h-6 text-green-600" />
+                      <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
+                        <nft.icon className="w-6 h-6 text-blue-600" />
                       </div>
                       <div>
-                        <div className="font-medium">{workflow.name}</div>
+                        <div className="font-medium">{nft.name}</div>
                         <div className="text-sm text-muted-foreground">
-                          {workflow.description} • {workflow.steps} steps
+                          {nft.description} • {nft.tokenId}
                         </div>
                       </div>
                     </div>
 
                     <div className="flex items-center gap-3">
                       <div className="text-right">
-                        <div className="text-sm font-medium">{workflow.lastRun}</div>
+                        <div className="text-sm font-medium">{nft.price} ETH</div>
                         <div className="text-xs text-muted-foreground">
-                          {workflow.duration}
+                          {nft.mintDate}
                         </div>
                       </div>
 
                       <Button
-                        onClick={() => handleRunWorkflow({ workflowId: workflow.id, action: 'run' })}
+                        onClick={() => handleMintNFT({ nftId: nft.id, action: 'mint' })}
                         variant="outline"
                         size="sm"
                       >
-                        <Play className="w-4 h-4" />
+                        <Sparkles className="w-4 h-4" />
                       </Button>
 
-                      <Badge variant={workflow.status === 'running' ? 'default' : 'secondary'}>
-                        {workflow.status}
+                      <Badge variant={nft.status === 'minted' ? 'default' : 'secondary'}>
+                        {nft.status}
                       </Badge>
                     </div>
                   </div>
@@ -407,17 +528,17 @@ export function AdvancedAutomation({ className }: AdvancedAutomationProps) {
             </CardContent>
           </Card>
 
-          {/* Workflow Analytics */}
+          {/* NFT Analytics */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <BarChart3 className="w-5 h-5" />
-                Workflow Analytics
+                NFT Analytics
               </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                {workflowsQuery.data?.workflowAnalytics?.map((analytic) => (
+                {nftsQuery.data?.nftAnalytics?.map((analytic) => (
                   <div key={analytic.id} className="p-4 border rounded-lg text-center">
                     <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-2">
                       <analytic.icon className="w-6 h-6 text-blue-600" />
@@ -434,53 +555,53 @@ export function AdvancedAutomation({ className }: AdvancedAutomationProps) {
         </div>
       )}
 
-      {/* Rules Tab */}
-      {selectedTab === 'rules' && (
+      {/* Contracts Tab */}
+      {selectedTab === 'contracts' && (
         <div className="space-y-4">
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <Zap className="w-5 h-5" />
-                Smart Rules
+                <Award className="w-5 h-5" />
+                Smart Contracts
               </CardTitle>
               <CardDescription>
-                Create og manage conditional automation rules
+                Deploy og manage smart contracts
               </CardDescription>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {rulesQuery.data?.smartRules?.map((rule) => (
-                  <div key={rule.id} className="flex items-center justify-between p-4 border rounded-lg">
+                {contractsQuery.data?.contracts?.map((contract) => (
+                  <div key={contract.id} className="flex items-center justify-between p-4 border rounded-lg">
                     <div className="flex items-center gap-3">
-                      <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
-                        <rule.icon className="w-6 h-6 text-blue-600" />
+                      <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
+                        <contract.icon className="w-6 h-6 text-green-600" />
                       </div>
                       <div>
-                        <div className="font-medium">{rule.name}</div>
+                        <div className="font-medium">{contract.name}</div>
                         <div className="text-sm text-muted-foreground">
-                          {rule.condition} → {rule.action}
+                          {contract.description} • {contract.address}
                         </div>
                       </div>
                     </div>
 
                     <div className="flex items-center gap-3">
                       <div className="text-right">
-                        <div className="text-sm font-medium">{rule.triggerCount}</div>
+                        <div className="text-sm font-medium">{contract.gasUsed} gas</div>
                         <div className="text-xs text-muted-foreground">
-                          {rule.lastTriggered}
+                          {contract.deployDate}
                         </div>
                       </div>
 
                       <Button
-                        onClick={() => handleCreateRule({ ruleId: rule.id, action: 'test' })}
+                        onClick={() => handleDeployContract({ contractId: contract.id, action: 'deploy' })}
                         variant="outline"
                         size="sm"
                       >
-                        <Code className="w-4 h-4" />
+                        <Rocket className="w-4 h-4" />
                       </Button>
 
-                      <Badge variant={rule.status === 'active' ? 'default' : 'secondary'}>
-                        {rule.status}
+                      <Badge variant={contract.status === 'deployed' ? 'default' : 'secondary'}>
+                        {contract.status}
                       </Badge>
                     </div>
                   </div>
@@ -489,17 +610,17 @@ export function AdvancedAutomation({ className }: AdvancedAutomationProps) {
             </CardContent>
           </Card>
 
-          {/* Rules Analytics */}
+          {/* Contract Analytics */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <PieChart className="w-5 h-5" />
-                Rules Analytics
+                Contract Analytics
               </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {rulesQuery.data?.rulesAnalytics?.map((analytic) => (
+                {contractsQuery.data?.contractAnalytics?.map((analytic) => (
                   <div key={analytic.id} className="space-y-2">
                     <div className="flex items-center justify-between">
                       <span className="text-sm font-medium">{analytic.name}</span>
@@ -514,53 +635,53 @@ export function AdvancedAutomation({ className }: AdvancedAutomationProps) {
         </div>
       )}
 
-      {/* Tasks Tab */}
-      {selectedTab === 'tasks' && (
+      {/* Web3 Tab */}
+      {selectedTab === 'web3' && (
         <div className="space-y-4">
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <Clock className="w-5 h-5" />
-                Scheduled Tasks
+                <Web3 className="w-5 h-5" />
+                Web3 Integration
               </CardTitle>
               <CardDescription>
-                Manage time-based automation tasks
+                Connect wallets og manage Web3 features
               </CardDescription>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {tasksQuery.data?.scheduledTasks?.map((task) => (
-                  <div key={task.id} className="flex items-center justify-between p-4 border rounded-lg">
+                {web3Query.data?.wallets?.map((wallet) => (
+                  <div key={wallet.id} className="flex items-center justify-between p-4 border rounded-lg">
                     <div className="flex items-center gap-3">
                       <div className="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center">
-                        <task.icon className="w-6 h-6 text-purple-600" />
+                        <wallet.icon className="w-6 h-6 text-purple-600" />
                       </div>
                       <div>
-                        <div className="font-medium">{task.name}</div>
+                        <div className="font-medium">{wallet.name}</div>
                         <div className="text-sm text-muted-foreground">
-                          {task.schedule} • {task.type}
+                          {wallet.description} • {wallet.address}
                         </div>
                       </div>
                     </div>
 
                     <div className="flex items-center gap-3">
                       <div className="text-right">
-                        <div className="text-sm font-medium">{task.nextRun}</div>
+                        <div className="text-sm font-medium">{wallet.balance} ETH</div>
                         <div className="text-xs text-muted-foreground">
-                          {task.frequency}
+                          {wallet.lastConnected}
                         </div>
                       </div>
 
                       <Button
-                        onClick={() => handleScheduleTask({ taskId: task.id, action: 'schedule' })}
+                        onClick={() => handleConnectWallet({ walletId: wallet.id, action: 'connect' })}
                         variant="outline"
                         size="sm"
                       >
-                        <Clock className="w-4 h-4" />
+                        <Link className="w-4 h-4" />
                       </Button>
 
-                      <Badge variant={task.status === 'scheduled' ? 'default' : 'secondary'}>
-                        {task.status}
+                      <Badge variant={wallet.status === 'connected' ? 'default' : 'secondary'}>
+                        {wallet.status}
                       </Badge>
                     </div>
                   </div>
@@ -569,17 +690,17 @@ export function AdvancedAutomation({ className }: AdvancedAutomationProps) {
             </CardContent>
           </Card>
 
-          {/* Task Analytics */}
+          {/* Web3 Analytics */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <BarChart3 className="w-5 h-5" />
-                Task Analytics
+                Web3 Analytics
               </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                {tasksQuery.data?.taskAnalytics?.map((analytic) => (
+                {web3Query.data?.web3Analytics?.map((analytic) => (
                   <div key={analytic.id} className="p-4 border rounded-lg text-center">
                     <div className="w-12 h-12 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-2">
                       <analytic.icon className="w-6 h-6 text-orange-600" />
@@ -603,10 +724,10 @@ export function AdvancedAutomation({ className }: AdvancedAutomationProps) {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Settings className="w-5 h-5" />
-                Automation Settings
+                Blockchain Settings
               </CardTitle>
               <CardDescription>
-                Configure your automation preferences
+                Configure your blockchain preferences
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -620,8 +741,8 @@ export function AdvancedAutomation({ className }: AdvancedAutomationProps) {
                     <Switch
                       checked={setting.enabled}
                       onCheckedChange={(enabled) => {
-                        if (setting.key === 'automationEnabled') {
-                          handleToggleAutomation(enabled)
+                        if (setting.key === 'blockchainEnabled') {
+                          handleToggleBlockchain(enabled)
                         }
                       }}
                     />
@@ -631,17 +752,17 @@ export function AdvancedAutomation({ className }: AdvancedAutomationProps) {
             </CardContent>
           </Card>
 
-          {/* Automation Goals */}
+          {/* Blockchain Goals */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Target className="w-5 h-5" />
-                Automation Goals
+                Blockchain Goals
               </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {settingsQuery.data?.automationGoals?.map((goal) => (
+                {settingsQuery.data?.blockchainGoals?.map((goal) => (
                   <div key={goal.id} className="space-y-2">
                     <div className="flex items-center justify-between">
                       <span className="text-sm font-medium">{goal.name}</span>
@@ -670,16 +791,16 @@ export function AdvancedAutomation({ className }: AdvancedAutomationProps) {
         <CardContent>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             <Button variant="outline" className="h-auto p-4 flex flex-col gap-2">
-              <Workflow className="w-5 h-5" />
-              <span className="text-sm">Run Workflow</span>
+              <Star className="w-5 h-5" />
+              <span className="text-sm">Mint NFT</span>
             </Button>
             <Button variant="outline" className="h-auto p-4 flex flex-col gap-2">
-              <Zap className="w-5 h-5" />
-              <span className="text-sm">Create Rule</span>
+              <Award className="w-5 h-5" />
+              <span className="text-sm">Deploy Contract</span>
             </Button>
             <Button variant="outline" className="h-auto p-4 flex flex-col gap-2">
-              <Clock className="w-5 h-5" />
-              <span className="text-sm">Schedule Task</span>
+              <Wallet className="w-5 h-5" />
+              <span className="text-sm">Connect Wallet</span>
             </Button>
             <Button variant="outline" className="h-auto p-4 flex flex-col gap-2">
               <Settings className="w-5 h-5" />
