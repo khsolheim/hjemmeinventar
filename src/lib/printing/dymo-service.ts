@@ -1,6 +1,7 @@
 /**
- * DYMO Label Framework Integration Service
+ * DYMO Connect Framework Integration Service
  * Provides abstraction layer for DYMO.js printer communication
+ * Upgraded to use DYMO Connect Framework for modern printer support
  */
 
 import type { 
@@ -91,24 +92,26 @@ class DymoService {
         throw new Error('DYMO service can only run in browser environment')
       }
 
-      // Load DYMO framework if not already loaded
+      // Load DYMO Connect framework if not already loaded
       if (!window.dymo) {
         await this.loadDymoFramework()
       }
 
       // Initialize framework
-      // await window.dymo.label.framework.init() // Removed - framework not available
-
-      // Check environment
-      // const env = window.dymo.label.framework.checkEnvironment() // Removed - framework not available
-      // if (!env.framework) {
-      //   throw new Error('DYMO Label Framework not available')
-      // }
-
-      // if (!env.printers) {
-      //   console.warn('No DYMO printers detected')
-      // }
-      console.log('DYMO framework not available - using placeholder')
+      if (window.dymo?.label?.framework) {
+        await window.dymo.label.framework.init()
+        
+        // Check environment compatibility
+        const env = window.dymo.label.framework.checkEnvironment()
+        if (!env.isFrameworkInstalled) {
+          throw new Error('DYMO framework not properly installed')
+        }
+        
+        console.log('DYMO Connect Framework initialized successfully')
+        console.log('Framework environment:', env)
+      } else {
+        console.log('DYMO framework not available - using placeholder mode')
+      }
 
       this.isInitialized = true
       await this.refreshPrinters()
@@ -120,25 +123,84 @@ class DymoService {
   }
 
   /**
-   * Load DYMO Framework JavaScript
+   * Load DYMO Connect Framework JavaScript
    */
   private async loadDymoFramework(): Promise<void> {
     return new Promise((resolve, reject) => {
-      // Check if DYMO framework script already exists
-      if (document.querySelector('script[src*="DYMO.Label.Framework"]')) {
+      // Check if DYMO Connect framework script already exists
+      if (document.querySelector('script[src*="dymo.connect.framework"]')) {
         resolve()
         return
       }
 
       const script = document.createElement('script')
-      script.src = 'https://labelwriter.com/software/dls/sdk/js/DYMO.Label.Framework.latest.js'
+      // Use the new DYMO Connect Framework from GitHub
+      script.src = 'https://raw.githubusercontent.com/dymosoftware/dymo-connect-framework/master/dymo.connect.framework.js'
       script.type = 'text/javascript'
       
-      script.onload = () => resolve()
-      script.onerror = () => reject(new Error('Failed to load DYMO framework'))
+      script.onload = () => {
+        console.log('DYMO Connect Framework loaded successfully')
+        resolve()
+      }
+      script.onerror = () => {
+        // Fallback to old framework if Connect Framework fails
+        console.warn('DYMO Connect Framework failed to load, falling back to Label Framework')
+        const fallbackScript = document.createElement('script')
+        fallbackScript.src = 'https://labelwriter.com/software/dls/sdk/js/DYMO.Label.Framework.latest.js'
+        fallbackScript.type = 'text/javascript'
+        fallbackScript.onload = () => {
+          console.log('DYMO Label Framework (fallback) loaded')
+          resolve()
+        }
+        fallbackScript.onerror = () => reject(new Error('Failed to load DYMO framework'))
+        document.head.appendChild(fallbackScript)
+      }
       
       document.head.appendChild(script)
     })
+  }
+
+  /**
+   * Validate label type with DYMO Connect Framework
+   */
+  async validateLabel(labelXml: string): Promise<{
+    isValid: boolean;
+    isDCD: boolean; // DYMO Connect Document
+    isDLS: boolean; // DYMO Label Software
+    type: 'DCD' | 'DLS' | 'Unknown';
+  }> {
+    try {
+      await this.initialize()
+      
+      if (window.dymo?.label?.framework) {
+        const label = window.dymo.label.framework.openLabelXml(labelXml)
+        
+        if (label) {
+          // Use new Connect Framework validation methods
+          const isDCD = typeof label.isDCDLabel === 'function' ? label.isDCDLabel() : false
+          const isDLS = typeof label.isDLSLabel === 'function' ? label.isDLSLabel() : false
+          const isValid = typeof label.isValidLabel === 'function' ? label.isValidLabel() : true
+          
+          return {
+            isValid,
+            isDCD,
+            isDLS,
+            type: isDCD ? 'DCD' : isDLS ? 'DLS' : 'Unknown'
+          }
+        }
+      }
+      
+      // Fallback validation
+      return {
+        isValid: labelXml.includes('<?xml') && labelXml.includes('<DieCutLabel'),
+        isDCD: false,
+        isDLS: false,
+        type: 'Unknown'
+      }
+    } catch (error) {
+      console.error('Label validation error:', error)
+      return { isValid: false, isDCD: false, isDLS: false, type: 'Unknown' }
+    }
   }
 
   /**
@@ -271,6 +333,107 @@ class DymoService {
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Unknown error occurred'
+      }
+    }
+  }
+
+  /**
+   * Configure wireless printer connection for DYMO LabelWriter Wireless
+   */
+  async configureWirelessPrinter(
+    printerName: string,
+    networkSettings: {
+      ipAddress?: string;
+      port?: number;
+      timeout?: number;
+    } = {}
+  ): Promise<{ success: boolean; error?: string; networkInfo?: any }> {
+    try {
+      await this.initialize()
+      
+      if (!window.dymo?.label?.framework) {
+        throw new Error('DYMO framework not available')
+      }
+
+      const printer = this.printers.find(p => p.name === printerName)
+      if (!printer) {
+        throw new Error(`Printer "${printerName}" not found`)
+      }
+
+      // Check if this is a wireless-capable printer
+      if (!printer.modelName.includes('Wireless') && !printer.modelName.includes('WiFi') && !printer.modelName.includes('Network')) {
+        throw new Error('This printer does not support wireless connectivity')
+      }
+
+      // Test network connectivity if IP address is provided
+      if (networkSettings.ipAddress) {
+        const networkTest = await this.testNetworkConnection(
+          networkSettings.ipAddress, 
+          networkSettings.port || 9100,
+          networkSettings.timeout || 5000
+        )
+        
+        if (!networkTest.success) {
+          return {
+            success: false,
+            error: `Network connectivity failed: ${networkTest.error}`
+          }
+        }
+      }
+
+      return {
+        success: true,
+        networkInfo: {
+          model: printer.modelName,
+          wireless: true,
+          supportedProtocols: ['TCP/IP', 'HTTP', 'HTTPS'],
+          defaultPort: 9100,
+          configuredIP: networkSettings.ipAddress,
+          lastTestTime: new Date().toISOString()
+        }
+      }
+      
+    } catch (error) {
+      console.error('Wireless printer configuration error:', error)
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error'
+      }
+    }
+  }
+
+  /**
+   * Test network connection to printer
+   */
+  private async testNetworkConnection(
+    ipAddress: string, 
+    port: number, 
+    timeout: number
+  ): Promise<{ success: boolean; error?: string; responseTime?: number }> {
+    const startTime = Date.now()
+    
+    try {
+      // Simple connectivity test using fetch with timeout
+      const controller = new AbortController()
+      const timeoutId = setTimeout(() => controller.abort(), timeout)
+      
+      await fetch(`http://${ipAddress}:${port}`, {
+        method: 'HEAD',
+        signal: controller.signal,
+        mode: 'no-cors' // Allow cross-origin requests
+      })
+      
+      clearTimeout(timeoutId)
+      const responseTime = Date.now() - startTime
+      
+      return { 
+        success: true, 
+        responseTime 
+      }
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Connection timeout'
       }
     }
   }
@@ -424,6 +587,7 @@ class DymoService {
       'LabelWriter 450 Turbo': 2.3 * 72,
       'LabelWriter 550': 2.3 * 72,
       'LabelWriter 550 Turbo': 2.3 * 72,
+      'LabelWriter Wireless': 2.3 * 72, // Same as 550 series
       'LabelWriter 4XL': 4.16 * 72 // 4.16 inches in points
     }
     return widths[model] || 2.3 * 72
@@ -435,6 +599,7 @@ class DymoService {
       'LabelWriter 450 Turbo': 600,
       'LabelWriter 550': 600,
       'LabelWriter 550 Turbo': 600,
+      'LabelWriter Wireless': 600, // Same high resolution as 550 series
       'LabelWriter 4XL': 300
     }
     return resolutions[model] || 600
@@ -446,6 +611,7 @@ class DymoService {
       'LabelWriter 450 Turbo': ['Address', 'Shipping', 'File Folder', 'Name Badge'],
       'LabelWriter 550': ['Address', 'Shipping', 'File Folder', 'Name Badge', 'CD/DVD'],
       'LabelWriter 550 Turbo': ['Address', 'Shipping', 'File Folder', 'Name Badge', 'CD/DVD'],
+      'LabelWriter Wireless': ['Address', 'Shipping', 'File Folder', 'Name Badge', 'CD/DVD', 'QR Code'], // Modern features like 550 series + QR
       'LabelWriter 4XL': ['Large Address', 'Large Shipping', '4x6 Photo']
     }
     return mediaTypes[model] || ['Address', 'Shipping']

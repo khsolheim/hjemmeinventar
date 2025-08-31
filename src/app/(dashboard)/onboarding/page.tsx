@@ -59,8 +59,8 @@ export default function OnboardingPage() {
               Velkommen til HMS! 🏠
             </h1>
             <p className="text-xl text-muted-foreground mb-8 max-w-2xl mx-auto">
-              La oss hjelpe deg å komme i gang med ditt personlige inventarsystem. 
-              Det tar bare noen få minutter!
+              La oss hjelpe deg å komme i gang med ditt personlige inventarsystem.
+              Med smart auto-oppsett tar det bare noen få minutter!
             </p>
           </div>
 
@@ -77,10 +77,10 @@ export default function OnboardingPage() {
               </CardHeader>
               <CardContent className="min-h-40">
                 <ul className="space-y-2 text-sm text-muted-foreground mb-6">
+                  <li>• Auto-generer rom basert på boligtype</li>
                   <li>• Tilpass systemet til dine behov</li>
-                  <li>• Opprett din første lokasjon</li>
-                  <li>• Registrer en prøve-gjenstand</li>
-                  <li>• Sett opp dine preferanser</li>
+                  <li>• Legg til en prøve-gjenstand</li>
+                  <li>• Få smarte forslag underveis</li>
                 </ul>
                 <Button 
                   onClick={() => setShowWizard(true)}
@@ -105,9 +105,9 @@ export default function OnboardingPage() {
               <CardContent className="min-h-40">
                 <ul className="space-y-2 text-sm text-muted-foreground mb-6">
                   <li>• Kom i gang med en gang</li>
+                  <li>• Bruk Quick-Add for å legge til ting</li>
                   <li>• Utforsk alle funksjoner</li>
-                  <li>• Sett opp når du vil</li>
-                  <li>• Kan kjøre oppsettet senere</li>
+                  <li>• Kan kjøre full oppsett senere</li>
                 </ul>
                 <Button 
                   variant="outline" 

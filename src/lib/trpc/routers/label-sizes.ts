@@ -8,9 +8,9 @@ export const labelSizesRouter = createTRPCRouter({
   getAll: protectedProcedure
     .query(async ({ ctx }) => {
       const { db, session } = ctx
-      
+
       console.log('🔍 labelSizes.getAll called for user:', session!.user.email, 'ID:', session!.user.id)
-      
+
       try {
         const labelSizes = await db.labelSize.findMany({
           where: { userId: session!.user.id },
@@ -19,15 +19,48 @@ export const labelSizesRouter = createTRPCRouter({
             { name: 'asc' }
           ]
         })
-        
+
         console.log('✅ Found', labelSizes.length, 'label sizes for user:', session!.user.email)
-        
+
         return labelSizes
       } catch (error) {
         console.error('❌ Error fetching label sizes:', error)
         throw new TRPCError({
           code: 'INTERNAL_SERVER_ERROR',
           message: 'Kunne ikke hente etikett-størrelser'
+        })
+      }
+    }),
+
+  // Hent enkelt størrelse etter ID
+  getById: protectedProcedure
+    .input(z.object({
+      id: z.string()
+    }))
+    .query(async ({ ctx, input }) => {
+      const { db, session } = ctx
+
+      try {
+        const labelSize = await db.labelSize.findFirst({
+          where: {
+            id: input.id,
+            userId: session!.user.id
+          }
+        })
+
+        if (!labelSize) {
+          throw new TRPCError({
+            code: 'NOT_FOUND',
+            message: 'Størrelse ikke funnet'
+          })
+        }
+
+        return labelSize
+      } catch (error) {
+        console.error('❌ Error fetching label size:', error)
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Kunne ikke hente etikett-størrelse'
         })
       }
     }),

@@ -7,13 +7,55 @@ const globalForPrisma = globalThis as unknown as {
 }
 
 export const db = globalForPrisma.prisma ?? new PrismaClient({
-  log: process.env.NODE_ENV === 'development' ? ['query', 'error', 'warn'] : ['error']
+  log: process.env.NODE_ENV === 'development' ? ['query', 'error', 'warn'] : ['error'],
+  datasources: {
+    db: {
+      url: process.env.DATABASE_URL
+        ? `${process.env.DATABASE_URL}${process.env.DATABASE_URL.includes('?') ? '&' : '?'}pgbouncer=true&connection_limit=1&pool_timeout=30`
+        : undefined
+    }
+  }
 })
 
 if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = db
 
 // Database utilities
 export async function generateUniqueQRCode(): Promise<string> {
+  // Finn høyeste eksisterende LOC-nummer
+  const lastLocation = await db.location.findFirst({
+    where: {
+      qrCode: {
+        startsWith: 'LOC'
+      }
+    },
+    orderBy: {
+      qrCode: 'desc'
+    }
+  })
+  
+  let nextNumber = 1
+  if (lastLocation?.qrCode) {
+    const match = lastLocation.qrCode.match(/LOC(\d+)/)
+    if (match) {
+      nextNumber = parseInt(match[1]) + 1
+    }
+  }
+  
+  // Generer ny LOC-kode
+  const qrCode = `LOC${nextNumber.toString().padStart(3, '0')}`
+  
+  // Dobbeltsjekk at den ikke eksisterer (sikkerhet)
+  const existing = await db.location.findUnique({ where: { qrCode } })
+  if (existing) {
+    // Fallback til random hvis det skjer kollisjon
+    return generateRandomQRCode()
+  }
+  
+  return qrCode
+}
+
+// Fallback random QR-kode generator
+async function generateRandomQRCode(): Promise<string> {
   const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
   let qrCode: string
   let exists: boolean

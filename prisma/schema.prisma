@@ -57,10 +57,13 @@ model User {
   labelSizes    LabelSize[]
   loans         Loan[]
   locations     Location[]
+  printers      Printer[]
+  printJobs     PrintJob[]
   sessions      Session[]
   tags          Tag[]
   yarnPatterns  YarnPattern[]
   yarnProjects  YarnProject[]
+  labelTemplates LabelTemplate[]
 }
 
 model Location {
@@ -78,6 +81,7 @@ model Location {
   distributions ItemDistribution[]
   parent        Location?          @relation("LocationHierarchy", fields: [parentId], references: [id])
   children      Location[]         @relation("LocationHierarchy")
+  printJobs     PrintJob[]
   user          User               @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
@@ -125,6 +129,7 @@ model Item {
   itemRelationsFrom ItemRelation[]     @relation("ItemRelationsFrom")
   itemRelationsTo   ItemRelation[]     @relation("ItemRelationsTo")
   loan              Loan?
+  printJobs         PrintJob[]
   projectUsage      ProjectYarnUsage[]
   Item_A            Item[]             @relation("ItemRelations")
   Item_B            Item[]             @relation("ItemRelations")
@@ -198,6 +203,7 @@ model Household {
   createdAt   DateTime          @default(now())
   updatedAt   DateTime          @updatedAt
   members     HouseholdMember[]
+  labelTemplates LabelTemplate[]
 }
 
 model HouseholdMember {
@@ -334,6 +340,105 @@ model LabelSize {
   @@index([userId])
 }
 
+model LabelTemplate {
+  id                  String              @id @default(cuid())
+  name                String
+  description         String?
+  type                LabelType
+  size                LabelSizeType
+  width               String?             // Bredde i mm
+  height              String?             // Høyde i mm
+  orientation         String?             // Orientering: landscape/portrait
+  category            String?
+  xml                 String
+  fieldMapping        String?
+  thumbnail           String?
+  isVisualTemplate    Boolean             @default(false)  // Om det er laget med visuell editor
+  visualElements      Json?               // JSON data for visuelle elementer
+  isSystemDefault     Boolean             @default(false)
+  usageCount          Int                 @default(0)
+  lastUsedAt          DateTime?
+  version             Int                 @default(1)
+  locale              String              @default("nb-NO")
+  textDirection       String              @default("ltr")
+  parentTemplateId    String?
+  inheritanceLevel    Int                 @default(0)
+  overriddenFields    String?
+  complexity          TemplateComplexity  @default(SIMPLE)
+  estimatedRenderTime Int                 @default(100)
+  labelMediaId        String?
+  userId              String?
+  householdId         String?
+  tenantId            String?
+  createdAt           DateTime            @default(now())
+  updatedAt           DateTime            @updatedAt
+  createdBy           String?
+  updatedBy           String?
+  deletedAt           DateTime?
+  deletedBy           String?
+
+  // Relationships
+  parentTemplate      LabelTemplate?      @relation("TemplateInheritance", fields: [parentTemplateId], references: [id])
+  childTemplates      LabelTemplate[]     @relation("TemplateInheritance")
+  labelMedia          LabelMedia?         @relation(fields: [labelMediaId], references: [id])
+  user                User?               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  household           Household?          @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  printJobs           PrintJob[]          @relation("TemplatePrintJobs")
+
+  @@index([userId])
+  @@index([type, isSystemDefault])
+  @@index([category, usageCount])
+  @@index([parentTemplateId, inheritanceLevel])
+}
+
+model LabelMedia {
+  id                String          @id @default(cuid())
+  code              String
+  dymoId            String
+  paperName         String
+  size              LabelSizeType
+  widthMm           Float?
+  heightMm          Float?
+  isActive          Boolean         @default(true)
+  supportedPrinters String?
+  costPerLabel      Float           @default(0.0000)
+  supplier          String?
+  stockQuantity     Int             @default(0)
+  tenantId          String?
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+  createdBy         String?
+  updatedBy         String?
+  deletedAt         DateTime?
+  deletedBy         String?
+
+  // Relationships
+  templates         LabelTemplate[]
+
+  @@index([size])
+  @@index([isActive])
+}
+
+enum LabelType {
+  QR
+  BARCODE
+  CUSTOM
+  TEXT
+}
+
+enum LabelSizeType {
+  SMALL
+  STANDARD
+  LARGE
+  CUSTOM
+}
+
+enum TemplateComplexity {
+  SIMPLE
+  MEDIUM
+  COMPLEX
+}
+
 enum LocationType {
   ROOM
   CABINET
@@ -346,6 +451,116 @@ enum LocationType {
   CONTAINER
   SHELF_COMPARTMENT
   SECTION
+}
+
+model Printer {
+  id              String          @id @default(cuid())
+  name            String          // User-defined name
+  model           String          // Printer model (e.g., DYMO_LW_WIRELESS)
+  brand           PrinterBrand    @default(DYMO)
+  connectionType  ConnectionType  @default(NETWORK)
+  ipAddress       String?         // For network printers
+  port            String?         // Network port (default 9100)
+  macAddress      String?         // MAC address for identification
+  location        String?         // Physical location description
+  description     String?         // Optional description
+  isActive        Boolean         @default(true)
+  isDefault       Boolean         @default(false)
+  
+  // Capabilities and settings
+  maxWidth        Float?          // Maximum label width in inches
+  resolution      Int?            // DPI resolution
+  supportedMedia  String[]        // Supported label types as JSON array
+  settings        Json?           // Printer-specific settings as JSON
+  
+  // Status and monitoring
+  lastSeen        DateTime?       // Last successful connection
+  paperLevel      Int?            // Paper level percentage (0-100)
+  status          PrinterStatus   @default(UNKNOWN)
+  
+  // Relationships
+  userId          String
+  user            User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  printJobs       PrintJob[]
+  
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+  
+  @@index([userId])
+  @@index([brand])
+  @@index([isActive])
+}
+
+model PrintJob {
+  id            String        @id @default(cuid())
+  title         String        // Job description
+  type          PrintJobType  @default(LABEL)
+  status        JobStatus     @default(PENDING)
+  
+  // Job data
+  labelXml      String?       // DYMO label XML
+  labelData     Json?         // Data for label fields
+  settings      Json?         // Print settings (copies, etc.)
+  
+  // Relationships
+  printerId     String
+  printer       Printer       @relation(fields: [printerId], references: [id], onDelete: Cascade)
+  userId        String
+  user          User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  itemId        String?
+  item          Item?         @relation(fields: [itemId], references: [id], onDelete: SetNull)
+  locationId    String?
+  location      Location?     @relation(fields: [locationId], references: [id], onDelete: SetNull)
+  labelTemplate LabelTemplate? @relation("TemplatePrintJobs", fields: [labelTemplateId], references: [id], onDelete: SetNull)
+  labelTemplateId String?
+  
+  // Timestamps
+  queuedAt      DateTime      @default(now())
+  startedAt     DateTime?
+  completedAt   DateTime?
+  errorMessage  String?
+  
+  @@index([userId])
+  @@index([printerId])
+  @@index([status])
+}
+
+enum PrinterBrand {
+  DYMO
+  ZEBRA
+  BROTHER
+  HP
+  GENERIC
+}
+
+enum ConnectionType {
+  USB
+  NETWORK
+  BLUETOOTH
+}
+
+enum PrinterStatus {
+  ONLINE
+  OFFLINE
+  ERROR
+  LOW_PAPER
+  LOW_INK
+  UNKNOWN
+}
+
+enum PrintJobType {
+  LABEL
+  QR_CODE
+  BARCODE
+  TEST
+}
+
+enum JobStatus {
+  PENDING
+  PRINTING
+  COMPLETED
+  FAILED
+  CANCELLED
 }
 
 enum DistributionPurpose {

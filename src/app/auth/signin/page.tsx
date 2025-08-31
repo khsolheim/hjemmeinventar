@@ -9,11 +9,13 @@ import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { AccessibleButton } from '@/components/ui/accessible-button'
 import { toast } from 'sonner'
+import { Eye, EyeOff } from 'lucide-react'
 
 export default function SignInPage() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [isLoading, setIsLoading] = useState(false)
+  const [showPassword, setShowPassword] = useState(false)
   const router = useRouter()
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -30,7 +32,11 @@ export default function SignInPage() {
 
       if (result?.error) {
         console.error('Login error:', result.error)
-        toast.error(`Innlogging feilet: ${result.error}`)
+        if (result.error === 'CredentialsSignin') {
+          toast.error('Feil e-post eller passord. Hvis du registrerte deg med Google, bruk "Fortsett med Google" knappen.')
+        } else {
+          toast.error(`Innlogging feilet: ${result.error}`)
+        }
       } else if (result?.ok) {
         toast.success('Velkommen tilbake!')
         // Wait a moment for session to be established, then redirect
@@ -112,6 +118,7 @@ export default function SignInPage() {
                 <Label htmlFor="email">E-post</Label>
                 <Input
                   id="email"
+                  autoComplete="email"
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
@@ -123,15 +130,31 @@ export default function SignInPage() {
 
               <div>
                 <Label htmlFor="password">Passord</Label>
-                <Input
-                  id="password"
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                  aria-describedby="password-error"
-                  placeholder="Ditt passord"
-                />
+                <div className="relative">
+                  <Input
+                    id="password"
+                    autoComplete="current-password"
+                    type={showPassword ? "text" : "password"}
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
+                    aria-describedby="password-error"
+                    placeholder="Ditt passord"
+                    className="pr-10"
+                  />
+                  <button
+                    type="button"
+                    className="absolute inset-y-0 right-0 pr-3 flex items-center"
+                    onClick={() => setShowPassword(!showPassword)}
+                    aria-label={showPassword ? "Skjul passord" : "Vis passord"}
+                  >
+                    {showPassword ? (
+                      <EyeOff className="h-4 w-4 text-gray-400 hover:text-gray-600" />
+                    ) : (
+                      <Eye className="h-4 w-4 text-gray-400 hover:text-gray-600" />
+                    )}
+                  </button>
+                </div>
               </div>
 
               <AccessibleButton

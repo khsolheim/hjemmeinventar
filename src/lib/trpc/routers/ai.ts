@@ -1,6 +1,7 @@
 import { z } from 'zod'
 import { createTRPCRouter, protectedProcedure } from '../server'
 import { aiService } from '@/lib/ai/ai-service'
+import { db } from '@/lib/db'
 import { TRPCError } from '@trpc/server'
 
 export const aiRouter = createTRPCRouter({
@@ -112,6 +113,118 @@ export const aiRouter = createTRPCRouter({
 
       const enhanced = await aiService.enhanceSearchQuery(input.query, input.context)
       return enhanced
+    }),
+
+  // Enhance item creation with AI suggestions (alias for getBatchSuggestions for better UX)
+  enhanceItem: protectedProcedure
+    .input(z.object({
+      name: z.string().min(1),
+      description: z.string().optional(),
+      context: z.string().optional(),
+    }))
+    .mutation(async ({ input }) => {
+      return await aiService.enhanceItem(input.name, input.description, input.context)
+    }),
+
+  // Natural language search
+  naturalLanguageSearch: protectedProcedure
+    .input(z.object({
+      query: z.string().min(1),
+      context: z.string().optional(),
+      userId: z.string(),
+    }))
+    .mutation(async ({ input, ctx }) => {
+      if (!aiService.isAIEnabled()) {
+        return []
+      }
+
+      const results = await aiService.naturalLanguageSearch(
+        input.query,
+        input.context,
+        ctx.user.id
+      )
+      return results
+    }),
+
+  // Personalized dashboard
+  getPersonalizedDashboard: protectedProcedure
+    .query(async ({ ctx }) => {
+      if (!aiService.isAIEnabled()) {
+        return {
+          topCategories: [],
+          recentLocations: [],
+          suggestedActions: [],
+          insights: [],
+          quickStats: {}
+        }
+      }
+
+      const personalizedData = await aiService.getPersonalizedDashboard(ctx.user.id)
+      return personalizedData
+    }),
+
+  // Advanced AI categorization
+  smartCategorization: protectedProcedure
+    .input(z.object({
+      itemName: z.string().min(1),
+      itemDescription: z.string().optional(),
+      imageData: z.string().optional(),
+    }))
+    .mutation(async ({ input, ctx }) => {
+      if (!aiService.isAIEnabled()) {
+        return { category: null, confidence: 0, suggestions: [] }
+      }
+
+      const result = await aiService.smartCategorization(
+        input.itemName,
+        input.itemDescription,
+        input.imageData
+      )
+      return result
+    }),
+
+  // Smart location suggestions
+  smartLocationSuggestion: protectedProcedure
+    .input(z.object({
+      itemName: z.string().min(1),
+      itemCategory: z.string().optional(),
+    }))
+    .mutation(async ({ input, ctx }) => {
+      if (!aiService.isAIEnabled()) {
+        return { location: null, confidence: 0, reasoning: '' }
+      }
+
+      // Get user's locations for context
+      const locations = await db.location.findMany({
+        where: { userId: ctx.user.id },
+        include: {
+          distributions: {
+            include: {
+              item: {
+                include: { category: true }
+              }
+            }
+          }
+        }
+      })
+
+      const result = await aiService.smartLocationSuggestion(
+        input.itemName,
+        input.itemCategory,
+        locations
+      )
+      return result
+    }),
+
+  // Predictive maintenance and organization
+  predictiveMaintenance: protectedProcedure
+    .query(async ({ ctx }) => {
+      if (!aiService.isAIEnabled()) {
+        return { predictions: [], insights: [], summary: {} }
+      }
+
+      const result = await aiService.predictiveMaintenance(ctx.user.id)
+      return result
     }),
 
   // Batch suggestions for new item

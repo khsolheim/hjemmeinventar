@@ -18,8 +18,9 @@ import { Printer, Wifi, WifiOff, Settings, Plus, MoreHorizontal, Eye, Edit, Tras
 import { formatDistanceToNow } from 'date-fns'
 import { nb } from 'date-fns/locale'
 // TODO: Add these types when printing models are implemented
+import { PrinterBrand, ConnectionType, PrinterStatus } from '@prisma/client'
+import { useSession } from 'next-auth/react'
 type PrinterProfile = any
-type ConnectionType = 'USB' | 'NETWORK' | 'BLUETOOTH'
 
 interface PrinterWithStatus extends PrinterProfile {
   isOnline: boolean
@@ -31,6 +32,7 @@ interface PrinterWithStatus extends PrinterProfile {
 }
 
 export default function PrintersPage() {
+  const { status: sessionStatus } = useSession()
   const [selectedTab, setSelectedTab] = useState<'overview' | 'settings' | 'diagnostics'>('overview')
   const [selectedPrinter, setSelectedPrinter] = useState<string | null>(null)
   const [showAddPrinter, setShowAddPrinter] = useState(false)
@@ -46,49 +48,62 @@ export default function PrintersPage() {
     settings: {}
   })
 
-  // tRPC queries
-  // const { 
-  //   data: printers, 
-  //   isLoading, 
-  //   refetch: refetchPrinters 
-  // } = trpc.printing.listPrinters.useQuery()
+  // tRPC queries (kun når bruker er autentisert)
+  const { 
+    data: printers, 
+    isLoading, 
+    isFetching,
+    isFetched,
+    error: printersError,
+    refetch: refetchPrinters 
+  } = trpc.printing.listPrinters.useQuery(undefined, {
+    enabled: sessionStatus === 'authenticated',
+    keepPreviousData: true,
+    staleTime: 10000,
+    refetchOnWindowFocus: false,
+    refetchOnMount: 'always'
+  })
 
-  // const { data: supportedModels } = trpc.printing.getSupportedPrinterModels.useQuery()
-  
-  // Placeholder data
-  const printers: any[] = []
-  const isLoading = false
-  const refetchPrinters = () => {}
-  const supportedModels: any[] = []
+  const { 
+    data: supportedModels, 
+    error: modelsError 
+  } = trpc.printing.getSupportedPrinterModels.useQuery(undefined, {
+    enabled: sessionStatus === 'authenticated',
+    keepPreviousData: true,
+    staleTime: 600000,
+    refetchOnWindowFocus: false
+  })
 
-  // Mutations - temporarily disabled
-  // const addPrinterMutation = trpc.printing.addPrinter.useMutation({
-  //   onSuccess: () => {
-  //     setShowAddPrinter(false)
-  //     refetchPrinters()
-  //     resetNewPrinter()
-  //   }
-  // })
+  //
 
-  // const updatePrinterMutation = trpc.printing.updatePrinter.useMutation({
-  //   onSuccess: () => {
-  //     refetchPrinters()
-  //   }
-  // })
+  // tRPC mutations
+  const addPrinterMutation = trpc.printing.addPrinter.useMutation({
+    onSuccess: (printer) => {
+      console.log('Printer added successfully:', printer)
+      setShowAddPrinter(false)
+      refetchPrinters()
+      resetNewPrinter()
+      // TODO: Add toast notification when toast system is available
+    },
+    onError: (error) => {
+      console.error('Failed to add printer:', error)
+      // TODO: Add error toast when toast system is available
+    }
+  })
 
-  // const deletePrinterMutation = trpc.printing.deletePrinter.useMutation({
-  //   onSuccess: () => {
-  //     refetchPrinters()
-  //   }
-  // })
+  const updatePrinterMutation = trpc.printing.updatePrinter.useMutation({
+    onSuccess: () => {
+      refetchPrinters()
+    }
+  })
 
-  // const testPrinterMutation = trpc.printing.testPrinter.useMutation()
-  
-  // Placeholder mutations
-  const addPrinterMutation = { mutateAsync: async (data: any) => {}, isPending: false }
-  const updatePrinterMutation = { mutateAsync: async (data: any) => {}, isPending: false }
-  const deletePrinterMutation = { mutateAsync: async (data: any) => {}, isPending: false }
-  const testPrinterMutation = { mutateAsync: async (data: any) => {}, isPending: false }
+  const deletePrinterMutation = trpc.printing.deletePrinter.useMutation({
+    onSuccess: () => {
+      refetchPrinters()
+    }
+  })
+
+  const testPrinterMutation = trpc.printing.testPrinter.useMutation()
 
   const resetNewPrinter = () => {
     setNewPrinter({
@@ -140,10 +155,41 @@ export default function PrintersPage() {
   }
 
   const handleAddPrinter = async () => {
+    console.log('handleAddPrinter called with:', newPrinter)
+    
+    // Validate required fields
+    if (!newPrinter.name.trim()) {
+      console.error('Printer name is required')
+      return
+    }
+    
+    if (!newPrinter.model) {
+      console.error('Printer model is required')
+      return
+    }
+
     try {
-      await addPrinterMutation.mutateAsync(newPrinter)
+      console.log('Attempting to add printer...')
+      // Finn brand basert på valgt modell dersom tilgjengelig fra API
+      const selectedModel = (supportedModels || []).find((m: any) => m.value === newPrinter.model)
+      const brand = (selectedModel?.brand as PrinterBrand) || 'DYMO'
+
+      // Send kun feltene API-et forventer
+      const payload = {
+        name: newPrinter.name.trim(),
+        model: newPrinter.model,
+        brand,
+        connectionType: newPrinter.connectionType,
+        ipAddress: newPrinter.connectionType === 'NETWORK' ? (newPrinter.ipAddress || undefined) : undefined,
+        port: newPrinter.connectionType === 'NETWORK' ? (newPrinter.port || undefined) : undefined,
+        location: newPrinter.location || undefined,
+        description: newPrinter.description || undefined,
+      }
+
+      const result = await addPrinterMutation.mutateAsync(payload as any)
+      console.log('Add printer result:', result)
     } catch (error) {
-      console.error('Feil ved tillegging av skriver:', error)
+      console.error('Error adding printer:', error)
     }
   }
 
@@ -159,7 +205,7 @@ export default function PrintersPage() {
   const handleDeletePrinter = async (printerId: string) => {
     if (confirm('Er du sikker på at du vil slette denne skriveren?')) {
       try {
-        await deletePrinterMutation.mutateAsync({ printerId })
+        await deletePrinterMutation.mutateAsync({ id: printerId })
       } catch (error) {
         console.error('Feil ved sletting av skriver:', error)
       }
@@ -324,7 +370,24 @@ export default function PrintersPage() {
         </TabsList>
 
         <TabsContent value="overview" className="space-y-4">
-          {isLoading ? (
+          {/* Error handling */}
+          {printersError && (
+            <Card className="border-red-200 bg-red-50">
+              <CardContent className="p-4">
+                <div className="flex items-center gap-2 text-red-700">
+                  <AlertTriangle className="h-5 w-5" />
+                  <div>
+                    <p className="font-medium">Feil ved lasting av skrivere</p>
+                    <p className="text-sm">{printersError.message}</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {sessionStatus !== 'authenticated' ? (
+            <Card><CardContent className="p-6">Laster inn...</CardContent></Card>
+          ) : (isLoading || isFetching || !isFetched) ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {[...Array(3)].map((_, i) => (
                 <Card key={i} className="animate-pulse">
@@ -341,7 +404,7 @@ export default function PrintersPage() {
                 </Card>
               ))}
             </div>
-          ) : printers?.length === 0 ? (
+          ) : (!printers || printers?.length === 0) ? (
             <Card>
               <CardContent className="py-8 text-center">
                 <Printer className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
@@ -357,7 +420,7 @@ export default function PrintersPage() {
             </Card>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {printers.map((printer: any) => (
+              {(printers || []).map((printer: any) => (
                 <PrinterCard key={printer.id} printer={printer as PrinterWithStatus} />
               ))}
             </div>
@@ -497,6 +560,7 @@ export default function PrintersPage() {
                     <SelectItem value="DYMO_LW_450_TURBO">DYMO LabelWriter 450 Turbo</SelectItem>
                     <SelectItem value="DYMO_LW_550">DYMO LabelWriter 550</SelectItem>
                     <SelectItem value="DYMO_LW_550_TURBO">DYMO LabelWriter 550 Turbo</SelectItem>
+                    <SelectItem value="DYMO_LW_WIRELESS">DYMO LabelWriter Wireless</SelectItem>
                     <SelectItem value="ZEBRA_ZD220">Zebra ZD220</SelectItem>
                     <SelectItem value="ZEBRA_ZD420">Zebra ZD420</SelectItem>
                     <SelectItem value="BROTHER_QL_800">Brother QL-800</SelectItem>
@@ -542,6 +606,45 @@ export default function PrintersPage() {
                     value={newPrinter.port}
                     onChange={(e) => setNewPrinter(prev => ({ ...prev, port: e.target.value }))}
                   />
+                </div>
+              </div>
+            )}
+
+            {/* Special configuration for DYMO Wireless */}
+            {newPrinter.model === 'DYMO_LW_WIRELESS' && (
+              <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg space-y-3">
+                <div className="flex items-start gap-2">
+                  <Wifi className="h-5 w-5 text-blue-600 mt-0.5" />
+                  <div>
+                    <h4 className="font-medium text-blue-900">DYMO LabelWriter Wireless Konfigurasjon</h4>
+                    <p className="text-sm text-blue-700 mt-1">
+                      Denne printeren støtter trådløs tilkobling via Wi-Fi. Sørg for at printeren er koblet til samme nettverk som datamaskinen.
+                    </p>
+                  </div>
+                </div>
+                
+                <div className="grid grid-cols-2 gap-3 text-sm">
+                  <div className="space-y-1">
+                    <span className="font-medium text-blue-900">Støttede funksjoner:</span>
+                    <ul className="text-blue-700 space-y-0.5 list-disc list-inside">
+                      <li>QR-kode etiketter</li>
+                      <li>Adresse-etiketter</li>
+                      <li>CD/DVD etiketter</li>
+                      <li>600 DPI høy oppløsning</li>
+                    </ul>
+                  </div>
+                  <div className="space-y-1">
+                    <span className="font-medium text-blue-900">Nettverkskrav:</span>
+                    <ul className="text-blue-700 space-y-0.5 list-disc list-inside">
+                      <li>Wi-Fi 802.11 b/g/n</li>
+                      <li>Port 9100 (standard)</li>
+                      <li>DYMO Connect Software</li>
+                    </ul>
+                  </div>
+                </div>
+                
+                <div className="text-xs text-blue-600">
+                  💡 Tip: Finn printer IP-adressen i router-innstillingene eller skriv ut nettverksstatus fra printeren.
                 </div>
               </div>
             )}

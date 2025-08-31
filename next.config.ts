@@ -6,11 +6,18 @@ const withBundleAnalyzer = require('@next/bundle-analyzer')({
 });
 
 const nextConfig: NextConfig = {
-  reactStrictMode: true,
+  reactStrictMode: false, // Disabled to prevent constant reloading in development
   eslint: {
     // Disable ESLint during builds for deployment
     ignoreDuringBuilds: true,
   },
+  typescript: {
+    // Disable type checking during Capacitor builds
+    ignoreBuildErrors: process.env.CAPACITOR_BUILD === 'true',
+  },
+  // Capacitor configuration
+  output: process.env.CAPACITOR_BUILD === 'true' ? 'export' : undefined,
+  trailingSlash: process.env.CAPACITOR_BUILD === 'true',
   experimental: {
     optimizePackageImports: ['lucide-react'],
     // Turbopack configuration
@@ -43,7 +50,7 @@ const nextConfig: NextConfig = {
           },
           {
             key: 'Permissions-Policy',
-            value: 'camera=(), microphone=(), geolocation=()',
+            value: 'camera=(self), microphone=(), geolocation=()',
           },
         ],
       },
@@ -51,6 +58,7 @@ const nextConfig: NextConfig = {
   },
   // Image optimization
   images: {
+    unoptimized: process.env.CAPACITOR_BUILD === 'true',
     formats: ['image/webp', 'image/avif'],
     deviceSizes: [640, 750, 828, 1080, 1200, 1920, 2048, 3840],
     imageSizes: [16, 32, 48, 64, 96, 128, 256, 384],

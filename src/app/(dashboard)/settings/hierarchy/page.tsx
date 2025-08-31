@@ -38,7 +38,7 @@ export default function HierarchySettingsPage() {
   } = trpc.hierarchy.getDefaultRuleSets.useQuery()
 
   // Detect active rule set
-  const { data: activeRuleSet } = trpc.hierarchy.getActiveRuleSet.useQuery(
+  const { data: activeRuleSet, refetch: refetchActiveRuleSet } = trpc.hierarchy.getActiveRuleSet.useQuery(
     { householdId: householdId as string },
     { enabled: !!householdId }
   )
@@ -49,6 +49,7 @@ export default function HierarchySettingsPage() {
       setSuccessMessage('Regel-sett ble aktivert!')
       setIsApplying(false)
       refetchMatrix()
+      refetchActiveRuleSet()
       setTimeout(() => setSuccessMessage(''), 3000)
     },
     onError: (error) => {
@@ -179,56 +180,35 @@ export default function HierarchySettingsPage() {
               <CardContent className="space-y-6">
               {/* Rule Set Descriptions */}
               <div className="grid gap-4 md:grid-cols-3">
-                <Card className="border-2 hover:border-primary/50 transition-colors">
-                  <CardHeader className="pb-4">
-                    <CardTitle className="text-lg">Minimal</CardTitle>
-                    <Badge variant="outline" className="w-fit">8 regler</Badge>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="text-sm text-muted-foreground mb-3">
-                      Enkel organisering for mindre husholdninger. Begrensede nivåer for oversiktlighet.
-                    </p>
-                    <ul className="text-xs space-y-1 text-muted-foreground">
-                      <li>• Rom → Skap/Beholdere/Bokser</li>
-                      <li>• Skap → Bokser/Poser</li>
-                      <li>• Beholdere → Bokser/Poser</li>
-                    </ul>
-                  </CardContent>
-                </Card>
-
-                <Card className="border-2 hover:border-primary/50 transition-colors">
-                  <CardHeader className="pb-4">
-                    <CardTitle className="text-lg">Standard</CardTitle>
-                    <Badge variant="outline" className="w-fit">18 regler</Badge>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="text-sm text-muted-foreground mb-3">
-                      Balansert fleksibilitet for de fleste husholdninger. Gode organisasjonsmuligheter.
-                    </p>
-                    <ul className="text-xs space-y-1 text-muted-foreground">
-                      <li>• Rom → Reoler/Skap/Beholdere</li>
-                      <li>• Skap → Skuffer/Hyller/Bokser</li>
-                      <li>• Reoler → Hylleavdelinger/Bokser</li>
-                    </ul>
-                  </CardContent>
-                </Card>
-
-                <Card className="border-2 hover:border-primary/50 transition-colors">
-                  <CardHeader className="pb-4">
-                    <CardTitle className="text-lg">Utvidet</CardTitle>
-                    <Badge variant="outline" className="w-fit">26 regler</Badge>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="text-sm text-muted-foreground mb-3">
-                      Maksimal fleksibilitet for komplekse organisasjonsbehov. Alle kombinasjoner tillatt.
-                    </p>
-                    <ul className="text-xs space-y-1 text-muted-foreground">
-                      <li>• Alle lokasjonstyper kan kombineres</li>
-                      <li>• Perfekt for spesialiserte behov</li>
-                      <li>• Krever mer planlegging</li>
-                    </ul>
-                  </CardContent>
-                </Card>
+                {defaultRuleSets?.map((ruleSet) => (
+                  <Card 
+                    key={ruleSet.name} 
+                    className={`border-2 hover:border-primary/50 transition-colors cursor-pointer ${
+                      selectedRuleSet === ruleSet.name ? 'border-primary bg-primary/5' : ''
+                    }`}
+                    onClick={() => setSelectedRuleSet(ruleSet.name)}
+                  >
+                    <CardHeader className="pb-4">
+                      <CardTitle className="text-lg">{ruleSet.displayName}</CardTitle>
+                      <Badge variant="outline" className="w-fit">{ruleSet.rules.length} regler</Badge>
+                    </CardHeader>
+                    <CardContent>
+                      <p className="text-sm text-muted-foreground mb-3">
+                        {ruleSet.description}
+                      </p>
+                      <ul className="text-xs space-y-1 text-muted-foreground">
+                        {ruleSet.rules.slice(0, 3).map((rule, index) => (
+                          <li key={index}>
+                            • {locationTypeLabels[rule.parentType as keyof typeof locationTypeLabels]} → {locationTypeLabels[rule.childType as keyof typeof locationTypeLabels]}
+                          </li>
+                        ))}
+                        {ruleSet.rules.length > 3 && (
+                          <li>• ... og {ruleSet.rules.length - 3} flere</li>
+                        )}
+                      </ul>
+                    </CardContent>
+                  </Card>
+                ))}
               </div>
 
               {/* Rule Set Selector */}
@@ -240,9 +220,11 @@ export default function HierarchySettingsPage() {
                       <SelectValue placeholder="Velg et regel-sett" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="minimal">Minimal (8 regler)</SelectItem>
-                      <SelectItem value="standard">Standard (18 regler)</SelectItem>
-                      <SelectItem value="extended">Utvidet (26 regler)</SelectItem>
+                      {defaultRuleSets?.map((ruleSet) => (
+                        <SelectItem key={ruleSet.name} value={ruleSet.name}>
+                          {ruleSet.displayName} ({ruleSet.rules.length} regler)
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>

@@ -58,8 +58,8 @@ export async function middleware(request: NextRequest) {
     pathname.startsWith(route)
   )
   
-  // Check if this is a tRPC route that requires authentication
-  const isProtectedTrpcRoute = pathname.startsWith('/api/trpc') && !isPublicTrpcRoute
+  // Do not protect tRPC at middleware level; let tRPC protectedProcedure enforce auth
+  const isProtectedTrpcRoute = false
   
   // Check if this is an auth route
   const isAuthRoute = authRoutes.some(route => 

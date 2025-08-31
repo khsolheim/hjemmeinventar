@@ -36,7 +36,10 @@ export function LocationWizard() {
   const [showPrivacyModal, setShowPrivacyModal] = useState<WizardLocation | null>(null)
 
   // tRPC queries and mutations
-  const { data: locations = [], isLoading: locationsLoading, refetch } = trpc.locations.getAll.useQuery()
+  const { data: locationsData, isLoading: locationsLoading, refetch } = trpc.locations.getAll.useQuery()
+  
+  // Safe array handling
+  const locations = locationsData && Array.isArray(locationsData) ? locationsData : []
   const createLocationMutation = trpc.locations.createWithWizard.useMutation({
     onSuccess: (newLocation) => {
       toast.success('Lokasjon opprettet!')
@@ -89,6 +92,11 @@ export function LocationWizard() {
 
   // Convert database locations to wizard format
   const flattenToWizardLocations = (dbLocations: any[]): WizardLocation[] => {
+    // Safe guard - ensure dbLocations is an array
+    if (!dbLocations || !Array.isArray(dbLocations)) {
+      return []
+    }
+
     const convertLocation = (loc: any): WizardLocation => ({
       id: loc.id,
       name: loc.name,
@@ -102,7 +110,7 @@ export function LocationWizard() {
       colorCode: loc.colorCode,
       tags: loc.tags ? JSON.parse(loc.tags) : [],
       qrCode: loc.qrCode,
-      children: loc.children ? loc.children.map(convertLocation) : []
+      children: loc.children && Array.isArray(loc.children) ? loc.children.map(convertLocation) : []
     })
 
     return dbLocations.map(convertLocation)

@@ -40,47 +40,47 @@ async function isPlacementAllowed(ctx: any, parentType: string, childType: strin
   return true // Placeholder since hierarchyRule not in schema
 }
 
+// Helper function to build breadcrumbs for navigation
+async function buildBreadcrumbs(ctx: any, locationId: string): Promise<any[]> {
+  const breadcrumbs: any[] = []
+  let currentId: string | null = locationId
+
+  // Build breadcrumbs by walking up the hierarchy
+  while (currentId) {
+    const location = await ctx.db.location.findFirst({
+      where: {
+        id: currentId,
+        userId: ctx.user.id
+      }
+    })
+
+    if (!location) break
+
+    breadcrumbs.unshift({
+      id: location.id,
+      name: location.name,
+      type: location.type
+    })
+
+    currentId = location.parentId
+  }
+
+  // Add root level
+  breadcrumbs.unshift({
+    id: null,
+    name: 'Alle lokasjoner'
+  })
+
+  return breadcrumbs
+}
+
 export const locationsRouter = createTRPCRouter({
   // Get all locations for user (hierarchical tree)
   getAll: protectedProcedure
     .query(async ({ ctx }) => {
-      console.log('=== CRITICAL DEBUGGING ===')
-      console.log('Current user ID from session:', ctx.user.id)
-      console.log('User ID type:', typeof ctx.user.id)
-      
-      // Hent ALLE lokasjoner for å se userId-ene
-      const allLocationsInDB = await ctx.db.location.findMany({
-        select: { id: true, name: true, userId: true }
-      })
-      console.log('All locations in DB with userIds:', allLocationsInDB)
-      console.log('Unique user IDs in DB:', [...new Set(allLocationsInDB.map(l => l.userId))])
-      
-      // Hent alle lokasjoner og bygg hierarkiet i koden
-      const allLocations = await ctx.db.location.findMany({
-        where: { userId: ctx.user.id },
-        include: {
-          parent: true,
-          _count: { select: { items: true } }
-        },
-        orderBy: { name: 'asc' }
-      })
-      
-      console.log('Matching locations for current user:', allLocations.length)
-      
-      // MIDLERTIDIG FIX: Hvis bruker har 0 lokasjoner men det finnes lokasjoner i DB,
-      // tilordne dem til current user (kun under utvikling)
-      if (allLocations.length === 0 && allLocationsInDB.length > 0) {
-        console.log('FIXING: No locations for current user, but locations exist. Reassigning to current user...')
-        
-        // Oppdater alle lokasjoner til current user
-        await ctx.db.location.updateMany({
-          data: { userId: ctx.user.id }
-        })
-        
-        console.log('Updated all locations to current user. Refetching...')
-        
-        // Hent på nytt
-        const updatedLocations = await ctx.db.location.findMany({
+      try {
+        // Hent alle lokasjoner for brukeren
+        const allLocations = await ctx.db.location.findMany({
           where: { userId: ctx.user.id },
           include: {
             parent: true,
@@ -89,33 +89,33 @@ export const locationsRouter = createTRPCRouter({
           orderBy: { name: 'asc' }
         })
         
-        console.log('After update - found locations:', updatedLocations.length)
-        
         // Funksjjon for å bygge hierarkisk struktur
-        const buildHierarchy = (locations: typeof updatedLocations, parentId: string | null = null): any[] => {
+        const buildHierarchy = (locations: typeof allLocations, parentId: string | null = null): any[] => {
           return locations
             .filter(loc => loc.parentId === parentId)
             .map(loc => ({
-              ...loc,
+              id: loc.id,
+              name: loc.name,
+              type: loc.type,
+              parentId: loc.parentId,
+              userId: loc.userId,
+              qrCode: loc.qrCode,
+              description: loc.description,
+              // Skip Date objects since superjson is disabled
+              itemCount: loc._count?.items || 0,
               children: buildHierarchy(locations, loc.id)
             }))
         }
         
-        return buildHierarchy(updatedLocations, null)
+        // Returner kun root-lokasjoner med hierarkisk struktur
+        return buildHierarchy(allLocations, null)
+      } catch (error) {
+        console.error('Error in locations.getAll:', error)
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Kunne ikke hente lokasjoner'
+        })
       }
-      
-      // Funksjjon for å bygge hierarkisk struktur
-      const buildHierarchy = (locations: typeof allLocations, parentId: string | null = null): any[] => {
-        return locations
-          .filter(loc => loc.parentId === parentId)
-          .map(loc => ({
-            ...loc,
-            children: buildHierarchy(locations, loc.id)
-          }))
-      }
-      
-      // Returner kun root-lokasjoner med hierarkisk struktur
-      return buildHierarchy(allLocations, null)
     }),
 
   // ALTERNATIV: Get all locations as flat list (for debugging)
@@ -222,88 +222,140 @@ export const locationsRouter = createTRPCRouter({
       parentId: z.string().nullable().optional()
     }))
     .mutation(async ({ ctx, input }) => {
-      // Clean parentId - convert empty string to undefined and validate
-      let parentId = input.parentId
-      if (!parentId || parentId === '' || parentId === null || (typeof parentId === 'string' && parentId.trim() === '')) {
-        parentId = undefined
-      }
-      
-      console.log('Creating location with parentId:', parentId, 'original:', input.parentId)
-      console.log('User ID:', ctx.user.id)
-      
-      // Verify user exists
-      const userExists = await ctx.db.user.findUnique({
-        where: { id: ctx.user.id }
-      })
-      
-      if (!userExists) {
-        throw new TRPCError({
-          code: 'UNAUTHORIZED',
-          message: 'Bruker ikke funnet'
-        })
-      }
-      
-      const cleanedInput = {
-        name: input.name,
-        description: input.description,
-        type: input.type,
-        parentId: parentId
-      }
-      
-      // Verify parent location if specified
-      if (cleanedInput.parentId) {
-        console.log('Verifying parent location:', cleanedInput.parentId)
-        const parent = await ctx.db.location.findFirst({
-          where: {
-            id: cleanedInput.parentId,
+      try {
+        // Clean parentId - convert empty string to null
+        let parentId = input.parentId
+        if (!parentId || parentId === '' || (typeof parentId === 'string' && parentId.trim() === '')) {
+          parentId = null
+        }
+        
+        // Verify parent location if specified
+        if (parentId) {
+          const parent = await ctx.db.location.findFirst({
+            where: {
+              id: parentId,
+              userId: ctx.user.id
+            }
+          })
+          
+          if (!parent) {
+            throw new TRPCError({
+              code: 'NOT_FOUND',
+              message: 'Overordnet lokasjon ikke funnet'
+            })
+          }
+        }
+        
+        // Generate unique QR code
+        const qrCode = await generateUniqueQRCode()
+        
+        // Create location in database
+        const location = await ctx.db.location.create({
+          data: {
+            name: input.name,
+            description: input.description,
+            type: input.type as any,
+            parentId: parentId,
+            qrCode,
             userId: ctx.user.id
           }
         })
         
-        console.log('Parent found:', !!parent)
-        
-        if (!parent) {
-          throw new TRPCError({
-            code: 'NOT_FOUND',
-            message: 'Overordnet lokasjon ikke funnet'
-          })
+        // Return simple response (no Date objects since superjson is disabled)
+        return {
+          success: true,
+          id: location.id,
+          name: location.name,
+          type: location.type,
+          qrCode: location.qrCode,
+          description: location.description,
+          parentId: location.parentId
         }
-        
-        // Validate hierarchy rules (household-aware)
-        if (!(await isPlacementAllowed(ctx, parent.type, cleanedInput.type))) {
-          throw new TRPCError({
-            code: 'BAD_REQUEST',
-            message: `En ${cleanedInput.type.toLowerCase()} kan ikke plasseres i en ${parent.type.toLowerCase()}. Sjekk hierarki-reglene.`
-          })
-        }
+      } catch (error) {
+        console.error('Error in locations.create:', error)
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Kunne ikke opprette lokasjon'
+        })
       }
-      
-      // Generate unique QR code
-      const qrCode = await generateUniqueQRCode()
-      
-      const location = await ctx.db.location.create({
-        data: {
-          name: cleanedInput.name,
-          description: cleanedInput.description,
-          type: cleanedInput.type as any, // TypeScript workaround for SHELF_COMPARTMENT
-          parentId: cleanedInput.parentId || null,
-          qrCode,
-          userId: ctx.user.id
-        },
-        include: {
-          parent: true
+    }),
+
+  // Bulk create locations
+  bulkCreate: protectedProcedure
+    .input(z.object({
+      locations: z.array(z.object({
+        name: z.string().min(1),
+        description: z.string().optional(),
+        type: z.enum(['ROOM', 'SHELF', 'BOX', 'CONTAINER', 'DRAWER', 'CABINET', 'SHELF_COMPARTMENT', 'BAG', 'SECTION']),
+        parentId: z.string().nullable().optional()
+      }))
+    }))
+    .mutation(async ({ ctx, input }) => {
+      try {
+        const results = []
+        
+        for (const locationData of input.locations) {
+          // Clean parentId - convert empty string to null
+          let parentId = locationData.parentId
+          if (!parentId || parentId === '' || (typeof parentId === 'string' && parentId.trim() === '')) {
+            parentId = null
+          }
+          
+          // Verify parent location if specified
+          if (parentId) {
+            const parent = await ctx.db.location.findFirst({
+              where: {
+                id: parentId,
+                userId: ctx.user.id
+              }
+            })
+            
+            if (!parent) {
+              throw new TRPCError({
+                code: 'NOT_FOUND',
+                message: `Overordnet lokasjon ikke funnet for ${locationData.name}`
+              })
+            }
+          }
+          
+          // Generate unique QR code
+          const qrCode = await generateUniqueQRCode()
+          
+          // Create location in database
+          const location = await ctx.db.location.create({
+            data: {
+              name: locationData.name,
+              description: locationData.description,
+              type: locationData.type as any,
+              parentId: parentId,
+              qrCode,
+              userId: ctx.user.id
+            }
+          })
+          
+          results.push({
+            success: true,
+            id: location.id,
+            name: location.name,
+            type: location.type,
+            qrCode: location.qrCode,
+            description: location.description,
+            parentId: location.parentId
+          })
         }
-      })
-      
-      // Log activity
-      await logActivity({
-        type: 'LOCATION_CREATED',
-        description: `Opprettet lokasjon ${location.name}`,
-        userId: ctx.user.id,
-        locationId: location.id
-      })
-      
-      return location
+        
+        return {
+          success: true,
+          count: results.length,
+          locations: results
+        }
+      } catch (error) {
+        console.error('Error in locations.bulkCreate:', error)
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Kunne ikke opprette lokasjoner'
+        })
+      }
     }),
 
   // Update location
@@ -388,7 +440,28 @@ export const locationsRouter = createTRPCRouter({
         }
       })
       
-      return location
+      // Return serialized location object
+      return {
+        id: location.id,
+        name: location.name,
+        type: location.type,
+        parentId: location.parentId,
+        userId: location.userId,
+        qrCode: location.qrCode,
+        description: location.description,
+        createdAt: location.createdAt.toISOString(),
+        updatedAt: location.updatedAt.toISOString(),
+        parent: location.parent ? {
+          id: location.parent.id,
+          name: location.parent.name,
+          type: location.parent.type
+        } : null,
+        children: location.children ? location.children.map(child => ({
+          id: child.id,
+          name: child.name,
+          type: child.type
+        })) : []
+      }
     }),
 
   // Delete location (with validation)
@@ -584,11 +657,118 @@ export const locationsRouter = createTRPCRouter({
         }
       })
 
+      // Return serialized location object
       return {
-        ...location,
-        // tags: location.tags ? JSON.parse(location.tags) : [], // Removed - not in schema
-        // allowedUsers: location.allowedUsers ? JSON.parse(location.allowedUsers) : [], // Removed - not in schema
-        // images: location.images ? JSON.parse(location.images) : [] // Removed - not in schema
+        id: location.id,
+        name: location.name,
+        type: location.type,
+        parentId: location.parentId,
+        userId: location.userId,
+        qrCode: location.qrCode,
+        description: location.description,
+        createdAt: location.createdAt.toISOString(),
+        updatedAt: location.updatedAt.toISOString(),
+        _count: location._count,
+        parent: location.parent ? {
+          id: location.parent.id,
+          name: location.parent.name,
+          type: location.parent.type
+        } : null
+      }
+    }),
+
+  // Get content for a specific location (children + items)
+  getLocationContent: protectedProcedure
+    .input(z.object({
+      locationId: z.string().nullable()
+    }))
+    .query(async ({ ctx, input }) => {
+      try {
+        let currentLocation = null
+        let breadcrumbs: any[] = []
+
+        // Get current location if specified
+        if (input.locationId) {
+          currentLocation = await ctx.db.location.findFirst({
+            where: {
+              id: input.locationId,
+              userId: ctx.user.id
+            }
+          })
+
+          if (!currentLocation) {
+            throw new TRPCError({
+              code: 'NOT_FOUND',
+              message: 'Lokasjon ikke funnet'
+            })
+          }
+
+          // Build breadcrumbs
+          breadcrumbs = await buildBreadcrumbs(ctx, input.locationId)
+        } else {
+          // Root level
+          breadcrumbs = [{ id: null, name: 'Alle lokasjoner' }]
+        }
+
+        // Get child locations
+        const childLocations = await ctx.db.location.findMany({
+          where: {
+            parentId: input.locationId,
+            userId: ctx.user.id
+          },
+          include: {
+            _count: { select: { items: true } }
+          },
+          orderBy: { name: 'asc' }
+        })
+
+        // Get items in this location
+        const items = await ctx.db.item.findMany({
+          where: {
+            locationId: input.locationId || undefined,
+            userId: ctx.user.id
+          },
+          include: {
+            category: true
+          },
+          orderBy: { name: 'asc' }
+        })
+
+        return {
+          currentLocation: currentLocation ? {
+            id: currentLocation.id,
+            name: currentLocation.name,
+            type: currentLocation.type,
+            description: currentLocation.description,
+            qrCode: currentLocation.qrCode,
+            parentId: currentLocation.parentId
+          } : null,
+          childLocations: childLocations.map(loc => ({
+            id: loc.id,
+            name: loc.name,
+            type: loc.type,
+            description: loc.description,
+            qrCode: loc.qrCode,
+            itemCount: loc._count.items
+          })),
+          items: items.map(item => ({
+            id: item.id,
+            name: item.name,
+            description: item.description,
+            price: item.price,
+            category: item.category ? {
+              id: item.category.id,
+              name: item.category.name
+            } : null
+          })),
+          breadcrumbs
+        }
+      } catch (error) {
+        console.error('Error in locations.getLocationContent:', error)
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Kunne ikke hente lokasjon-innhold'
+        })
       }
     }),
 

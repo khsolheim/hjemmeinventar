@@ -42,6 +42,10 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { CameraCaptureCompact } from '@/components/ui/camera-capture'
 import { BarcodeScannerCompact, type ProductInfo } from '@/components/ui/barcode-scanner'
+import { QuickAddModal } from '@/components/ui/quick-add-modal'
+import { SwipeableItemCard, CompactItemCard } from '@/components/items/SwipeableItemCard'
+import { BulkActions, BulkSelectionControls } from '@/components/bulk/BulkActions'
+import { ItemsGridSkeleton, ItemsListSkeleton } from '@/components/ui/skeleton'
 
 import { DynamicFormFields } from '@/components/forms/DynamicFormFields'
 import { trpc } from '@/lib/trpc/client'
@@ -69,6 +73,12 @@ export default function ItemsPage() {
   const [showCreateForm, setShowCreateForm] = useState(false)
   const [editingItem, setEditingItem] = useState<any>(null)
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid')
+  const [showQuickAdd, setShowQuickAdd] = useState(false)
+
+  // Bulk selection state
+  const [bulkMode, setBulkMode] = useState(false)
+  const [selectedItems, setSelectedItems] = useState<string[]>([])
+  const [defaultLocationId, setDefaultLocationId] = useState<string>()
   const [newItem, setNewItem] = useState({
     name: '',
     description: '',
@@ -85,18 +95,50 @@ export default function ItemsPage() {
   })
 
   // tRPC queries and mutations
-  const { data: itemsData, isLoading, error, refetch } = trpc.items.getAll.useQuery({
+  const { data: itemsData, isLoading, error, refetch } = (trpc.items.getAll.useQuery as any)({
     search: searchQuery || undefined,
     categoryId: selectedCategory === 'all' ? undefined : selectedCategory,
     locationId: selectedLocation === 'all' ? undefined : selectedLocation,
     limit: 50
   })
-  
+
   // Extract items from the response object
   const items = itemsData?.items || []
+
+  const { data: locationsData } = (trpc.locations.getAll.useQuery as any)()
+  const { data: categoriesData } = (trpc.categories.getAll.useQuery as any)()
   
-  const { data: locations = [] } = trpc.locations.getAll.useQuery()
-  const { data: categories = [] } = trpc.categories.getAll.useQuery()
+  // Safe array handling
+  const locations = locationsData && Array.isArray(locationsData) ? locationsData : []
+  const categories = categoriesData && Array.isArray(categoriesData) ? categoriesData : []
+
+  // Bulk selection handlers
+  const handleItemSelect = (itemId: string, selected: boolean) => {
+    if (selected) {
+      setSelectedItems(prev => [...prev, itemId])
+    } else {
+      setSelectedItems(prev => prev.filter(id => id !== itemId))
+    }
+  }
+
+  const handleSelectAll = () => {
+    if (selectedItems.length === items.length) {
+      setSelectedItems([])
+    } else {
+      setSelectedItems(items.map((item: any) => item.id))
+    }
+  }
+
+  const handleClearSelection = () => {
+    setSelectedItems([])
+  }
+
+  const toggleBulkMode = () => {
+    setBulkMode(!bulkMode)
+    if (bulkMode) {
+      setSelectedItems([])
+    }
+  }
   
   // Get field schema for selected category in create form
   const { data: categoryFieldSchema } = trpc.categories.getFieldSchema.useQuery(
@@ -316,6 +358,26 @@ export default function ItemsPage() {
           </p>
         </div>
         <div className="flex items-center gap-4">
+          {/* Bulk Mode Toggle */}
+          <Button
+            variant={bulkMode ? 'default' : 'outline'}
+            size="sm"
+            onClick={toggleBulkMode}
+            className="gap-2"
+          >
+            {bulkMode ? (
+              <>
+                <Archive className="w-4 h-4" />
+                Avslutt bulk
+              </>
+            ) : (
+              <>
+                <Archive className="w-4 h-4" />
+                Bulk modus
+              </>
+            )}
+          </Button>
+
           {/* View Controls */}
           <div className="flex items-center gap-2">
             <Button
@@ -333,12 +395,12 @@ export default function ItemsPage() {
               <List className="w-4 h-4" />
             </Button>
           </div>
-          <AccessibleButton 
-            onClick={() => setShowCreateForm(true)}
+          <AccessibleButton
+            onClick={() => setShowQuickAdd(true)}
             aria-label="Legg til ny gjenstand"
           >
             <Plus className="w-4 h-4 mr-2" />
-            Ny gjenstand
+            Hurtig tillegg
           </AccessibleButton>
         </div>
       </div>
@@ -694,8 +756,28 @@ export default function ItemsPage() {
         </Card>
       )}
 
+      {/* Bulk Actions */}
+      {bulkMode && (
+        <div className="space-y-4">
+          <BulkSelectionControls
+            totalItems={items.length}
+            selectedItems={selectedItems}
+            onSelectAll={handleSelectAll}
+            onClearSelection={handleClearSelection}
+          />
+
+          <BulkActions
+            selectedItems={selectedItems}
+            onClearSelection={handleClearSelection}
+            onItemsUpdated={refetch}
+          />
+        </div>
+      )}
+
       {/* Items Display */}
-      {viewMode === 'grid' ? (
+      {isLoading ? (
+        viewMode === 'grid' ? <ItemsGridSkeleton /> : <ItemsListSkeleton />
+      ) : viewMode === 'grid' ? (
         <div className="cq-grid items-grid" style={{"--card-min":"220px"} as any}>
           {items.map((item: any) => (
           <Card key={item.id} className="hover:shadow-md transition-shadow group cursor-pointer">
@@ -948,6 +1030,17 @@ export default function ItemsPage() {
           )}
         </div>
       )}
+
+      {/* Quick Add Modal */}
+      <QuickAddModal
+        open={showQuickAdd}
+        onOpenChange={setShowQuickAdd}
+        defaultLocationId={defaultLocationId}
+        onItemAdded={() => {
+          refetch()
+          setShowQuickAdd(false)
+        }}
+      />
     </div>
   )
 }

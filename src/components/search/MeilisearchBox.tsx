@@ -47,6 +47,7 @@ interface SearchResult {
   locationName?: string
   price?: number
   quantity?: number
+  explanation?: string
   _formatted?: any
 }
 
@@ -59,18 +60,24 @@ interface SearchFilters {
   hasBarcode?: boolean
 }
 
-export function MeilisearchBox({ 
+export function MeilisearchBox({
   placeholder = "Søk i inventar...",
   className = "",
   onResultSelect,
   showFilters = true,
-  autoFocus = false
+  autoFocus = false,
+  naturalLanguageMode = false,
+  inputId,
+  inputName
 }: {
   placeholder?: string
   className?: string
   onResultSelect?: (result: SearchResult) => void
   showFilters?: boolean
   autoFocus?: boolean
+  naturalLanguageMode?: boolean
+  inputId?: string
+  inputName?: string
 }) {
   const { data: session } = useSession()
   const router = useRouter()
@@ -98,6 +105,19 @@ export function MeilisearchBox({
     },
     onError: (error) => {
       toast.error('AI-forbedring feilet: ' + error.message)
+    }
+  })
+
+  // Natural language search
+  const naturalLanguageSearch = trpc.ai.naturalLanguageSearch?.useMutation({
+    onSuccess: (results) => {
+      setResults(results)
+      setAiEnhanced(true)
+    },
+    onError: (error) => {
+      toast.error('Naturlig språk søk feilet: ' + error.message)
+      // Fall back to regular search
+      performSearch(query)
     }
   })
 
@@ -134,6 +154,21 @@ export function MeilisearchBox({
     }
 
     setIsLoading(true)
+
+    // Check if this looks like a natural language query
+    const isNaturalLanguage = naturalLanguageMode || isNaturalLanguageQuery(searchQuery)
+
+    if (isNaturalLanguage && aiStatus?.enabled && naturalLanguageSearch) {
+      // Use natural language search
+      naturalLanguageSearch.mutate({
+        query: searchQuery,
+        context: 'inventory_search',
+        userId: session.user.id
+      })
+      return
+    }
+
+    // Regular search
     try {
       const response = await fetch('/api/search/meilisearch', {
         method: 'POST',
@@ -158,7 +193,26 @@ export function MeilisearchBox({
     } finally {
       setIsLoading(false)
     }
-  }, [session?.user?.id, filters])
+  }, [session?.user?.id, filters, naturalLanguageMode, aiStatus?.enabled])
+
+  // Helper function to detect natural language queries
+  const isNaturalLanguageQuery = (query: string): boolean => {
+    const naturalLanguagePatterns = [
+      /\bhvor er\b/i, // "hvor er"
+      /\bfinn\b/i, // "finn"
+      /\bhva er\b/i, // "hva er"
+      /\bhar jeg\b/i, // "har jeg"
+      /\bsiste\b/i, // "siste"
+      /\bnye\b/i, // "nye"
+      /\bi\b/i, // "i" (location context)
+      /\bpå\b/i, // "på" (location context)
+      /\bmine\b/i, // "mine" (possessive)
+      /\bmitt\b/i, // "mitt" (possessive)
+      /\bmin\b/i // "min" (possessive)
+    ]
+
+    return naturalLanguagePatterns.some(pattern => pattern.test(query))
+  }
 
   // Debounced search effect
   useEffect(() => {
@@ -248,7 +302,10 @@ export function MeilisearchBox({
             <Input
               ref={inputRef}
               type="text"
-              placeholder={placeholder}
+              id={inputId || 'inventory-search'}
+              name={inputName || 'search'}
+              autoComplete="search"
+              placeholder={naturalLanguageMode ? "Prøv: 'hvor er mine røde sokker?' eller 'strikketøy i stuen'" : placeholder}
               value={query}
               onChange={(e) => {
                 setQuery(e.target.value)
@@ -308,24 +365,32 @@ export function MeilisearchBox({
                         </Badge>
                       </div>
                       
-                      <div className="flex-1 min-w-0">
-                        <div className="font-medium truncate">
-                          {result._formatted?.name ? (
-                            <span dangerouslySetInnerHTML={{ __html: result._formatted.name }} />
-                          ) : (
-                            result.name
-                          )}
-                        </div>
-                        
-                        {result.description && (
-                          <div className="text-sm text-muted-foreground truncate">
-                            {result._formatted?.description ? (
-                              <span dangerouslySetInnerHTML={{ __html: result._formatted.description }} />
+                                              <div className="flex-1 min-w-0">
+                          <div className="font-medium truncate">
+                            {result._formatted?.name ? (
+                              <span dangerouslySetInnerHTML={{ __html: result._formatted.name }} />
                             ) : (
-                              result.description
+                              result.name
                             )}
                           </div>
-                        )}
+
+                          {result.description && (
+                            <div className="text-sm text-muted-foreground truncate">
+                              {result._formatted?.description ? (
+                                <span dangerouslySetInnerHTML={{ __html: result._formatted.description }} />
+                              ) : (
+                                result.description
+                              )}
+                            </div>
+                          )}
+
+                          {/* Show explanation for natural language results */}
+                          {result.explanation && (
+                            <div className="text-xs text-blue-600 mt-1 flex items-center gap-1">
+                              <Sparkles className="w-3 h-3" />
+                              {result.explanation}
+                            </div>
+                          )}
                         
                         <div className="flex items-center gap-2 mt-1">
                           {result.categoryName && (
@@ -419,8 +484,33 @@ export function MeilisearchBox({
                 </CommandGroup>
               )}
 
+              {/* Natural Language Suggestions */}
+              {!query && naturalLanguageMode && (
+                <CommandGroup heading="Naturlige søk eksempler">
+                  {[
+                    { text: "hvor er mine røde sokker?", desc: "Finn spesifikke gjenstander" },
+                    { text: "strikketøy i stuen", desc: "Søk etter kategori i rom" },
+                    { text: "nye ting denne måneden", desc: "Nylig registrerte gjenstander" },
+                    { text: "hva har jeg i kjøleskapet?", desc: "Alt i en spesifikk lokasjon" },
+                    { text: "mine verktøy", desc: "Alle gjenstander i en kategori" }
+                  ].map((suggestion, index) => (
+                    <CommandItem
+                      key={index}
+                      onSelect={() => handleRecentSearchClick(suggestion.text)}
+                      className="flex items-center gap-3 p-3"
+                    >
+                      <Sparkles className="h-4 w-4 text-blue-500" />
+                      <div className="flex-1">
+                        <div className="font-medium text-left">{suggestion.text}</div>
+                        <div className="text-xs text-muted-foreground">{suggestion.desc}</div>
+                      </div>
+                    </CommandItem>
+                  ))}
+                </CommandGroup>
+              )}
+
               {/* Empty State */}
-              {!query && recentSearches.length === 0 && popularItems.length === 0 && (
+              {!query && recentSearches.length === 0 && popularItems.length === 0 && !naturalLanguageMode && (
                 <div className="py-6 text-center text-sm text-muted-foreground">
                   <Search className="h-8 w-8 mx-auto mb-2" />
                   <p>Begynn å skrive for å søke...</p>

@@ -53,16 +53,21 @@ export function OnboardingWizard({ onComplete, onSkip, className = '' }: Onboard
     primaryUse: '',
     householdSize: '',
     inventoryTypes: [] as string[],
-    
-    // Step 2: First Location
+
+    // Step 2: Quick Setup (NEW)
+    selectedHomeType: '',
+    autoGenerateRooms: true,
+    customRoomName: '',
+
+    // Step 3: First Location (renamed from Step 2)
     firstLocationName: '',
     firstLocationType: 'ROOM' as const,
-    
-    // Step 3: Sample Item
+
+    // Step 4: Sample Item (renamed from Step 3)
     sampleItemName: '',
     sampleItemCategory: '',
-    
-    // Step 4: Settings
+
+    // Step 5: Settings (renamed from Step 4)
     enableNotifications: true,
     enableQRPrinting: false,
     defaultUnit: 'stk'
@@ -73,6 +78,8 @@ export function OnboardingWizard({ onComplete, onSkip, className = '' }: Onboard
   const createItemMutation = trpc.items.create.useMutation()
   const initializeCategoriesMutation = trpc.categories.initializeDefaults.useMutation()
 
+  // We use individual location creation for now, but could optimize with bulk later
+
   const inventoryTypeOptions = [
     { value: 'food', label: 'Mat og drikke', icon: '🍎' },
     { value: 'yarn', label: 'Garn og strikking', icon: '🧶' },
@@ -82,6 +89,45 @@ export function OnboardingWizard({ onComplete, onSkip, className = '' }: Onboard
     { value: 'clothes', label: 'Klær', icon: '👕' },
     { value: 'hobby', label: 'Hobby og kreativt', icon: '🎨' },
     { value: 'beauty', label: 'Helse og skjønnhet', icon: '💄' }
+  ]
+
+  const homeTypeOptions = [
+    {
+      value: 'apartment',
+      label: 'Leilighet',
+      icon: '🏢',
+      rooms: ['Stue', 'Kjøkken', 'Soverom', 'Bad', 'Entre']
+    },
+    {
+      value: 'house',
+      label: 'Enebolig',
+      icon: '🏠',
+      rooms: ['Stue', 'Kjøkken', 'Soverom 1', 'Soverom 2', 'Bad', 'Entre', 'Bod']
+    },
+    {
+      value: 'townhouse',
+      label: 'Rekkehus',
+      icon: '🏘️',
+      rooms: ['Stue', 'Kjøkken', 'Soverom 1', 'Soverom 2', 'Bad', 'Entre', 'Kjeller']
+    },
+    {
+      value: 'cottage',
+      label: 'Hytte/Fritidsbolig',
+      icon: '🏕️',
+      rooms: ['Stue', 'Kjøkken', 'Soverom', 'Bad', 'Veranda', 'Bod']
+    },
+    {
+      value: 'studio',
+      label: 'Studio/Loft',
+      icon: '🛋️',
+      rooms: ['Hovedrom', 'Kjøkken', 'Bad']
+    },
+    {
+      value: 'custom',
+      label: 'Tilpasset',
+      icon: '⚙️',
+      rooms: []
+    }
   ]
 
   const steps: OnboardingStep[] = [
@@ -129,6 +175,92 @@ export function OnboardingWizard({ onComplete, onSkip, className = '' }: Onboard
               </div>
               <p className="text-xs">Finn alt raskt</p>
             </div>
+          </div>
+        </div>
+      )
+    },
+    {
+      id: 'quick-setup',
+      title: 'Hurtig oppsett av hjem',
+      description: 'La oss auto-generere vanlige rom og kategorier for deg',
+      icon: Home,
+      content: (
+        <div className="space-y-6">
+          <div className="text-center">
+            <div className="w-20 h-20 bg-green-100 rounded-lg flex items-center justify-center mx-auto mb-4">
+              <Home className="w-10 h-10 text-green-600" />
+            </div>
+            <h3 className="text-lg font-medium mb-2">Spar tid med smart oppsett</h3>
+            <p className="text-muted-foreground">
+              Vi kan automatisk opprette vanlige rom og kategorier basert på din boligtype.
+              Dette gir deg en perfekt start på bare noen sekunder!
+            </p>
+          </div>
+
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>Hva slags bolig har du?</Label>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                {homeTypeOptions.map((option) => (
+                  <div
+                    key={option.value}
+                    className={`p-4 border rounded-lg cursor-pointer transition-all ${
+                      userData.selectedHomeType === option.value
+                        ? 'border-primary bg-primary/5 shadow-sm'
+                        : 'hover:border-primary/50 hover:bg-primary/2'
+                    }`}
+                    onClick={() => setUserData({...userData, selectedHomeType: option.value})}
+                  >
+                    <div className="flex items-center gap-3">
+                      <span className="text-2xl">{option.icon}</span>
+                      <div>
+                        <div className="font-medium">{option.label}</div>
+                        <div className="text-sm text-muted-foreground">
+                          {option.rooms.length > 0
+                            ? `${option.rooms.length} rom inkludert`
+                            : 'Tilpasset oppsett'
+                          }
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {userData.selectedHomeType === 'custom' && (
+              <div className="space-y-2">
+                <Label htmlFor="custom-room">Legg til ditt første rom</Label>
+                <Input
+                  id="custom-room"
+                  placeholder="F.eks. Stue, Kjøkken, Soverom..."
+                  value={userData.customRoomName}
+                  onChange={(e) => setUserData({...userData, customRoomName: e.target.value})}
+                />
+              </div>
+            )}
+
+            {userData.selectedHomeType && userData.selectedHomeType !== 'custom' && (
+              <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
+                <div className="flex items-start gap-3">
+                  <Check className="w-5 h-5 text-blue-600 mt-0.5" />
+                  <div>
+                    <h4 className="font-medium text-blue-900 mb-2">Dette blir opprettet automatisk:</h4>
+                    <div className="space-y-1">
+                      {homeTypeOptions.find(h => h.value === userData.selectedHomeType)?.rooms.map((room, index) => (
+                        <div key={index} className="flex items-center gap-2 text-sm text-blue-700">
+                          <span className="w-2 h-2 bg-blue-500 rounded-full"></span>
+                          {room}
+                        </div>
+                      ))}
+                    </div>
+                    <p className="text-xs text-blue-600 mt-2">
+                      Du kan alltid legge til flere rom senere!
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )
@@ -464,21 +596,64 @@ export function OnboardingWizard({ onComplete, onSkip, className = '' }: Onboard
     }
 
     // Validate current step
-    if (currentStep === 1 && !userData.primaryUse) {
+    if (currentStep === 1 && !userData.selectedHomeType) {
+      toast.error('Vennligst velg type bolig')
+      return
+    }
+    if (currentStep === 1 && userData.selectedHomeType === 'custom' && !userData.customRoomName.trim()) {
+      toast.error('Vennligst skriv inn navn på ditt første rom')
+      return
+    }
+    if (currentStep === 2 && !userData.primaryUse) {
       toast.error('Vennligst velg hovedformål')
       return
     }
-    if (currentStep === 2 && !userData.firstLocationName.trim()) {
+    if (currentStep === 3 && !userData.firstLocationName.trim()) {
       toast.error('Vennligst skriv inn navn på lokasjon')
       return
     }
-    if (currentStep === 3 && !userData.sampleItemName.trim()) {
+    if (currentStep === 4 && !userData.sampleItemName.trim()) {
       toast.error('Vennligst skriv inn navn på gjenstand')
       return
     }
 
-    // Create location on step 3
-    if (currentStep === 2) {
+    // Create locations on step 1 (quick setup)
+    if (currentStep === 1 && userData.autoGenerateRooms) {
+      const selectedHomeType = homeTypeOptions.find(h => h.value === userData.selectedHomeType)
+      if (selectedHomeType && selectedHomeType.rooms.length > 0) {
+        try {
+          // Bulk create rooms
+          const roomPromises = selectedHomeType.rooms.map(roomName =>
+            createLocationMutation.mutateAsync({
+              name: roomName,
+              type: 'ROOM',
+              description: `Auto-generert rom for ${selectedHomeType.label}`
+            })
+          )
+
+          await Promise.all(roomPromises)
+          toast.success(`${selectedHomeType.rooms.length} rom opprettet!`)
+        } catch (error) {
+          toast.error('Kunne ikke opprette rom automatisk')
+          return
+        }
+      } else if (userData.selectedHomeType === 'custom' && userData.customRoomName.trim()) {
+        try {
+          await createLocationMutation.mutateAsync({
+            name: userData.customRoomName,
+            type: 'ROOM',
+            description: 'Tilpasset rom opprettet under onboarding'
+          })
+          toast.success('Tilpasset rom opprettet!')
+        } catch (error) {
+          toast.error('Kunne ikke opprette rom')
+          return
+        }
+      }
+    }
+
+    // Create location on step 4 (now step 3)
+    if (currentStep === 3) {
       try {
         await createLocationMutation.mutateAsync({
           name: userData.firstLocationName,
@@ -511,12 +686,14 @@ export function OnboardingWizard({ onComplete, onSkip, className = '' }: Onboard
       // Create sample item if provided
       if (userData.sampleItemName.trim()) {
         const locations = await trpc.locations.getAll.useQuery().refetch()
-        const firstLocation = locations.data?.[0]
-        
-        if (firstLocation) {
+        const sampleLocation = userData.firstLocationName.trim()
+          ? locations.data?.find(loc => loc.name === userData.firstLocationName)
+          : locations.data?.find(loc => loc.type === 'ROOM') // Use first room if no specific location created
+
+        if (sampleLocation) {
           await createItemMutation.mutateAsync({
             name: userData.sampleItemName,
-            locationId: firstLocation.id,
+            locationId: sampleLocation.id,
             totalQuantity: 1,
             unit: userData.defaultUnit
           })

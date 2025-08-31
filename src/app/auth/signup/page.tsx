@@ -10,6 +10,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { AccessibleButton } from '@/components/ui/accessible-button'
 import { toast } from 'sonner'
 import { trpc } from '@/lib/trpc/client'
+import { Eye, EyeOff } from 'lucide-react'
 
 export default function SignUpPage() {
   const [formData, setFormData] = useState({
@@ -19,6 +20,8 @@ export default function SignUpPage() {
     confirmPassword: ''
   })
   const [isLoading, setIsLoading] = useState(false)
+  const [showPassword, setShowPassword] = useState(false)
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const router = useRouter()
 
   // tRPC mutation for user registration
@@ -125,6 +128,7 @@ export default function SignUpPage() {
                   id="name"
                   name="name"
                   type="text"
+                  autoComplete="name"
                   value={formData.name}
                   onChange={handleInputChange}
                   required
@@ -138,6 +142,7 @@ export default function SignUpPage() {
                   id="email"
                   name="email"
                   type="email"
+                  autoComplete="email"
                   value={formData.email}
                   onChange={handleInputChange}
                   required
@@ -147,16 +152,32 @@ export default function SignUpPage() {
 
               <div>
                 <Label htmlFor="password">Passord</Label>
-                <Input
-                  id="password"
-                  name="password"
-                  type="password"
-                  value={formData.password}
-                  onChange={handleInputChange}
-                  required
-                  placeholder="Minst 6 tegn"
-                  aria-describedby="password-help"
-                />
+                <div className="relative">
+                  <Input
+                    id="password"
+                    name="password"
+                    type={showPassword ? "text" : "password"}
+                    autoComplete="new-password"
+                    value={formData.password}
+                    onChange={handleInputChange}
+                    required
+                    placeholder="Minst 6 tegn"
+                    aria-describedby="password-help"
+                    className="pr-10"
+                  />
+                  <button
+                    type="button"
+                    className="absolute inset-y-0 right-0 pr-3 flex items-center"
+                    onClick={() => setShowPassword(!showPassword)}
+                    aria-label={showPassword ? "Skjul passord" : "Vis passord"}
+                  >
+                    {showPassword ? (
+                      <EyeOff className="h-4 w-4 text-gray-400 hover:text-gray-600" />
+                    ) : (
+                      <Eye className="h-4 w-4 text-gray-400 hover:text-gray-600" />
+                    )}
+                  </button>
+                </div>
                 <p id="password-help" className="text-sm text-gray-500 mt-1">
                   Passordet må være minst 6 tegn langt
                 </p>
@@ -164,16 +185,32 @@ export default function SignUpPage() {
 
               <div>
                 <Label htmlFor="confirmPassword">Bekreft passord</Label>
-                <Input
-                  id="confirmPassword"
-                  name="confirmPassword"
-                  type="password"
-                  value={formData.confirmPassword}
-                  onChange={handleInputChange}
-                  required
-                  placeholder="Gjenta passordet"
-                  aria-describedby="confirm-password-help"
-                />
+                <div className="relative">
+                  <Input
+                    id="confirmPassword"
+                    name="confirmPassword"
+                    type={showConfirmPassword ? "text" : "password"}
+                    autoComplete="new-password"
+                    value={formData.confirmPassword}
+                    onChange={handleInputChange}
+                    required
+                    placeholder="Gjenta passordet"
+                    aria-describedby="confirm-password-help"
+                    className="pr-10"
+                  />
+                  <button
+                    type="button"
+                    className="absolute inset-y-0 right-0 pr-3 flex items-center"
+                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                    aria-label={showConfirmPassword ? "Skjul bekreft passord" : "Vis bekreft passord"}
+                  >
+                    {showConfirmPassword ? (
+                      <EyeOff className="h-4 w-4 text-gray-400 hover:text-gray-600" />
+                    ) : (
+                      <Eye className="h-4 w-4 text-gray-400 hover:text-gray-600" />
+                    )}
+                  </button>
+                </div>
                 {formData.confirmPassword && formData.password !== formData.confirmPassword && (
                   <p id="confirm-password-help" className="text-sm text-red-600 mt-1">
                     Passordene må være like

@@ -18,20 +18,14 @@ export function LabelSizeSelector({
 }: LabelSizeSelectorProps) {
   const { data: labelSizes, isLoading } = trpc.labelSizes.getAll.useQuery()
 
-  if (isLoading) {
-    return (
-      <Select disabled>
-        <SelectTrigger>
-          <SelectValue placeholder="Laster..." />
-        </SelectTrigger>
-      </Select>
-    )
-  }
-
   return (
-    <Select value={value} onValueChange={onValueChange} disabled={disabled}>
+    <Select
+      value={value || ""}
+      onValueChange={onValueChange}
+      disabled={disabled || isLoading}
+    >
       <SelectTrigger>
-        <SelectValue placeholder={placeholder} />
+        <SelectValue placeholder={isLoading ? "Laster..." : placeholder} />
       </SelectTrigger>
       <SelectContent>
         {labelSizes?.map((size) => (

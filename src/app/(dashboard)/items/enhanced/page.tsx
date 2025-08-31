@@ -72,8 +72,12 @@ export default function EnhancedItemsPage() {
   
   // Extract items from the response object  
   const items = itemsData?.items || []
-  const { data: locations = [] } = trpc.locations.getAll.useQuery()
-  const { data: categories = [] } = trpc.categories.getAll.useQuery()
+  const { data: locationsData } = trpc.locations.getAll.useQuery()
+  const { data: categoriesData } = trpc.categories.getAll.useQuery()
+  
+  // Safe array handling
+  const locations = locationsData && Array.isArray(locationsData) ? locationsData : []
+  const categories = categoriesData && Array.isArray(categoriesData) ? categoriesData : []
 
   // Bulk delete mutation
   const bulkDeleteMutation = trpc.items.bulkDelete.useMutation({

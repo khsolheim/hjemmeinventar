@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Camera, QrCode, X, AlertCircle, Check } from 'lucide-react'
 import { toast } from 'sonner'
+import jsQR from 'jsqr'
 
 interface QRScannerProps {
   onScan: (result: string) => void
@@ -22,63 +23,182 @@ export function QRScanner({ onScan, onError, className = '' }: QRScannerProps) {
   const videoRef = useRef<HTMLVideoElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const scanIntervalRef = useRef<NodeJS.Timeout | null>(null)
+  const mountedRef = useRef(true)
+  const [deviceInfo, setDeviceInfo] = useState<{
+    hasRearCamera: boolean
+    isMobile: boolean
+    isIOS: boolean
+    isIOSChrome: boolean
+    isIOSFirefox: boolean
+    isIOSEdge: boolean
+    isIOSSafari: boolean
+  }>({ 
+    hasRearCamera: false, 
+    isMobile: false, 
+    isIOS: false,
+    isIOSChrome: false,
+    isIOSFirefox: false,
+    isIOSEdge: false,
+    isIOSSafari: false
+  })
 
-  // Check for camera permission and MediaDevices support
+  // Detect device capabilities
+  useEffect(() => {
+    const detectDevice = async () => {
+      const userAgent = navigator.userAgent
+      const isMobile = /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(userAgent)
+      const isIOS = /iPad|iPhone|iPod/.test(userAgent)
+      
+      // Detect specific iOS browsers
+      const isIOSChrome = isIOS && /CriOS/i.test(userAgent)
+      const isIOSFirefox = isIOS && /FxiOS/i.test(userAgent)
+      const isIOSEdge = isIOS && /EdgiOS/i.test(userAgent)
+      const isIOSSafari = isIOS && !isIOSChrome && !isIOSFirefox && !isIOSEdge
+      
+      console.log('Browser detection:', {
+        isIOS,
+        isIOSChrome,
+        isIOSFirefox, 
+        isIOSEdge,
+        isIOSSafari,
+        userAgent
+      })
+      
+      let hasRearCamera = false
+      
+      if (navigator.mediaDevices && navigator.mediaDevices.enumerateDevices) {
+        try {
+          const devices = await navigator.mediaDevices.enumerateDevices()
+          const videoDevices = devices.filter(device => device.kind === 'videoinput')
+          
+          // Check if any device has environment facing mode
+          for (const device of videoDevices) {
+            try {
+              const stream = await navigator.mediaDevices.getUserMedia({
+                video: { deviceId: device.deviceId, facingMode: 'environment' }
+              })
+              stream.getTracks().forEach(track => track.stop())
+              hasRearCamera = true
+              break
+            } catch (e) {
+              // Continue checking other devices
+            }
+          }
+        } catch (error) {
+          console.warn('Could not enumerate devices:', error)
+        }
+      }
+      
+      setDeviceInfo({ 
+        hasRearCamera, 
+        isMobile, 
+        isIOS,
+        isIOSChrome,
+        isIOSFirefox,
+        isIOSEdge,
+        isIOSSafari
+      })
+    }
+    
+    detectDevice()
+  }, [])
+
+  // Simplified camera permission check
   useEffect(() => {
     const checkCameraSupport = async () => {
-      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      console.log('🔍 QR Scanner: Checking camera support...')
+      
+      // Basic API check
+      if (!navigator.mediaDevices?.getUserMedia) {
+        console.error('❌ QR Scanner: MediaDevices API not supported')
         setHasPermission(false)
         return
       }
       
-      try {
-        const testStream = await navigator.mediaDevices.getUserMedia({ 
-          video: { facingMode: 'environment' } 
-        })
-        testStream.getTracks().forEach(track => track.stop())
-        setHasPermission(true)
-      } catch (error) {
-        setHasPermission(false)
-      }
+      console.log('✅ QR Scanner: MediaDevices API available')
+      
+      // Don't test camera access here - wait for user to click start
+      // This prevents permission prompts on page load
+      setHasPermission(null) // null = unknown, will test when user clicks start
     }
     
     checkCameraSupport()
   }, [])
 
-  // Start camera and scanning
+  // Simplified start scanning function
   const startScanning = useCallback(async () => {
-    if (!hasPermission) {
-      toast.error('Kamera-tilgang ikke tilgjengelig')
-      return
-    }
+    console.log('🚀 QR Scanner: Starting camera...')
 
     try {
       setIsScanning(true)
+
+      // Simple progressive fallback approach
+      let mediaStream: MediaStream
       
-      const mediaStream = await navigator.mediaDevices.getUserMedia({
-        video: { 
-          facingMode: 'environment', // Use rear camera if available
-          width: { ideal: 1280 },
-          height: { ideal: 720 }
+      try {
+        // Try basic camera first
+        console.log('📹 QR Scanner: Trying basic camera access...')
+        mediaStream = await navigator.mediaDevices.getUserMedia({
+          video: true
+        })
+        console.log('✅ QR Scanner: Basic camera successful')
+      } catch (basicError) {
+        console.warn('❌ QR Scanner: Basic camera failed:', basicError)
+        
+        // Try with rear camera
+        try {
+          console.log('📹 QR Scanner: Trying rear camera...')
+          mediaStream = await navigator.mediaDevices.getUserMedia({
+            video: { facingMode: 'environment' }
+          })
+          console.log('✅ QR Scanner: Rear camera successful')
+        } catch (rearError) {
+          console.error('❌ QR Scanner: All camera attempts failed:', rearError)
+          throw rearError
         }
-      })
+      }
+
+      // Set permission to true since we got camera access
+      setHasPermission(true)
 
       setStream(mediaStream)
       
       if (videoRef.current) {
         videoRef.current.srcObject = mediaStream
-        videoRef.current.play()
+        
+        // Try to play video with error handling for AbortError
+        try {
+          await videoRef.current.play()
+        } catch (playError) {
+          // Ignore AbortError - this happens when component unmounts or stream changes
+          if (playError instanceof DOMException && playError.name === 'AbortError') {
+            console.log('Video play aborted - component likely unmounting')
+            return
+          }
+          // Re-throw other errors
+          throw playError
+        }
+        
+        // Check if component is still mounted before continuing
+        if (!mountedRef.current) {
+          return
+        }
 
-        // Start scanning for QR codes
+        // Start scanning for QR codes - optimized for mobile performance
+        const isMobile = /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
+        const scanInterval = isMobile ? 300 : 200 // Slower on mobile to preserve battery
+        
         scanIntervalRef.current = setInterval(() => {
           if (videoRef.current && canvasRef.current && videoRef.current.readyState === 4) {
             detectQRCode()
           }
-        }, 100) // Scan every 100ms
+        }, scanInterval)
       }
     } catch (error) {
       console.error('Camera access error:', error)
-      setIsScanning(false)
+      if (mountedRef.current) {
+        setIsScanning(false)
+      }
       toast.error('Kunne ikke få tilgang til kameraet')
       onError?.('Kamera-feil')
     }
@@ -86,31 +206,54 @@ export function QRScanner({ onScan, onError, className = '' }: QRScannerProps) {
 
   // Stop camera and scanning
   const stopScanning = useCallback(() => {
-    setIsScanning(false)
-    
+    // Haptic feedback for stopping scan
+    if ('vibrate' in navigator) {
+      navigator.vibrate(30) // Very short vibration for stop
+    }
+
+    if (mountedRef.current) {
+      setIsScanning(false)
+    }
+
     if (scanIntervalRef.current) {
       clearInterval(scanIntervalRef.current)
       scanIntervalRef.current = null
     }
-    
+
     if (stream) {
       stream.getTracks().forEach(track => track.stop())
-      setStream(null)
+      if (mountedRef.current) {
+        setStream(null)
+      }
     }
-    
+
     if (videoRef.current) {
+      // Pause video first to prevent AbortError
+      try {
+        videoRef.current.pause()
+      } catch (pauseError) {
+        // Ignore pause errors - video might already be stopped
+        console.log('Video pause error (ignored):', pauseError)
+      }
+      
+      // Clear the source
       videoRef.current.srcObject = null
     }
   }, [stream])
 
   // Handle scan result
   const handleScanResult = useCallback((result: string) => {
+    // Haptic feedback for mobile devices
+    if ('vibrate' in navigator) {
+      navigator.vibrate([100, 50, 100]) // Double vibration pattern for success
+    }
+
     onScan(result)
     stopScanning()
     toast.success(`QR-kode skannet: ${result}`)
   }, [onScan, stopScanning])
 
-  // Simple QR code detection (in real app, you'd use a proper QR detection library)
+  // Real QR code detection using jsQR library
   const detectQRCode = useCallback(() => {
     if (!videoRef.current || !canvasRef.current) return
 
@@ -118,51 +261,30 @@ export function QRScanner({ onScan, onError, className = '' }: QRScannerProps) {
     const canvas = canvasRef.current
     const context = canvas.getContext('2d')
     
-    if (!context) return
+    if (!context || video.readyState !== 4) return
 
+    // Set canvas size to match video
     canvas.width = video.videoWidth
     canvas.height = video.videoHeight
     
+    // Draw current video frame to canvas
     context.drawImage(video, 0, 0, canvas.width, canvas.height)
     
-    // Simple pattern detection - in production use proper QR detection
-    // For demo, we'll simulate detection of patterns that look like QR codes
+    // Get image data for QR detection
     const imageData = context.getImageData(0, 0, canvas.width, canvas.height)
     
-    // Look for high contrast patterns (simplified QR detection)
-    if (hasQRPattern(imageData)) {
-      // For demo purposes, generate a mock QR code result
-      const mockResults = ['KJK-0001', 'SOV-0001', 'BOD-0001', 'ITEM-001']
-      const randomResult = mockResults[Math.floor(Math.random() * mockResults.length)]
-      
-      if (randomResult) {
-        handleScanResult(randomResult)
-      }
+    // Use jsQR to detect QR codes
+    const qrCode = jsQR(imageData.data, imageData.width, imageData.height, {
+      inversionAttempts: 'dontInvert', // Faster processing
+    })
+    
+    if (qrCode && qrCode.data) {
+      console.log('QR Code detected:', qrCode.data)
+      handleScanResult(qrCode.data)
     }
   }, [handleScanResult])
 
-  // Simplified pattern detection
-  const hasQRPattern = (imageData: ImageData): boolean => {
-    const data = imageData.data
-    let blackPixels = 0
-    let whitePixels = 0
-    
-    // Sample every 10th pixel to check for high contrast patterns
-    for (let i = 0; i < data.length - 2; i += 40) {
-      const brightness = (data[i]! + data[i + 1]! + data[i + 2]!) / 3
-      if (brightness < 128) {
-        blackPixels++
-      } else {
-        whitePixels++
-      }
-    }
-    
-    const totalPixels = blackPixels + whitePixels
-    const contrastRatio = Math.min(blackPixels, whitePixels) / totalPixels
-    
-    // If we have good contrast and some pattern, simulate QR detection
-    return contrastRatio > 0.2 && Math.random() > 0.98 // Low probability to simulate detection
-  }
+
 
   // Handle manual input
   const handleManualSubmit = (e: React.FormEvent) => {
@@ -176,6 +298,7 @@ export function QRScanner({ onScan, onError, className = '' }: QRScannerProps) {
   // Cleanup on unmount
   useEffect(() => {
     return () => {
+      mountedRef.current = false
       stopScanning()
     }
   }, [stopScanning])
@@ -193,7 +316,11 @@ export function QRScanner({ onScan, onError, className = '' }: QRScannerProps) {
             <CardDescription>
               {hasPermission === false 
                 ? 'Kamera ikke tilgjengelig eller tilgang nektet'
-                : 'Bruk kameraet til å skanne QR-koder automatisk'
+                : deviceInfo.isMobile 
+                  ? `${deviceInfo.isIOS 
+                      ? `iOS ${deviceInfo.isIOSChrome ? 'Chrome' : deviceInfo.isIOSFirefox ? 'Firefox' : deviceInfo.isIOSEdge ? 'Edge' : 'Safari'}-optimalisert` 
+                      : 'Mobil-optimalisert'} skanning${deviceInfo.hasRearCamera ? ' med bakre kamera' : ''}`
+                  : 'Bruk kameraet til å skanne QR-koder automatisk'
               }
             </CardDescription>
           </CardHeader>
@@ -201,9 +328,50 @@ export function QRScanner({ onScan, onError, className = '' }: QRScannerProps) {
             {hasPermission === false ? (
               <div className="text-center py-8">
                 <AlertCircle className="w-12 h-12 mx-auto text-orange-500 mb-4" />
-                <p className="text-sm text-muted-foreground mb-4">
-                  Kamera-tilgang ikke tilgjengelig. Bruk manuell inntasting nedenfor.
-                </p>
+                <div className="space-y-3">
+                  <p className="text-sm font-medium text-foreground">
+                    Kamera-tilgang ikke tilgjengelig
+                  </p>
+                  <div className="text-xs text-muted-foreground space-y-1">
+                    <p>For å aktivere kamera-skanning:</p>
+                    <ul className="list-disc list-inside space-y-1 text-left max-w-xs mx-auto">
+                      <li>Tillat kamera-tilgang når nettleseren spør</li>
+                      <li>Sjekk at siden bruker HTTPS (sikker tilkobling)</li>
+                      <li>Kontroller nettleserinnstillinger for kamera</li>
+                      <li>Prøv å oppdatere siden</li>
+                    </ul>
+                  </div>
+                  <p className="text-sm text-muted-foreground mt-4">
+                    Bruk manuell inntasting nedenfor i mellomtiden.
+                  </p>
+                  <div className="flex gap-2 mt-3">
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={() => window.location.reload()}
+                    >
+                      <Camera className="w-4 h-4 mr-2" />
+                      Prøv kamera igjen
+                    </Button>
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={async () => {
+                        try {
+                          const stream = await navigator.mediaDevices.getUserMedia({ video: true })
+                          stream.getTracks().forEach(track => track.stop())
+                          toast.success('Kamera fungerer! Prøv å starte skanning.')
+                          window.location.reload()
+                        } catch (error) {
+                          console.error('Kamera-test feilet:', error)
+                          toast.error('Kamera-test feilet. Sjekk tillatelser.')
+                        }
+                      }}
+                    >
+                      Test kamera
+                    </Button>
+                  </div>
+                </div>
               </div>
             ) : (
               <div className="space-y-4">
@@ -225,10 +393,22 @@ export function QRScanner({ onScan, onError, className = '' }: QRScannerProps) {
                     <div className="relative">
                       <video
                         ref={videoRef}
-                        className="w-full max-w-md mx-auto border rounded-lg"
+                        className="w-full max-w-md mx-auto border rounded-lg touch-manipulation"
                         autoPlay
                         playsInline
                         muted
+                        webkit-playsinline="true"
+                        x5-playsinline="true"
+                        x5-video-player-type="h5"
+                        x5-video-player-fullscreen="false"
+                        style={{
+                          // Optimize for mobile touch and performance
+                          WebkitUserSelect: 'none',
+                          WebkitTouchCallout: 'none',
+                          WebkitTapHighlightColor: 'transparent',
+                          objectFit: 'cover',
+                          transform: 'scaleX(-1)', // Mirror for selfie-style view
+                        }}
                       />
                       <canvas
                         ref={canvasRef}
@@ -237,11 +417,25 @@ export function QRScanner({ onScan, onError, className = '' }: QRScannerProps) {
                       
                       {/* Scanning overlay */}
                       <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                        <div className="w-48 h-48 border-2 border-primary border-dashed rounded-lg animate-pulse">
+                        <div className="w-48 h-48 border-2 border-primary rounded-lg relative">
+                          {/* Corner markers */}
                           <div className="absolute top-2 left-2 w-4 h-4 border-t-2 border-l-2 border-primary"></div>
                           <div className="absolute top-2 right-2 w-4 h-4 border-t-2 border-r-2 border-primary"></div>
                           <div className="absolute bottom-2 left-2 w-4 h-4 border-b-2 border-l-2 border-primary"></div>
                           <div className="absolute bottom-2 right-2 w-4 h-4 border-b-2 border-r-2 border-primary"></div>
+
+                          {/* Scanning animation */}
+                          <div className="absolute inset-0 border border-primary rounded-lg animate-pulse opacity-50"></div>
+
+                          {/* Center target */}
+                          <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-8 h-8 border border-primary rounded-full opacity-30"></div>
+                        </div>
+
+                        {/* Instruction text */}
+                        <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 text-center">
+                          <p className="text-sm text-primary font-medium bg-background/80 px-3 py-1 rounded-full">
+                            Plasser QR-koden innenfor rammen
+                          </p>
                         </div>
                       </div>
                     </div>
@@ -291,23 +485,7 @@ export function QRScanner({ onScan, onError, className = '' }: QRScannerProps) {
               </Button>
             </form>
             
-            {/* Test codes for demo */}
-            <div className="mt-4 pt-4 border-t">
-              <p className="text-sm font-medium mb-2">Test-koder for demo:</p>
-              <div className="grid grid-cols-2 gap-2">
-                {['KJK-0001', 'SOV-0001', 'BOD-0001', 'ITEM-001'].map((code) => (
-                  <Button
-                    key={code}
-                    variant="outline"
-                    size="sm"
-                    className="font-mono text-xs"
-                    onClick={() => handleScanResult(code)}
-                  >
-                    {code}
-                  </Button>
-                ))}
-              </div>
-            </div>
+
           </CardContent>
         </Card>
       </div>
@@ -356,23 +534,7 @@ export function QRScannerCompact({
         </div>
       </form>
       
-      {/* Quick test buttons */}
-      <div className="space-y-2">
-        <p className="text-xs text-muted-foreground">Test-koder:</p>
-        <div className="flex flex-wrap gap-1">
-          {['KJK-0001', 'SOV-0001', 'BOD-0001'].map((code) => (
-            <Button
-              key={code}
-              variant="outline"
-              size="sm"
-              className="text-xs font-mono"
-              onClick={() => onScan(code)}
-            >
-              {code}
-            </Button>
-          ))}
-        </div>
-      </div>
+
     </div>
   )
 }

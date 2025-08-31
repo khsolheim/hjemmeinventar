@@ -3,6 +3,7 @@ import { Inter } from "next/font/google"
 import "./globals.css"
 import { TRPCProvider } from "@/lib/trpc/client"
 import { SessionProvider } from "@/components/providers/SessionProvider"
+import { ThemeProvider } from "@/components/providers/ThemeProvider"
 import { Toaster } from "@/components/ui/sonner"
 // import { initializeAxe } from "@/lib/testing/accessibility" // Disabled for production build
 import { SkipToContent } from "@/components/accessibility/SkipToContent"
@@ -57,26 +58,35 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="no" className={inter.variable}>
+    <html lang="no" className={`${inter.variable} light`} suppressHydrationWarning>
       <head>
-        <link rel="icon" href="/favicon.ico" />
+        <link rel="icon" href="/icon.svg" type="image/svg+xml" />
         <link rel="apple-touch-icon" href="/icon-192x192.png" />
         <meta name="theme-color" content="#ffffff" />
       </head>
-      <body className="min-h-screen bg-background font-sans antialiased">
-        <SkipToContent />
-        <ErrorBoundary>
-          <SessionProvider>
-            <TRPCProvider>
-              <div className="relative flex min-h-screen flex-col">
-                <main id="main-content" className="flex-1" tabIndex={-1}>
-                  {children}
-                </main>
-              </div>
-              <Toaster />
-            </TRPCProvider>
-          </SessionProvider>
-        </ErrorBoundary>
+      <body className="min-h-screen bg-background font-sans antialiased" suppressHydrationWarning>
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="system"
+          enableSystem
+          enableColorScheme={false}
+          disableTransitionOnChange
+          suppressHydrationWarning
+        >
+          <SkipToContent />
+          <ErrorBoundary>
+            <SessionProvider>
+              <TRPCProvider>
+                <div className="relative flex min-h-screen flex-col">
+                  <main id="main-content" className="flex-1" tabIndex={-1}>
+                    {children}
+                  </main>
+                </div>
+                <Toaster />
+              </TRPCProvider>
+            </SessionProvider>
+          </ErrorBoundary>
+        </ThemeProvider>
       </body>
     </html>
   )

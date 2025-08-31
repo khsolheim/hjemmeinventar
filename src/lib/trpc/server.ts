@@ -30,10 +30,9 @@ export async function createTRPCContext() {
 
 export type Context = Awaited<ReturnType<typeof createTRPCContext>>
 
-// Initialize tRPC
+// Initialize tRPC (temporarily without superjson for debugging)
 const t = initTRPC.context<Context>().create({
-  // Remove superjson transformer temporarily to fix serialization issues
-  // transformer: superjson,
+  // transformer: superjson, // Temporarily disabled
   errorFormatter({ shape, error }) {
     return {
       ...shape,
@@ -46,7 +45,7 @@ const t = initTRPC.context<Context>().create({
 })
 
 // Create reusable middleware
-const isAuthenticated = t.middleware(({ ctx, next }) => {
+const isAuthenticated = t.middleware(async ({ ctx, next }) => {
   if (!ctx.session?.user) {
     console.log('❌ Unauthorized access attempt - no session or user')
     throw new TRPCError({
@@ -56,6 +55,24 @@ const isAuthenticated = t.middleware(({ ctx, next }) => {
   }
   
   console.log('✅ Authenticated access for user:', ctx.session.user.email)
+  // Ensure User exists in DB (useful after DB resets)
+  try {
+    const userId = ctx.session.user.id
+    const userEmail = ctx.session.user.email
+    if (userId && userEmail) {
+      await ctx.db.user.upsert({
+        where: { id: userId },
+        update: {},
+        create: {
+          id: userId,
+          email: userEmail,
+          name: ctx.session.user.name ?? null
+        }
+      })
+    }
+  } catch (err) {
+    console.error('Failed to ensure user exists:', err)
+  }
   
   return next({
     ctx: {

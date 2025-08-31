@@ -16,7 +16,6 @@ import {
   Loader2,
   Package,
   ShoppingCart,
-  Eye,
   Search
 } from 'lucide-react'
 import { toast } from 'sonner'
@@ -61,12 +60,90 @@ export function BarcodeScanner({
   const [hasPermission, setHasPermission] = useState<boolean | null>(null)
   const [manualBarcode, setManualBarcode] = useState('')
   const [isLookingUp, setIsLookingUp] = useState(false)
-  const [recentScans, setRecentScans] = useState<ScanResult[]>([])
   const [lastDetectedBarcode, setLastDetectedBarcode] = useState<string | null>(null)
+  const [deviceInfo, setDeviceInfo] = useState<{
+    hasRearCamera: boolean
+    isMobile: boolean
+    isIOS: boolean
+    isIOSChrome: boolean
+    isIOSFirefox: boolean
+    isIOSEdge: boolean
+    isIOSSafari: boolean
+  }>({ 
+    hasRearCamera: false, 
+    isMobile: false, 
+    isIOS: false,
+    isIOSChrome: false,
+    isIOSFirefox: false,
+    isIOSEdge: false,
+    isIOSSafari: false
+  })
   
   const videoRef = useRef<HTMLVideoElement>(null)
   const scannerContainerRef = useRef<HTMLDivElement>(null)
   const timeoutRef = useRef<NodeJS.Timeout | null>(null)
+  const mountedRef = useRef(true)
+
+  // Detect device capabilities
+  useEffect(() => {
+    const detectDevice = async () => {
+      const userAgent = navigator.userAgent
+      const isMobile = /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(userAgent)
+      const isIOS = /iPad|iPhone|iPod/.test(userAgent)
+      
+      // Detect specific iOS browsers
+      const isIOSChrome = isIOS && /CriOS/i.test(userAgent)
+      const isIOSFirefox = isIOS && /FxiOS/i.test(userAgent)
+      const isIOSEdge = isIOS && /EdgiOS/i.test(userAgent)
+      const isIOSSafari = isIOS && !isIOSChrome && !isIOSFirefox && !isIOSEdge
+      
+      console.log('Barcode scanner browser detection:', {
+        isIOS,
+        isIOSChrome,
+        isIOSFirefox, 
+        isIOSEdge,
+        isIOSSafari,
+        userAgent
+      })
+      
+      let hasRearCamera = false
+      
+      if (navigator.mediaDevices && navigator.mediaDevices.enumerateDevices) {
+        try {
+          const devices = await navigator.mediaDevices.enumerateDevices()
+          const videoDevices = devices.filter(device => device.kind === 'videoinput')
+          
+          // Check if any device has environment facing mode
+          for (const device of videoDevices) {
+            try {
+              const stream = await navigator.mediaDevices.getUserMedia({
+                video: { deviceId: device.deviceId, facingMode: 'environment' }
+              })
+              stream.getTracks().forEach(track => track.stop())
+              hasRearCamera = true
+              break
+            } catch (e) {
+              // Continue checking other devices
+            }
+          }
+        } catch (error) {
+          console.warn('Could not enumerate devices:', error)
+        }
+      }
+      
+      setDeviceInfo({ 
+        hasRearCamera, 
+        isMobile, 
+        isIOS,
+        isIOSChrome,
+        isIOSFirefox,
+        isIOSEdge,
+        isIOSSafari
+      })
+    }
+    
+    detectDevice()
+  }, [])
 
   // Check camera permission
   useEffect(() => {
@@ -77,11 +154,55 @@ export function BarcodeScanner({
       }
       
       try {
-        const testStream = await navigator.mediaDevices.getUserMedia({ video: true })
+        // Test with rear camera first
+        let testStream: MediaStream
+        try {
+          testStream = await navigator.mediaDevices.getUserMedia({ 
+            video: { facingMode: { exact: 'environment' } } 
+          })
+        } catch (rearCameraError) {
+          console.warn('Rear camera not available, trying any camera:', rearCameraError)
+          // Fallback to any available camera
+          testStream = await navigator.mediaDevices.getUserMedia({ 
+            video: true 
+          })
+        }
+        
         testStream.getTracks().forEach(track => track.stop())
-        setHasPermission(true)
+        if (mountedRef.current) {
+          setHasPermission(true)
+        }
       } catch (error) {
-        setHasPermission(false)
+        console.error('Camera permission check failed:', error)
+        if (mountedRef.current) {
+          setHasPermission(false)
+        }
+        
+        // Gi mer spesifikk feilmelding basert på feiltype
+        if (error instanceof DOMException) {
+          switch (error.name) {
+            case 'NotAllowedError':
+              console.warn('Kamera-tilgang nektet av bruker eller nettleser')
+              break
+            case 'NotFoundError':
+              console.warn('Ingen kamera funnet på enheten')
+              break
+            case 'NotSupportedError':
+              console.warn('Kamera ikke støttet i denne nettleseren')
+              break
+            case 'SecurityError':
+              console.warn('Sikkerhetsfeil - krever HTTPS for kamera-tilgang')
+              break
+            case 'OverconstrainedError':
+              console.warn('Kamera-constraints ikke støttet på denne enheten')
+              break
+            case 'AbortError':
+              console.warn('Kamera-tilgang avbrutt')
+              break
+            default:
+              console.warn('Ukjent kamera-feil:', error.message)
+          }
+        }
       }
     }
     
@@ -148,7 +269,7 @@ export function BarcodeScanner({
         success: !!productInfo
       }
       
-      setRecentScans(prev => [scanResult, ...prev.slice(0, 4)]) // Keep last 5 scans
+
       
       if (productInfo) {
         toast.success(`Produkt funnet: ${productInfo.name || barcode}`)
@@ -177,21 +298,95 @@ export function BarcodeScanner({
       return
     }
 
+    // Haptic feedback for starting scan
+    if ('vibrate' in navigator) {
+      navigator.vibrate(50) // Short vibration for scan start
+    }
+
     setIsScanning(true)
     
     try {
-      // Initialize QuaggaJS
+      // Enhanced mobile camera constraints for QuaggaJS with iOS browser-specific handling
+      const getOptimalConstraints = () => {
+        const { isMobile, isIOS, hasRearCamera, isIOSChrome, isIOSFirefox, isIOSEdge, isIOSSafari } = deviceInfo
+        
+        if (isMobile) {
+          const baseConstraints = {
+            width: { min: 640, ideal: 1280, max: 1920 },
+            height: { min: 480, ideal: 720, max: 1080 },
+            frameRate: { ideal: 30, max: 60 },
+          }
+
+          if (isIOS) {
+            // iOS Safari - full feature support
+            if (isIOSSafari) {
+              return {
+                ...baseConstraints,
+                facingMode: hasRearCamera ? "environment" : "environment",
+                aspectRatio: 16/9
+              }
+            }
+            
+            // Chrome on iOS - more conservative approach
+            if (isIOSChrome) {
+              return {
+                facingMode: "environment", // Don't use exact - Chrome iOS can be picky
+                width: { ideal: 1280 },
+                height: { ideal: 720 },
+                frameRate: { ideal: 30 }
+              }
+            }
+            
+            // Firefox on iOS - basic constraints
+            if (isIOSFirefox) {
+              return {
+                facingMode: "environment",
+                width: { ideal: 640 },
+                height: { ideal: 480 }
+              }
+            }
+            
+            // Edge on iOS - similar to Chrome
+            if (isIOSEdge) {
+              return {
+                facingMode: "environment",
+                width: { ideal: 1280 },
+                height: { ideal: 720 },
+                frameRate: { ideal: 30 }
+              }
+            }
+            
+            // Fallback for other iOS browsers
+            return {
+              facingMode: "environment",
+              width: { ideal: 640 },
+              height: { ideal: 480 }
+            }
+          }
+          
+          // Android and other mobile
+          return {
+            ...baseConstraints,
+            facingMode: hasRearCamera ? "environment" : "environment"
+          }
+        }
+        
+        // Desktop fallback
+        return {
+          width: 640,
+          height: 480,
+          facingMode: "environment"
+        }
+      }
+
+      // Initialize QuaggaJS with mobile-optimized settings
       await new Promise<void>((resolve, reject) => {
         Quagga.init({
           inputStream: {
             name: "Live",
             type: "LiveStream",
             target: scannerContainerRef.current,
-            constraints: {
-              width: 640,
-              height: 480,
-              facingMode: "environment" // Use rear camera if available
-            }
+            constraints: getOptimalConstraints()
           },
           decoder: {
             readers: [
@@ -208,8 +403,8 @@ export function BarcodeScanner({
           },
           locate: true,
           locator: {
-            halfSample: true,
-            patchSize: "medium", // x-small, small, medium, large, x-large
+            halfSample: deviceInfo.isMobile, // Use halfSample on mobile for better performance
+            patchSize: deviceInfo.isMobile ? "medium" : "large", // Smaller patches on mobile
             debug: {
               showCanvas: false,
               showPatches: false,
@@ -224,7 +419,10 @@ export function BarcodeScanner({
                 showBB: false
               }
             }
-          }
+          },
+          // Mobile performance optimizations
+          frequency: deviceInfo.isMobile ? 5 : 10, // Slower scanning on mobile to preserve battery
+          numOfWorkers: deviceInfo.isMobile ? 2 : 4 // Fewer workers on mobile
         }, (err: any) => {
           if (err) {
             console.error('QuaggaJS init error:', err)
@@ -256,8 +454,15 @@ export function BarcodeScanner({
   }, [hasPermission, handleBarcodeDetected, onError])
 
   const stopScanning = useCallback(() => {
-    setIsScanning(false)
-    setLastDetectedBarcode(null)
+    // Haptic feedback for stopping scan
+    if ('vibrate' in navigator) {
+      navigator.vibrate(30) // Very short vibration for stop
+    }
+
+    if (mountedRef.current) {
+      setIsScanning(false)
+      setLastDetectedBarcode(null)
+    }
     
     if (timeoutRef.current) {
       clearTimeout(timeoutRef.current)
@@ -267,7 +472,9 @@ export function BarcodeScanner({
     try {
       Quagga.stop()
       Quagga.offDetected()
-      toast.info('Scanner stoppet')
+      if (mountedRef.current) {
+        toast.info('Scanner stoppet')
+      }
     } catch (error) {
       console.error('Error stopping scanner:', error)
     }
@@ -284,6 +491,7 @@ export function BarcodeScanner({
   // Cleanup on unmount
   useEffect(() => {
     return () => {
+      mountedRef.current = false
       stopScanning()
     }
   }, [stopScanning])
@@ -301,7 +509,11 @@ export function BarcodeScanner({
             <CardDescription>
               {hasPermission === false 
                 ? 'Kamera ikke tilgjengelig - bruk manuell inntasting nedenfor'
-                : 'Skann EAN/UPC strekkoder for automatisk produktidentifikasjon'
+                : deviceInfo.isMobile 
+                  ? `${deviceInfo.isIOS 
+                      ? `iOS ${deviceInfo.isIOSChrome ? 'Chrome' : deviceInfo.isIOSFirefox ? 'Firefox' : deviceInfo.isIOSEdge ? 'Edge' : 'Safari'}-optimalisert` 
+                      : 'Mobil-optimalisert'} strekkodeskanning${deviceInfo.hasRearCamera ? ' med bakre kamera' : ''}`
+                  : 'Skann EAN/UPC strekkoder for automatisk produktidentifikasjon'
               }
             </CardDescription>
           </CardHeader>
@@ -309,9 +521,32 @@ export function BarcodeScanner({
             {hasPermission === false ? (
               <div className="text-center py-8">
                 <AlertCircle className="w-12 h-12 mx-auto text-orange-500 mb-4" />
-                <p className="text-sm text-muted-foreground">
-                  Kamera ikke tilgjengelig. Bruk manuell inntasting nedenfor.
-                </p>
+                <div className="space-y-3">
+                  <p className="text-sm font-medium text-foreground">
+                    Kamera-tilgang ikke tilgjengelig
+                  </p>
+                  <div className="text-xs text-muted-foreground space-y-1">
+                    <p>For å aktivere kamera-skanning:</p>
+                    <ul className="list-disc list-inside space-y-1 text-left max-w-xs mx-auto">
+                      <li>Tillat kamera-tilgang når nettleseren spør</li>
+                      <li>Sjekk at siden bruker HTTPS (sikker tilkobling)</li>
+                      <li>Kontroller nettleserinnstillinger for kamera</li>
+                      <li>Prøv å oppdatere siden</li>
+                    </ul>
+                  </div>
+                  <p className="text-sm text-muted-foreground mt-4">
+                    Bruk manuell inntasting nedenfor i mellomtiden.
+                  </p>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={() => window.location.reload()}
+                    className="mt-3"
+                  >
+                    <Camera className="w-4 h-4 mr-2" />
+                    Prøv kamera igjen
+                  </Button>
+                </div>
               </div>
             ) : (
               <div className="space-y-4">
@@ -429,65 +664,7 @@ export function BarcodeScanner({
           </CardContent>
         </Card>
 
-        {/* Recent Scans */}
-        {recentScans.length > 0 && (
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Package className="w-5 h-5" />
-                Nylige skanninger
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                {recentScans.map((scan, index) => (
-                  <div key={index} className="flex items-center justify-between p-3 border rounded-lg">
-                    <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 bg-primary/10 rounded flex items-center justify-center">
-                        {scan.success ? (
-                          <Check className="w-4 h-4 text-green-600" />
-                        ) : (
-                          <Package className="w-4 h-4 text-blue-600" />
-                        )}
-                      </div>
-                      <div>
-                        <div className="font-medium">
-                          {scan.productInfo?.name || 'Ukjent produkt'}
-                        </div>
-                        <div className="text-sm text-muted-foreground">
-                          {scan.productInfo?.brand && `${scan.productInfo.brand} • `}
-                          <span className="font-mono">{scan.barcode}</span>
-                          {' • '}
-                          {scan.timestamp.toLocaleTimeString('no-NO', { hour: '2-digit', minute: '2-digit' })}
-                        </div>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      {scan.success ? (
-                        <Badge variant="secondary" className="text-xs">
-                          <Check className="w-3 h-3 mr-1" />
-                          Funnet
-                        </Badge>
-                      ) : (
-                        <Badge variant="outline" className="text-xs">
-                          <Search className="w-3 h-3 mr-1" />
-                          Ukjent
-                        </Badge>
-                      )}
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleBarcodeDetected(scan.barcode)}
-                      >
-                        <Eye className="w-4 h-4" />
-                      </Button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        )}
+
       </div>
     </div>
   )

@@ -283,7 +283,10 @@ export default function LocationsTreePage() {
   const [showQRCode, setShowQRCode] = useState<string | null>(null)
 
   // tRPC queries and mutations
-  const { data: locations = [], isLoading, error, refetch } = trpc.locations.getAll.useQuery()
+  const { data: locationsData, isLoading, error, refetch } = trpc.locations.getAll.useQuery()
+  
+  // Safe array handling
+  const locations = locationsData && Array.isArray(locationsData) ? locationsData : []
   
   // Flat list of all locations for dropdowns
   const allLocations = flattenLocations(locations)

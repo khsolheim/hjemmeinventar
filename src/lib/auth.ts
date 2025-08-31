@@ -1,4 +1,5 @@
 // NextAuth.js v5 configuration
+import NextAuth from 'next-auth'
 import { NextAuthConfig } from 'next-auth'
 import { PrismaAdapter } from '@auth/prisma-adapter'
 import { db } from './db'
@@ -157,5 +158,4 @@ declare module 'next-auth' {
 // }
 
 // Export auth function for API routes
-import NextAuth from 'next-auth'
 export const { auth } = NextAuth(authConfig)

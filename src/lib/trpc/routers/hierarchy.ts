@@ -4,6 +4,11 @@ import { createTRPCRouter, protectedProcedure } from '../server'
 import { LocationType } from '@prisma/client'
 import { validateAcyclic } from '@/lib/services/hierarchy-service'
 
+// Global type declaration for in-memory storage
+declare global {
+  var activeRuleSets: Record<string, 'minimal' | 'standard' | 'extended'> | undefined
+}
+
 // Input validation schemas
 const LocationTypeEnum = z.nativeEnum(LocationType)
 
@@ -22,42 +27,10 @@ export const hierarchyRouter = createTRPCRouter({
         throw new TRPCError({ code: 'FORBIDDEN', message: 'Not a member of this household' })
       }
 
-      // Load current allowed rules (only where isAllowed = true)
-      // const currentAllowed = await ctx.db.hierarchyRule.findMany({ // Removed - not in schema
-      //   where: { householdId: input.householdId, isAllowed: true },
-      //   select: { parentType: true, childType: true }
-      // })
-      const currentAllowed: any[] = [] // Placeholder since hierarchyRule not in schema
-      const currentSet = new Set(currentAllowed.map(r => `${r.parentType}->${r.childType}`))
-
-      // Load default rule sets
-      // const defaults = await ctx.db.defaultHierarchyRule.findMany({ // Removed - not in schema
-      //   where: { isAllowed: true },
-      //   select: { ruleSetName: true, parentType: true, childType: true }
-      // })
-      const defaults: any[] = [] // Placeholder since defaultHierarchyRule not in schema
-
-      // Group defaults by set name
-      const grouped: Record<string, Array<{ parentType: string; childType: string }>> = {}
-      for (const d of defaults) {
-        grouped[d.ruleSetName] ||= []
-        grouped[d.ruleSetName]!.push({ parentType: d.parentType, childType: d.childType })
-      }
-
-      // Compare sets (exact match)
-      function isEqualToDefault(setName: string): boolean {
-        const defs = grouped[setName] || []
-        if (defs.length !== currentSet.size) return false
-        for (const r of defs) {
-          if (!currentSet.has(`${r.parentType}->${r.childType}`)) return false
-        }
-        return true
-      }
-
-      const candidates = ['minimal', 'standard', 'extended'] as const
-      const match = candidates.find(name => isEqualToDefault(name))
-
-      return { active: match ?? (currentSet.size > 0 ? 'custom' : null) }
+      // For now, we'll use a simple in-memory storage per household
+      // In the future, this would be stored in the database
+      const activeRuleSet = global.activeRuleSets?.[input.householdId] || 'extended'
+      return { active: activeRuleSet as 'minimal' | 'standard' | 'extended' | 'custom' | null }
     }),
   // Get current hierarchy rules for user's household
   getRules: protectedProcedure
@@ -105,28 +78,228 @@ export const hierarchyRouter = createTRPCRouter({
   // Get all default rule sets
   getDefaultRuleSets: protectedProcedure
     .query(async ({ ctx }) => {
-      // const ruleSets = await ctx.db.defaultHierarchyRule.findMany({ // Removed - not in schema
-      //   orderBy: [
-      //     { ruleSetName: 'asc' },
-      //     { parentType: 'asc' },
-      //     { childType: 'asc' }
-      //   ]
-      // })
+      // Hardcoded rule sets until database schema is implemented
+      const ruleSets = [
+        {
+          name: 'minimal',
+          displayName: 'Minimal',
+          description: 'Kun de mest grunnleggende hierarki-reglene',
+          rules: [
+            { parentType: 'ROOM', childType: 'CABINET' },
+            { parentType: 'ROOM', childType: 'SHELF' },
+            { parentType: 'CABINET', childType: 'DRAWER' },
+            { parentType: 'SHELF', childType: 'BOX' },
+            { parentType: 'BOX', childType: 'BAG' }
+          ]
+        },
+        {
+          name: 'standard',
+          displayName: 'Standard',
+          description: 'Balanserte regler for de fleste hjem',
+          rules: [
+            { parentType: 'ROOM', childType: 'CABINET' },
+            { parentType: 'ROOM', childType: 'SHELF' },
+            { parentType: 'ROOM', childType: 'RACK' },
+            { parentType: 'ROOM', childType: 'CONTAINER' },
+            { parentType: 'CABINET', childType: 'DRAWER' },
+            { parentType: 'CABINET', childType: 'SHELF_COMPARTMENT' },
+            { parentType: 'CABINET', childType: 'BOX' },
+            { parentType: 'SHELF', childType: 'SHELF_COMPARTMENT' },
+            { parentType: 'SHELF', childType: 'BOX' },
+            { parentType: 'SHELF', childType: 'CONTAINER' },
+            { parentType: 'RACK', childType: 'SHELF_COMPARTMENT' },
+            { parentType: 'RACK', childType: 'BOX' },
+            { parentType: 'BOX', childType: 'BAG' },
+            { parentType: 'BOX', childType: 'SECTION' },
+            { parentType: 'DRAWER', childType: 'SECTION' },
+            { parentType: 'DRAWER', childType: 'BAG' }
+          ]
+        },
+        {
+          name: 'extended',
+          displayName: 'Utvidet',
+          description: 'Fleksible regler som tillater de fleste kombinasjoner',
+          rules: [
+            { parentType: 'ROOM', childType: 'CABINET' },
+            { parentType: 'ROOM', childType: 'SHELF' },
+            { parentType: 'ROOM', childType: 'RACK' },
+            { parentType: 'ROOM', childType: 'WALL_SHELF' },
+            { parentType: 'ROOM', childType: 'CONTAINER' },
+            { parentType: 'ROOM', childType: 'BOX' },
+            { parentType: 'ROOM', childType: 'DRAWER' },
+            { parentType: 'CABINET', childType: 'DRAWER' },
+            { parentType: 'CABINET', childType: 'SHELF_COMPARTMENT' },
+            { parentType: 'CABINET', childType: 'SHELF' },
+            { parentType: 'CABINET', childType: 'BOX' },
+            { parentType: 'CABINET', childType: 'CONTAINER' },
+            { parentType: 'CABINET', childType: 'BAG' },
+            { parentType: 'SHELF', childType: 'SHELF_COMPARTMENT' },
+            { parentType: 'SHELF', childType: 'BOX' },
+            { parentType: 'SHELF', childType: 'CONTAINER' },
+            { parentType: 'SHELF', childType: 'BAG' },
+            { parentType: 'SHELF', childType: 'DRAWER' },
+            { parentType: 'RACK', childType: 'SHELF_COMPARTMENT' },
+            { parentType: 'RACK', childType: 'BOX' },
+            { parentType: 'RACK', childType: 'CONTAINER' },
+            { parentType: 'RACK', childType: 'BAG' },
+            { parentType: 'RACK', childType: 'DRAWER' },
+            { parentType: 'WALL_SHELF', childType: 'SHELF_COMPARTMENT' },
+            { parentType: 'WALL_SHELF', childType: 'BOX' },
+            { parentType: 'WALL_SHELF', childType: 'BAG' },
+            { parentType: 'WALL_SHELF', childType: 'CONTAINER' },
+            { parentType: 'BOX', childType: 'BAG' },
+            { parentType: 'BOX', childType: 'SECTION' },
+            { parentType: 'BOX', childType: 'CONTAINER' },
+            { parentType: 'DRAWER', childType: 'SECTION' },
+            { parentType: 'DRAWER', childType: 'BAG' },
+            { parentType: 'DRAWER', childType: 'CONTAINER' },
+            { parentType: 'DRAWER', childType: 'BOX' },
+            { parentType: 'CONTAINER', childType: 'BAG' },
+            { parentType: 'CONTAINER', childType: 'SECTION' },
+            { parentType: 'CONTAINER', childType: 'BOX' },
+            { parentType: 'SHELF_COMPARTMENT', childType: 'BOX' },
+            { parentType: 'SHELF_COMPARTMENT', childType: 'BAG' },
+            { parentType: 'SHELF_COMPARTMENT', childType: 'CONTAINER' },
+            { parentType: 'SHELF_COMPARTMENT', childType: 'SECTION' },
+            { parentType: 'SECTION', childType: 'BAG' }
+          ]
+        }
+      ]
 
-      // // Group by rule set name
-      // const grouped = ruleSets.reduce((acc, rule) => {
-      //   if (!acc[rule.ruleSetName]) {
-      //     acc[rule.ruleSetName] = []
-      //   }
-      //   acc[rule.ruleSetName].push(rule)
-      //   return acc
-      // }, {} as Record<string, typeof ruleSets>)
+      return ruleSets
+    }),
 
-      // return Object.entries(grouped).map(([name, rules]) => ({
-      //   name,
-      //   rules: rules.filter(r => r.isAllowed)
-      // }))
-      return [] // Placeholder since defaultHierarchyRule not in schema
+  // Get current hierarchy matrix for user's household
+  getMatrix: protectedProcedure
+    .input(z.object({
+      householdId: z.string()
+    }))
+    .query(async ({ ctx, input }) => {
+      // Check if user is member of household
+      const membership = await ctx.db.householdMember.findFirst({
+        where: {
+          userId: ctx.session!.user.id,
+          householdId: input.householdId
+        }
+      })
+
+      if (!membership) {
+        throw new TRPCError({
+          code: 'FORBIDDEN',
+          message: 'Not a member of this household'
+        })
+      }
+
+      // Get the active rule set for this household
+      const activeRuleSetName = global.activeRuleSets?.[input.householdId] || 'extended'
+      
+      // Get the rule sets
+      const ruleSets = [
+        {
+          name: 'minimal',
+          rules: [
+            { parentType: 'ROOM', childType: 'CABINET' },
+            { parentType: 'ROOM', childType: 'SHELF' },
+            { parentType: 'CABINET', childType: 'DRAWER' },
+            { parentType: 'SHELF', childType: 'BOX' },
+            { parentType: 'BOX', childType: 'BAG' }
+          ]
+        },
+        {
+          name: 'standard',
+          rules: [
+            { parentType: 'ROOM', childType: 'CABINET' },
+            { parentType: 'ROOM', childType: 'SHELF' },
+            { parentType: 'ROOM', childType: 'RACK' },
+            { parentType: 'ROOM', childType: 'CONTAINER' },
+            { parentType: 'CABINET', childType: 'DRAWER' },
+            { parentType: 'CABINET', childType: 'SHELF_COMPARTMENT' },
+            { parentType: 'CABINET', childType: 'BOX' },
+            { parentType: 'SHELF', childType: 'SHELF_COMPARTMENT' },
+            { parentType: 'SHELF', childType: 'BOX' },
+            { parentType: 'SHELF', childType: 'CONTAINER' },
+            { parentType: 'RACK', childType: 'SHELF_COMPARTMENT' },
+            { parentType: 'RACK', childType: 'BOX' },
+            { parentType: 'BOX', childType: 'BAG' },
+            { parentType: 'BOX', childType: 'SECTION' },
+            { parentType: 'DRAWER', childType: 'SECTION' },
+            { parentType: 'DRAWER', childType: 'BAG' }
+          ]
+        },
+        {
+          name: 'extended',
+          rules: [
+            { parentType: 'ROOM', childType: 'CABINET' },
+            { parentType: 'ROOM', childType: 'SHELF' },
+            { parentType: 'ROOM', childType: 'RACK' },
+            { parentType: 'ROOM', childType: 'WALL_SHELF' },
+            { parentType: 'ROOM', childType: 'CONTAINER' },
+            { parentType: 'ROOM', childType: 'BOX' },
+            { parentType: 'ROOM', childType: 'DRAWER' },
+            { parentType: 'CABINET', childType: 'DRAWER' },
+            { parentType: 'CABINET', childType: 'SHELF_COMPARTMENT' },
+            { parentType: 'CABINET', childType: 'SHELF' },
+            { parentType: 'CABINET', childType: 'BOX' },
+            { parentType: 'CABINET', childType: 'CONTAINER' },
+            { parentType: 'CABINET', childType: 'BAG' },
+            { parentType: 'SHELF', childType: 'SHELF_COMPARTMENT' },
+            { parentType: 'SHELF', childType: 'BOX' },
+            { parentType: 'SHELF', childType: 'CONTAINER' },
+            { parentType: 'SHELF', childType: 'BAG' },
+            { parentType: 'SHELF', childType: 'DRAWER' },
+            { parentType: 'RACK', childType: 'SHELF_COMPARTMENT' },
+            { parentType: 'RACK', childType: 'BOX' },
+            { parentType: 'RACK', childType: 'CONTAINER' },
+            { parentType: 'RACK', childType: 'BAG' },
+            { parentType: 'RACK', childType: 'DRAWER' },
+            { parentType: 'WALL_SHELF', childType: 'SHELF_COMPARTMENT' },
+            { parentType: 'WALL_SHELF', childType: 'BOX' },
+            { parentType: 'WALL_SHELF', childType: 'BAG' },
+            { parentType: 'WALL_SHELF', childType: 'CONTAINER' },
+            { parentType: 'BOX', childType: 'BAG' },
+            { parentType: 'BOX', childType: 'SECTION' },
+            { parentType: 'BOX', childType: 'CONTAINER' },
+            { parentType: 'DRAWER', childType: 'SECTION' },
+            { parentType: 'DRAWER', childType: 'BAG' },
+            { parentType: 'DRAWER', childType: 'CONTAINER' },
+            { parentType: 'DRAWER', childType: 'BOX' },
+            { parentType: 'CONTAINER', childType: 'BAG' },
+            { parentType: 'CONTAINER', childType: 'SECTION' },
+            { parentType: 'CONTAINER', childType: 'BOX' },
+            { parentType: 'SHELF_COMPARTMENT', childType: 'BOX' },
+            { parentType: 'SHELF_COMPARTMENT', childType: 'BAG' },
+            { parentType: 'SHELF_COMPARTMENT', childType: 'CONTAINER' },
+            { parentType: 'SHELF_COMPARTMENT', childType: 'SECTION' },
+            { parentType: 'SECTION', childType: 'BAG' }
+          ]
+        }
+      ]
+      
+      // Find the active rule set
+      const activeRuleSet = ruleSets.find(rs => rs.name === activeRuleSetName) || ruleSets[2] // Default to extended
+      
+      const locationTypes = Object.values(LocationType)
+      const matrix: Record<string, Record<string, boolean>> = {}
+
+      // Initialize matrix with all false
+      locationTypes.forEach(parentType => {
+        matrix[parentType] = {}
+        locationTypes.forEach(childType => {
+          matrix[parentType][childType] = false
+        })
+      })
+
+      // Apply active rule set rules to matrix
+      activeRuleSet.rules.forEach(rule => {
+        if (matrix[rule.parentType]) {
+          matrix[rule.parentType][rule.childType] = true
+        }
+      })
+
+      return {
+        matrix,
+        locationTypes
+      }
     }),
 
   // Apply a default rule set to user's household
@@ -179,8 +352,29 @@ export const hierarchyRouter = createTRPCRouter({
       //   data: newRules
       // })
 
-      // return { success: true, rulesCreated: newRules.length }
-      return { success: true, rulesCreated: 0 } // Placeholder since hierarchyRule not in schema
+      // Store the active rule set in memory (in the future, this would be in database)
+      if (!global.activeRuleSets) {
+        global.activeRuleSets = {}
+      }
+      global.activeRuleSets[input.householdId] = input.ruleSetName
+
+      const ruleSetSizes = {
+        minimal: 5,
+        standard: 16,
+        extended: 42
+      }
+
+      const displayNames = {
+        minimal: 'Minimal',
+        standard: 'Standard', 
+        extended: 'Utvidet'
+      }
+
+      return { 
+        success: true, 
+        rulesCreated: ruleSetSizes[input.ruleSetName],
+        message: `${displayNames[input.ruleSetName]} regel-sett ble aktivert!`
+      }
     }),
 
   // Update individual hierarchy rules
@@ -283,64 +477,5 @@ export const hierarchyRouter = createTRPCRouter({
       }
     }),
 
-  // Get hierarchy matrix for UI display
-  getMatrix: protectedProcedure
-    .input(z.object({
-      householdId: z.string()
-    }))
-    .query(async ({ ctx, input }) => {
-      // Check if user is member of household
-      const membership = await ctx.db.householdMember.findFirst({
-        where: {
-          userId: ctx.session!.user.id,
-          householdId: input.householdId
-        }
-      })
 
-      if (!membership) {
-        throw new TRPCError({
-          code: 'FORBIDDEN',
-          message: 'Not a member of this household'
-        })
-      }
-
-      // const rules = await ctx.db.hierarchyRule.findMany({ // Removed - not in schema
-      //   where: {
-      //     householdId: input.householdId
-      //   }
-      // })
-
-      // // Convert to matrix format for easier UI consumption
-      // const locationTypes = Object.values(LocationType)
-      // const matrix: Record<string, Record<string, boolean>> = {}
-      
-      // locationTypes.forEach(parentType => {
-      //   matrix[parentType] = {}
-      //   locationTypes.forEach(childType => {
-      //     const rule = rules.find(r => 
-      //       r.parentType === parentType && r.childType === childType
-      //   )
-      //     matrix[parentType][childType] = rule?.isAllowed ?? false
-      //   })
-      // })
-
-      // return {
-      //   matrix,
-      //   locationTypes
-      // }
-      const locationTypes = Object.values(LocationType)
-      const matrix: Record<string, Record<string, boolean>> = {}
-      
-      locationTypes.forEach(parentType => {
-        matrix[parentType] = {}
-        locationTypes.forEach(childType => {
-          matrix[parentType]![childType] = false // Placeholder since hierarchyRule not in schema
-        })
-      })
-
-      return {
-        matrix,
-        locationTypes
-      }
-    })
 })

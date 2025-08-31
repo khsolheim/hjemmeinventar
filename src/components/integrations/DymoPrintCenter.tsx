@@ -285,15 +285,34 @@ export function DymoPrintCenter() {
             <Alert className="mt-4">
               <AlertCircle className="h-4 w-4" />
               <AlertDescription>
-                DYMO Label Framework er ikke installert. Last ned fra{' '}
-                <a 
-                  href="https://www.dymo.com/en-US/online-support/dymo-user-guides/dymo-connect/dymo-connect-sdk-for-developers"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="underline text-blue-600"
-                >
-                  DYMO.com
-                </a>
+                <div className="space-y-2">
+                  <p>
+                    DYMO printer framework ikke funnet. For best støtte av moderne printere som LabelWriter Wireless, 
+                    installer DYMO Connect eller DYMO Label Software:
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    <a 
+                      href="https://www.dymo.com/en-US/online-support/dymo-user-guides/dymo-connect/dymo-connect-sdk-for-developers"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="underline text-blue-600 text-sm"
+                    >
+                      DYMO Connect Software
+                    </a>
+                    <span className="text-muted-foreground">•</span>
+                    <a 
+                      href="https://github.com/dymosoftware/dymo-connect-framework"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="underline text-blue-600 text-sm"
+                    >
+                      Connect Framework (GitHub)
+                    </a>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    DYMO LabelWriter Wireless krever DYMO Connect eller nyere for full funksjonalitet.
+                  </p>
+                </div>
               </AlertDescription>
             </Alert>
           )}

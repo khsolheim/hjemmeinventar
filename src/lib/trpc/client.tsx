@@ -25,15 +25,35 @@ export function TRPCProvider({ children }: { children: React.ReactNode }) {
     defaultOptions: {
       queries: {
         staleTime: 5 * 60 * 1000, // 5 minutes
-        refetchOnWindowFocus: false
+        cacheTime: 10 * 60 * 1000, // 10 minutes
+        refetchOnWindowFocus: false,
+        retry: (failureCount, error: any) => {
+          // Don't retry on auth errors
+          if (error?.data?.code === 'UNAUTHORIZED') return false
+          // Don't retry on client errors (4xx)
+          if (error?.data?.httpStatus >= 400 && error?.data?.httpStatus < 500) return false
+          return failureCount < 2
+        },
+        retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 10000),
+        onError: (error: any) => {
+          console.error('❌ tRPC Query Error:', error)
+          if (error?.data?.code === 'UNAUTHORIZED') {
+            console.log('🔒 Global auth error detected - stopping retries')
+          }
+        }
+      },
+      mutations: {
+        retry: 1,
+        onError: (error) => {
+          console.error('❌ tRPC Mutation Error:', error)
+        }
       }
     }
   }))
 
   const [trpcClient] = useState(() =>
     trpc.createClient({
-      // Remove superjson transformer temporarily to fix serialization issues
-      // transformer: superjson,
+      // transformer: superjson, // Temporarily disabled for debugging
       links: [
         loggerLink({
           enabled: (opts) =>
@@ -41,7 +61,9 @@ export function TRPCProvider({ children }: { children: React.ReactNode }) {
             (opts.direction === 'down' && opts.result instanceof Error)
         }),
         httpBatchLink({
-          url: `${getBaseUrl()}/api/trpc`
+          url: `${getBaseUrl()}/api/trpc`,
+          fetch: (input, init) =>
+            fetch(input as RequestInfo, { ...(init || {}), credentials: 'include' })
         })
       ]
     })

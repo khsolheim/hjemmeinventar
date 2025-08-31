@@ -1,149 +1,200 @@
 'use client'
 
-import { useState } from 'react'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { useState, useEffect } from 'react'
+import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
-import { Progress } from '@/components/ui/progress'
-import { Separator } from '@/components/ui/separator'
-import { 
-  Printer, 
-  QrCode, 
-  BarChart3, 
-  Settings, 
-  Plus, 
-  Clock,
-  CheckCircle,
-  AlertCircle,
-  TrendingUp,
-  Activity,
-  FileText,
+import {
+  QrCode,
+  Bell,
   Zap,
-  Users,
-  Calendar,
-  Target,
-  Archive,
-  Sparkles,
-  Ruler
+  Plus,
+  X,
+  Package
 } from 'lucide-react'
 import Link from 'next/link'
-
-// Mock data for dashboard
-const mockStats = {
-  totalPrintJobs: 234,
-  successfulJobs: 221,
-  failedJobs: 13,
-  averageDuration: 2.3,
-  totalCost: 1250.50,
-  templatesCount: 8,
-  printersOnline: 2,
-  printersTotal: 3,
-  costSavings: 15.5,
-  todayJobs: 12,
-  weekJobs: 78,
-  monthJobs: 234
-}
-
-const recentJobs = [
-  { id: '1', template: 'Standard HMS Etikett', status: 'SUCCESS', createdAt: '10:45', copies: 5, duration: '2.1s' },
-  { id: '2', template: 'Kompakt Etikett', status: 'SUCCESS', createdAt: '10:32', copies: 12, duration: '4.2s' },
-  { id: '3', template: 'Detaljert Inventar', status: 'FAILED', createdAt: '10:15', copies: 1, duration: '0.8s' },
-  { id: '4', template: 'Standard HMS Etikett', status: 'SUCCESS', createdAt: '09:58', copies: 3, duration: '1.9s' },
-  { id: '5', template: 'Strekkode Etikett', status: 'SUCCESS', createdAt: '09:45', copies: 8, duration: '3.1s' }
-]
-
-const popularTemplates = [
-  { name: 'Standard HMS Etikett', usage: 89, trend: '+12%' },
-  { name: 'Kompakt Etikett', usage: 65, trend: '+8%' },
-  { name: 'Detaljert Inventar', usage: 34, trend: '+15%' },
-  { name: 'Strekkode Etikett', usage: 23, trend: '-2%' }
-]
+import { trpc } from '@/lib/trpc/client'
+import { useSession } from 'next-auth/react'
 
 const quickActions = [
   {
-    title: 'Skriv ut HMS Etikett',
-    description: 'Standard QR-etikett for gjenstander',
-    icon: QrCode,
-    href: '/printing/wizard?template=standard',
+    title: 'Hurtig utskrift',
+    description: 'Skriv ut QR-etiketter',
+    icon: Zap,
+    href: '/printing/wizard',
     color: 'bg-blue-500'
   },
   {
-    title: 'Opprett ny mal',
-    description: 'Lag en tilpasset etikettmal',
-    icon: Plus,
-    href: '/printing/templates/new',
+    title: 'Etikettmaler',
+    description: 'Administrer maler',
+    icon: QrCode,
+    href: '/printing/templates',
     color: 'bg-green-500'
-  },
-  {
-    title: 'Etikett størrelser',
-    description: 'Administrer størrelser for etiketter',
-    icon: Ruler,
-    href: '/printing/sizes',
-    color: 'bg-indigo-500'
-  },
-  {
-    title: 'Administrer skrivere',
-    description: 'Konfigurer og test skrivere',
-    icon: Printer,
-    href: '/printing/printers',
-    color: 'bg-purple-500'
-  },
-  {
-    title: 'Se analyse',
-    description: 'Utskriftsstatistikk og rapporter',
-    icon: BarChart3,
-    href: '/printing/analytics',
-    color: 'bg-orange-500'
   }
 ]
 
 export default function PrintingDashboard() {
-  const successRate = Math.round((mockStats.successfulJobs / mockStats.totalPrintJobs) * 100)
-  const printerUptime = Math.round((mockStats.printersOnline / mockStats.printersTotal) * 100)
+  const { status } = useSession()
+  const { data: itemsData } = trpc.items.getAll.useQuery({ limit: 1000 }, { enabled: status === 'authenticated' })
+
+  // Generate real reminders based on system state
+  const generateReminders = () => {
+    const reminders = []
+
+    // Check if user has items without QR codes
+    if (itemsData?.items && Array.isArray(itemsData.items)) {
+      const itemsWithoutQR = itemsData.items.filter(item => !item.qrCode)
+      if (itemsWithoutQR.length > 0) {
+        reminders.push({
+          id: 1,
+          type: 'info',
+          title: 'Gjenstander uten QR-kode',
+          description: `${itemsWithoutQR.length} gjenstander mangler QR-kode-etikett`,
+          action: 'Skriv ut etiketter',
+          actionHref: '/printing/wizard',
+          dismissible: true,
+          icon: Package
+        })
+      }
+    }
+
+    return reminders
+  }
+
+  const [visibleReminders, setVisibleReminders] = useState<any[]>([])
+
+  // Update reminders when data loads
+  useEffect(() => {
+    const reminders = generateReminders()
+    setVisibleReminders(reminders)
+  }, [itemsData])
+
+  const dismissReminder = (id: number) => {
+    setVisibleReminders(prev => prev.filter(r => r.id !== id))
+  }
+
+  const getReminderStyles = (type: string) => {
+    switch (type) {
+      case 'warning':
+        return {
+          bg: 'bg-amber-50',
+          border: 'border-amber-200',
+          text: 'text-amber-800',
+          icon: 'text-amber-600'
+        }
+      case 'info':
+        return {
+          bg: 'bg-blue-50',
+          border: 'border-blue-200',
+          text: 'text-blue-800',
+          icon: 'text-blue-600'
+        }
+      case 'success':
+        return {
+          bg: 'bg-green-50',
+          border: 'border-green-200',
+          text: 'text-green-800',
+          icon: 'text-green-600'
+        }
+      default:
+        return {
+          bg: 'bg-gray-50',
+          border: 'border-gray-200',
+          text: 'text-gray-800',
+          icon: 'text-gray-600'
+        }
+    }
+  }
 
   return (
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Etikettutskrift</h1>
+          <h1 className="text-2xl font-semibold">Etikettutskrift</h1>
           <p className="text-muted-foreground">
-            Moderne printing-system for HMS
+            Enkel og effektiv etikettproduksjon
           </p>
         </div>
-        <div className="flex gap-2">
-          <Button variant="outline" asChild>
-            <Link href="/printing/settings">
-              <Settings className="h-4 w-4 mr-2" />
-              Innstillinger
-            </Link>
-          </Button>
-          <Button asChild>
-            <Link href="/printing/wizard">
-              <Zap className="h-4 w-4 mr-2" />
-              Hurtigutskrift
-            </Link>
-          </Button>
-        </div>
+        <Button asChild>
+          <Link href="/printing/wizard">
+            <Plus className="h-4 w-4 mr-2" />
+            Ny utskrift
+          </Link>
+        </Button>
       </div>
 
+      {/* Reminder Boxes */}
+      {visibleReminders.length > 0 && (
+        <div className="space-y-3">
+          <div className="flex items-center gap-2">
+            <Bell className="h-4 w-4 text-muted-foreground" />
+            <h2 className="text-sm font-medium text-muted-foreground">Viktige påminnelser</h2>
+          </div>
+          <div className="space-y-2">
+            {visibleReminders.map((reminder) => {
+              const styles = getReminderStyles(reminder.type)
+              const IconComponent = reminder.icon
+
+              return (
+                <div
+                  key={reminder.id}
+                  className={`p-4 rounded-lg border ${styles.bg} ${styles.border} ${styles.text}`}
+                >
+                  <div className="flex items-start justify-between">
+                    <div className="flex items-start gap-3">
+                      <IconComponent className={`h-5 w-5 mt-0.5 ${styles.icon}`} />
+                      <div className="flex-1">
+                        <h3 className="font-medium text-sm">{reminder.title}</h3>
+                        <p className="text-xs opacity-80 mt-1">{reminder.description}</p>
+                        {reminder.action && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="mt-2 h-7 text-xs"
+                            asChild
+                          >
+                            <Link href={reminder.actionHref}>
+                              {reminder.action}
+                            </Link>
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                    {reminder.dismissible && (
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="h-6 w-6 p-0 hover:bg-white/20"
+                        onClick={() => dismissReminder(reminder.id)}
+                      >
+                        <X className="h-3 w-3" />
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      )}
+
       {/* Quick Actions */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-6 md:grid-cols-2">
         {quickActions.map((action, index) => {
           const IconComponent = action.icon
           return (
             <Card key={index} className="group hover:shadow-md transition-all cursor-pointer">
-              <Link href={action.href}>
-                <CardContent className="p-6">
-                  <div className="flex items-start gap-3">
-                    <div className={`p-2 rounded-lg ${action.color} text-white`}>
-                      <IconComponent className="h-5 w-5" />
+              <Link href={action.href} prefetch={false}>
+                <CardContent className="p-8">
+                  <div className="flex items-start gap-4">
+                    <div className={`p-3 rounded-lg ${action.color} text-white`}>
+                      <IconComponent className="h-6 w-6" />
                     </div>
                     <div>
-                      <h3 className="font-medium group-hover:text-blue-600 transition-colors">
+                      <h3 className="text-lg font-medium group-hover:text-blue-600 transition-colors">
                         {action.title}
                       </h3>
-                      <p className="text-sm text-muted-foreground mt-1">
+                      <p className="text-muted-foreground mt-2">
                         {action.description}
                       </p>
                     </div>
@@ -154,253 +205,6 @@ export default function PrintingDashboard() {
           )
         })}
       </div>
-
-      {/* Key Metrics */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">I dag</p>
-                <p className="text-2xl font-bold">{mockStats.todayJobs}</p>
-                <p className="text-xs text-green-600 flex items-center gap-1">
-                  <TrendingUp className="h-3 w-3" />
-                  +25% fra i går
-                </p>
-              </div>
-              <div className="p-2 bg-blue-100 rounded-full">
-                <Activity className="h-6 w-6 text-blue-600" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Suksessrate</p>
-                <p className="text-2xl font-bold">{successRate}%</p>
-                <p className="text-xs text-green-600">Meget bra!</p>
-              </div>
-              <div className="p-2 bg-green-100 rounded-full">
-                <CheckCircle className="h-6 w-6 text-green-600" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Skrivere online</p>
-                <p className="text-2xl font-bold">{mockStats.printersOnline}/{mockStats.printersTotal}</p>
-                <p className="text-xs text-muted-foreground">{printerUptime}% oppetid</p>
-              </div>
-              <div className="p-2 bg-purple-100 rounded-full">
-                <Printer className="h-6 w-6 text-purple-600" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Kostnad (mnd)</p>
-                <p className="text-2xl font-bold">kr {mockStats.totalCost.toFixed(0)}</p>
-                <p className="text-xs text-green-600 flex items-center gap-1">
-                  <Sparkles className="h-3 w-3" />
-                  {mockStats.costSavings}% besparelse
-                </p>
-              </div>
-              <div className="p-2 bg-orange-100 rounded-full">
-                <Target className="h-6 w-6 text-orange-600" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      <div className="grid gap-6 lg:grid-cols-3">
-        {/* Recent Jobs */}
-        <Card className="lg:col-span-2">
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <CardTitle className="flex items-center gap-2">
-                <Clock className="h-5 w-5" />
-                Siste utskriftsjobber
-              </CardTitle>
-              <Button variant="outline" size="sm" asChild>
-                <Link href="/printing/jobs">Se alle</Link>
-              </Button>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              {recentJobs.map((job) => (
-                <div key={job.id} className="flex items-center justify-between p-3 rounded-lg border">
-                  <div className="flex items-center gap-3">
-                    <div className={`p-1.5 rounded-full ${
-                      job.status === 'SUCCESS' ? 'bg-green-100' : 'bg-red-100'
-                    }`}>
-                      {job.status === 'SUCCESS' ? (
-                        <CheckCircle className="h-4 w-4 text-green-600" />
-                      ) : (
-                        <AlertCircle className="h-4 w-4 text-red-600" />
-                      )}
-                    </div>
-                    <div>
-                      <p className="font-medium text-sm">{job.template}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {job.copies} kopi{job.copies !== 1 ? 'er' : ''} • {job.duration}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <Badge variant={job.status === 'SUCCESS' ? 'default' : 'destructive'}>
-                      {job.status === 'SUCCESS' ? 'Vellykket' : 'Feilet'}
-                    </Badge>
-                    <p className="text-xs text-muted-foreground mt-1">{job.createdAt}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Popular Templates & Quick Stats */}
-        <div className="space-y-6">
-          {/* Popular Templates */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <FileText className="h-5 w-5" />
-                Populære maler
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                {popularTemplates.map((template, index) => (
-                  <div key={index} className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm font-medium">{template.name}</span>
-                      <div className="flex items-center gap-2">
-                        <span className={`text-xs ${
-                          template.trend.startsWith('+') ? 'text-green-600' : 'text-red-600'
-                        }`}>
-                          {template.trend}
-                        </span>
-                        <Badge variant="secondary">{template.usage}</Badge>
-                      </div>
-                    </div>
-                    <Progress value={template.usage} className="h-2" />
-                  </div>
-                ))}
-              </div>
-              <Separator className="my-4" />
-              <Button variant="outline" size="sm" className="w-full" asChild>
-                <Link href="/printing/templates">
-                  <FileText className="h-4 w-4 mr-2" />
-                  Administrer maler
-                </Link>
-              </Button>
-            </CardContent>
-          </Card>
-
-          {/* Monthly Overview */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Calendar className="h-5 w-5" />
-                Månedsoversikt
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="text-center">
-                  <p className="text-2xl font-bold text-blue-600">{mockStats.monthJobs}</p>
-                  <p className="text-xs text-muted-foreground">Totalt jobber</p>
-                </div>
-                <div className="text-center">
-                  <p className="text-2xl font-bold text-green-600">{mockStats.templatesCount}</p>
-                  <p className="text-xs text-muted-foreground">Aktive maler</p>
-                </div>
-              </div>
-              
-              <Separator />
-              
-              <div className="space-y-2">
-                <div className="flex justify-between text-sm">
-                  <span>Gjennomsnittlig tid:</span>
-                  <span className="font-medium">{mockStats.averageDuration}s</span>
-                </div>
-                <div className="flex justify-between text-sm">
-                  <span>Feilrate:</span>
-                  <span className="font-medium text-red-600">
-                    {Math.round((mockStats.failedJobs / mockStats.totalPrintJobs) * 100)}%
-                  </span>
-                </div>
-                <div className="flex justify-between text-sm">
-                  <span>Besparelse:</span>
-                  <span className="font-medium text-green-600">kr {mockStats.costSavings}</span>
-                </div>
-              </div>
-
-              <Button variant="outline" size="sm" className="w-full" asChild>
-                <Link href="/printing/analytics">
-                  <BarChart3 className="h-4 w-4 mr-2" />
-                  Detaljert analyse
-                </Link>
-              </Button>
-            </CardContent>
-          </Card>
-        </div>
-      </div>
-
-      {/* System Status */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Activity className="h-5 w-5" />
-            Systemstatus
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid gap-4 md:grid-cols-4">
-            <div className="flex items-center gap-3">
-              <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
-              <div>
-                <p className="text-sm font-medium">Print Service</p>
-                <p className="text-xs text-muted-foreground">Online</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-3">
-              <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
-              <div>
-                <p className="text-sm font-medium">Template Engine</p>
-                <p className="text-xs text-muted-foreground">Aktiv</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-3">
-              <div className="w-3 h-3 bg-yellow-500 rounded-full"></div>
-              <div>
-                <p className="text-sm font-medium">Queue Processor</p>
-                <p className="text-xs text-muted-foreground">3 jobber i kø</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-3">
-              <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
-              <div>
-                <p className="text-sm font-medium">Database</p>
-                <p className="text-xs text-muted-foreground">Tilkoblet</p>
-              </div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
     </div>
   )
 }

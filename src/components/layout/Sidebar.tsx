@@ -221,12 +221,7 @@ export function Sidebar({ isOpen, onToggle, isMobile = false }: SidebarProps) {
                   Legg til gjenstand
                 </Link>
               </Button>
-              <Button size="sm" variant="ghost" className="w-full justify-start md:hidden" asChild>
-                <Link href="/garn/mobile" onClick={onToggle}>
-                  <Palette className="h-4 w-4 mr-2" />
-                  Garn (Mobil)
-                </Link>
-              </Button>
+
                 <Button size="sm" variant="outline" className="w-full justify-start" asChild>
                   <Link href="/scan" onClick={onToggle}>
                     <QrCode className="h-4 w-4 mr-2" />
@@ -398,12 +393,7 @@ export function Sidebar({ isOpen, onToggle, isMobile = false }: SidebarProps) {
                   Legg til gjenstand
                 </Link>
               </Button>
-              <Button size="sm" variant="ghost" className="w-full justify-start md:hidden" asChild>
-                <Link href="/garn/mobile">
-                  <Palette className="h-4 w-4 mr-2" />
-                  Garn (Mobil)
-                </Link>
-              </Button>
+
               <Button size="sm" variant="outline" className="w-full justify-start" asChild>
                 <Link href="/scan">
                   <QrCode className="h-4 w-4 mr-2" />

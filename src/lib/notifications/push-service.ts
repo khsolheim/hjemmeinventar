@@ -34,10 +34,13 @@ export class PushNotificationService {
     }
 
     try {
-      // Register service worker
-      const registration = await navigator.serviceWorker.register('/sw.js', {
-        scope: '/'
-      })
+      // Get existing service worker registration or register new one
+      let registration = await navigator.serviceWorker.getRegistration('/')
+      if (!registration) {
+        registration = await navigator.serviceWorker.register('/sw.js', {
+          scope: '/'
+        })
+      }
 
       console.log('Service Worker registered:', registration)
 

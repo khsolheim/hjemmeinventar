@@ -1,6 +1,7 @@
 // Activities tRPC router
 import { z } from 'zod'
 import { createTRPCRouter, protectedProcedure } from '../server'
+import { TRPCError } from '@trpc/server'
 
 export const activitiesRouter = createTRPCRouter({
   // Get user's recent activities
@@ -11,6 +12,8 @@ export const activitiesRouter = createTRPCRouter({
       type: z.string().optional()
     }))
     .query(async ({ ctx, input }) => {
+      console.log('🔍 activities.getRecent called for user:', ctx.user?.email, 'ID:', ctx.user?.id)
+      
       const where: any = {
         userId: ctx.user.id
       }
@@ -19,8 +22,9 @@ export const activitiesRouter = createTRPCRouter({
         where.type = input.type
       }
       
-      const [activities, total] = await Promise.all([
-        ctx.db.activity.findMany({
+      try {
+        const [activities, total] = await Promise.all([
+          ctx.db.activity.findMany({
           where,
           include: {
             item: {
@@ -42,10 +46,38 @@ export const activitiesRouter = createTRPCRouter({
           take: input.limit,
           skip: input.offset
         }),
-        ctx.db.activity.count({ where })
-      ])
-      
-      return { activities, total }
+          ctx.db.activity.count({ where })
+        ])
+        
+        console.log('✅ Found', activities.length, 'activities for user:', ctx.user.email)
+        
+        // Ensure proper serialization - be very conservative
+        const serializedActivities = activities.map(activity => ({
+          id: activity.id,
+          type: activity.type,
+          description: activity.description,
+          createdAt: activity.createdAt.toISOString(),
+          metadata: activity.metadata ? JSON.parse(JSON.stringify(activity.metadata)) : null,
+          item: activity.item ? {
+            id: activity.item.id,
+            name: activity.item.name,
+            imageUrl: activity.item.imageUrl
+          } : null,
+          location: activity.location ? {
+            id: activity.location.id,
+            name: activity.location.name,
+            type: activity.location.type
+          } : null
+        }))
+        
+        return { activities: serializedActivities, total }
+      } catch (error) {
+        console.error('❌ Error fetching activities:', error)
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Kunne ikke hente aktiviteter'
+        })
+      }
     }),
 
   // Get activities for specific item

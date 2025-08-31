@@ -24,9 +24,13 @@ import Link from 'next/link'
 import { trpc } from '@/lib/trpc/client'
 import { useState, useEffect } from 'react'
 import { useSession } from 'next-auth/react'
+import { useTheme } from 'next-themes'
+import { useCompactMode } from '@/hooks/useCompactMode'
 
 export default function SettingsPage() {
   const { data: session, status } = useSession()
+  const { theme, setTheme, resolvedTheme } = useTheme()
+  const { isCompact, setCompactMode } = useCompactMode()
   const commonOpts = { enabled: status === 'authenticated', retry: 0, refetchOnWindowFocus: false, refetchOnMount: false, staleTime: 5 * 60 * 1000 } as const
   // const profilesQuery = trpc.users.getLabelProfiles.useQuery(undefined, commonOpts) // Temporarily disabled
   const profilesQuery = { data: [], refetch: () => {}, isLoading: false } // Placeholder since getLabelProfiles not available
@@ -66,7 +70,7 @@ export default function SettingsPage() {
         </p>
       </div>
 
-      <div className="settings-panel grid gap-6 cq">
+      <div className="settings-panel grid gap-6 lg:grid-cols-2 lg:gap-8 auto-rows-max cq">
         {/* Profile Settings */}
         <Card>
           <CardHeader>
@@ -148,28 +152,39 @@ export default function SettingsPage() {
           </CardHeader>
           <CardContent className="space-y-4">
             {/* Create */}
-            <div className="grid grid-cols-1 md:grid-cols-5 gap-2 items-end">
-              <div className="md:col-span-2">
+            <div className="space-y-4">
+              {/* First row - Name (full width) */}
+              <div>
                 <Label htmlFor="newProfileName">Navn</Label>
                 <Input id="newProfileName" name="newProfileName" value={newProfile.name} onChange={(e) => setNewProfile({ ...newProfile, name: e.target.value })} placeholder="F.eks. Standard med logo" />
               </div>
-              <div>
-                <Label htmlFor="newProfileLine2">Linje 2</Label>
-                <Input id="newProfileLine2" name="newProfileLine2" value={newProfile.extraLine1} onChange={(e) => setNewProfile({ ...newProfile, extraLine1: e.target.value })} placeholder="Valgfritt" />
+
+              {/* Second row - Extra lines */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="newProfileLine2">Linje 2 (valgfritt)</Label>
+                  <Input id="newProfileLine2" name="newProfileLine2" value={newProfile.extraLine1} onChange={(e) => setNewProfile({ ...newProfile, extraLine1: e.target.value })} placeholder="Ekstra tekst linje 2" />
+                </div>
+                <div>
+                  <Label htmlFor="newProfileLine3">Linje 3 (valgfritt)</Label>
+                  <Input id="newProfileLine3" name="newProfileLine3" value={newProfile.extraLine2} onChange={(e) => setNewProfile({ ...newProfile, extraLine2: e.target.value })} placeholder="Ekstra tekst linje 3" />
+                </div>
               </div>
-              <div>
-                <Label htmlFor="newProfileLine3">Linje 3</Label>
-                <Input id="newProfileLine3" name="newProfileLine3" value={newProfile.extraLine2} onChange={(e) => setNewProfile({ ...newProfile, extraLine2: e.target.value })} placeholder="Valgfritt" />
+
+              {/* Third row - Logo and URL switch */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-end">
+                <div>
+                  <Label htmlFor="newProfileLogoUrl">Logo URL (valgfritt)</Label>
+                  <Input id="newProfileLogoUrl" name="newProfileLogoUrl" value={newProfile.logoUrl} onChange={(e) => setNewProfile({ ...newProfile, logoUrl: e.target.value })} placeholder="https://eksempel.com/logo.png" />
+                </div>
+                <div className="flex items-center gap-2 pb-2">
+                  <Switch id="newProfileShowUrl" name="newProfileShowUrl" checked={newProfile.showUrl} onCheckedChange={(v) => setNewProfile({ ...newProfile, showUrl: !!v })} />
+                  <Label htmlFor="newProfileShowUrl">Vis URL på etikett</Label>
+                </div>
               </div>
-              <div>
-                <Label htmlFor="newProfileLogoUrl">Logo URL</Label>
-                <Input id="newProfileLogoUrl" name="newProfileLogoUrl" value={newProfile.logoUrl} onChange={(e) => setNewProfile({ ...newProfile, logoUrl: e.target.value })} placeholder="https://..." />
-              </div>
-              <div className="flex items-center gap-2">
-                <Switch id="newProfileShowUrl" name="newProfileShowUrl" checked={newProfile.showUrl} onCheckedChange={(v) => setNewProfile({ ...newProfile, showUrl: !!v })} />
-                <Label htmlFor="newProfileShowUrl">Vis URL på etikett</Label>
-              </div>
-              <div className="md:col-span-5 flex justify-end">
+
+              {/* Button row */}
+              <div className="flex justify-end">
                 <Button onClick={() => {
                   if (!newProfile.name.trim()) return
                   createProfile.mutate({ name: newProfile.name.trim(), extraLine1: newProfile.extraLine1 || undefined, extraLine2: newProfile.extraLine2 || undefined, showUrl: newProfile.showUrl, logoUrl: newProfile.logoUrl || undefined })
@@ -209,8 +224,10 @@ export default function SettingsPage() {
           </CardContent>
         </Card>
 
-        {/* Notification Settings */}
-        <NotificationSettings />
+        {/* Notification Settings - Full width */}
+        <div className="lg:col-span-2">
+          <NotificationSettings />
+        </div>
 
         {/* Privacy & Security */}
         <Card>
@@ -227,7 +244,7 @@ export default function SettingsPage() {
             <div className="setting-row flex items-center justify-between">
               <div className="space-y-0.5">
                 <Label className="text-base">Vis profil til andre brukere</Label>
-                <div className="text-sm text-gray-600">
+                <div className="text-sm text-muted-foreground">
                   Tillat andre medlemmer i husholdningen å se profilen din
                 </div>
               </div>
@@ -237,7 +254,7 @@ export default function SettingsPage() {
             <div className="setting-row flex items-center justify-between">
               <div className="space-y-0.5">
                 <Label className="text-base">Anonymiser aktivitetslogger</Label>
-                <div className="text-sm text-gray-600">
+                <div className="text-sm text-muted-foreground">
                   Skjul ditt navn i delte aktivitetslogger
                 </div>
               </div>
@@ -273,27 +290,41 @@ export default function SettingsPage() {
             <div className="setting-row flex items-center justify-between">
               <div className="space-y-0.5">
                 <Label htmlFor="pref-dark-mode" className="text-base">Mørk modus</Label>
-                <div className="text-sm text-gray-600">
+                <div className="text-sm text-muted-foreground">
                   Bruk mørk fargepalett for appen
                 </div>
               </div>
-              <Switch id="pref-dark-mode" name="pref-dark-mode" className="setting-switch" />
+              <Switch 
+                id="pref-dark-mode" 
+                name="pref-dark-mode" 
+                className="setting-switch"
+                checked={resolvedTheme === 'dark'}
+                onCheckedChange={(checked) => {
+                  setTheme(checked ? 'dark' : 'light')
+                }}
+              />
             </div>
 
             <div className="setting-row flex items-center justify-between">
               <div className="space-y-0.5">
                 <Label htmlFor="pref-compact-mode" className="text-base">Kompakt visning</Label>
-                <div className="text-sm text-gray-600">
+                <div className="text-sm text-muted-foreground">
                   Vis mer informasjon på mindre plass
                 </div>
               </div>
-              <Switch id="pref-compact-mode" name="pref-compact-mode" className="setting-switch" />
+              <Switch 
+                id="pref-compact-mode" 
+                name="pref-compact-mode" 
+                className="setting-switch"
+                checked={isCompact}
+                onCheckedChange={setCompactMode}
+              />
             </div>
 
             <div className="setting-row flex items-center justify-between">
               <div className="space-y-0.5">
                 <Label htmlFor="pref-auto-save" className="text-base">Automatisk lagring</Label>
-                <div className="text-sm text-gray-600">
+                <div className="text-sm text-muted-foreground">
                   Lagre endringer automatisk mens du skriver
                 </div>
               </div>
@@ -317,8 +348,8 @@ export default function SettingsPage() {
           </CardContent>
         </Card>
 
-        {/* Organization Settings */}
-        <Card>
+        {/* Organization Settings - Full width */}
+        <Card className="lg:col-span-2">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Layers className="h-5 w-5" />
@@ -348,7 +379,7 @@ export default function SettingsPage() {
               <div className="flex items-center justify-between">
                 <div className="space-y-0.5">
                   <Label htmlFor="org-strict-validation" className="text-base">Streng hierarki-validering</Label>
-                  <div className="text-sm text-gray-600">
+                  <div className="text-sm text-muted-foreground">
                     Forhindre plassering av gjenstander som bryter hierarki-reglene
                   </div>
                 </div>
@@ -358,7 +389,7 @@ export default function SettingsPage() {
               <div className="flex items-center justify-between">
                 <div className="space-y-0.5">
                   <Label htmlFor="org-show-warnings" className="text-base">Vis hierarki-advarsler</Label>
-                  <div className="text-sm text-gray-600">
+                  <div className="text-sm text-muted-foreground">
                     Vis advarsler når du oppretter lokasjoner som kan forvirre organisasjonen
                   </div>
                 </div>
@@ -368,7 +399,7 @@ export default function SettingsPage() {
               <div className="flex items-center justify-between">
                 <div className="space-y-0.5">
                   <Label htmlFor="org-auto-suggest" className="text-base">Auto-foreslå lokasjoner</Label>
-                  <div className="text-sm text-gray-600">
+                  <div className="text-sm text-muted-foreground">
                     Foreslå passende overordnede lokasjoner basert på type
                   </div>
                 </div>
@@ -378,11 +409,13 @@ export default function SettingsPage() {
           </CardContent>
         </Card>
 
-        {/* Wizard Settings */}
-        <WizardSettings />
+        {/* Wizard Settings - Full width */}
+        <div className="lg:col-span-2">
+          <WizardSettings />
+        </div>
 
-        {/* Data Management */}
-        <Card>
+        {/* Data Management - Full width */}
+        <Card className="lg:col-span-2">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Database className="h-5 w-5" />
@@ -408,7 +441,7 @@ export default function SettingsPage() {
 
             <div className="space-y-2">
               <Label className="text-base text-red-600">Farlig sone</Label>
-              <div className="text-sm text-gray-600 mb-4">
+              <div className="text-sm text-muted-foreground mb-4">
                 Disse handlingene kan ikke angres
               </div>
               
@@ -417,7 +450,7 @@ export default function SettingsPage() {
                   <SignOutButton variant="destructive" className="w-full sm:w-auto">
                     Logg ut fra kontoen
                   </SignOutButton>
-                  <div className="text-xs text-gray-500">
+                  <div className="text-xs text-muted-foreground">
                     Dette vil logge deg ut og sende deg tilbake til innloggingssiden
                   </div>
                 </div>
@@ -427,7 +460,7 @@ export default function SettingsPage() {
                     <Trash2 className="h-4 w-4" />
                     Slett alle data
                   </Button>
-                  <div className="text-xs text-gray-500">
+                  <div className="text-xs text-muted-foreground">
                     Dette vil permanent slette alle dine gjenstander, lokasjoner og aktiviteter
                   </div>
                 </div>
@@ -436,8 +469,8 @@ export default function SettingsPage() {
           </CardContent>
         </Card>
 
-        {/* Help & Support */}
-        <Card>
+        {/* Help & Support - Full width */}
+        <Card className="lg:col-span-2">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <HelpCircle className="h-5 w-5" />
@@ -448,7 +481,7 @@ export default function SettingsPage() {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
               <Button variant="outline">
                 Hjelpedokumentasjon
               </Button>
@@ -465,7 +498,7 @@ export default function SettingsPage() {
 
             <Separator />
 
-            <div className="text-sm text-gray-600 space-y-1">
+            <div className="text-sm text-muted-foreground space-y-1">
               <div>Versjon: 1.0.0</div>
               <div>Sist oppdatert: {new Date().toLocaleDateString('nb-NO')}</div>
               <div>© 2024 HMS - Home Management System</div>

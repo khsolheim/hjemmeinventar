@@ -54,7 +54,10 @@ export default function CollaborationPage() {
 
   const { recentActivities, liveEditing } = useRealtimeEvents()
 
-  const { data: households = [] } = trpc.households.getMyHouseholds.useQuery()
+  const { data: householdsData } = trpc.households.getMyHouseholds.useQuery()
+  
+  // Safe array handling
+  const households = householdsData && Array.isArray(householdsData) ? householdsData : []
 
   const { 
     typingUsers, 

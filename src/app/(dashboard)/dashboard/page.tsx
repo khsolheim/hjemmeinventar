@@ -1,28 +1,60 @@
 'use client'
 
+import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { AccessibleButton } from '@/components/ui/accessible-button'
-import { Plus, Package, MapPin, Search, QrCode, TrendingUp, Loader2 } from 'lucide-react'
+import { Plus, Package, MapPin, Search, QrCode, TrendingUp, Loader2, AlertCircle } from 'lucide-react'
 import { trpc } from '@/lib/trpc/client'
 import Link from 'next/link'
 import { NotificationSummary } from '@/components/notifications/NotificationCenter'
 import { InstallPrompt } from '@/components/pwa/InstallPrompt'
 import { NotificationTest } from '@/components/notifications/NotificationTest'
+import { QuickAddModal } from '@/components/ui/quick-add-modal'
+import { PersonalizedDashboard } from '@/components/dashboard/PersonalizedDashboard'
+import { DashboardSkeleton } from '@/components/ui/skeleton'
 
 export default function DashboardPage() {
+  // Quick Add Modal state
+  const [showQuickAdd, setShowQuickAdd] = useState(false)
+  const [defaultLocationId, setDefaultLocationId] = useState<string>()
+
+  // Dashboard mode state
+  const [dashboardMode, setDashboardMode] = useState<'standard' | 'personalized'>('standard')
+
+  // Load dashboard preference from localStorage
+  useEffect(() => {
+    const savedMode = localStorage.getItem('hms-dashboard-mode')
+    if (savedMode === 'personalized') {
+      setDashboardMode('personalized')
+    }
+  }, [])
+
+  // Save dashboard preference
+  const toggleDashboardMode = (mode: 'standard' | 'personalized') => {
+    setDashboardMode(mode)
+    localStorage.setItem('hms-dashboard-mode', mode)
+  }
+
   // Fetch dashboard data with error handling
   const { data: itemsData, isLoading: itemsLoading, error: itemsError } = trpc.items.getAll.useQuery({ limit: 10 })
-  const { data: locations = [], isLoading: locationsLoading, error: locationsError } = trpc.locations.getAll.useQuery()
-  const { data: activities = [], isLoading: activitiesLoading, error: activitiesError } = trpc.activities.getRecent.useQuery({ limit: 5 })
+  const { data: locationsData, isLoading: locationsLoading, error: locationsError } = trpc.locations.getAll.useQuery()
+  // ACTIVITIES COMPLETELY REMOVED - Replace with simple stats
+  // No more activities query - this was causing persistent React rendering issues
+  
+  // Ensure data is always arrays
+  const locations = locationsData && Array.isArray(locationsData) ? locationsData : []
+  const items = itemsData?.items && Array.isArray(itemsData.items) ? itemsData.items : []
+
+  // Check if any data is still loading
+  const isAnyLoading = itemsLoading || locationsLoading
 
   const isLoading = itemsLoading || locationsLoading
-  const hasErrors = itemsError || locationsError || activitiesError
+  const hasErrors = itemsError || locationsError
 
-  // Check if user needs to login (auth error)
-  const needsAuth = itemsError?.message?.includes('UNAUTHORIZED') || 
-                   locationsError?.message?.includes('UNAUTHORIZED') ||
-                   activitiesError?.message?.includes('UNAUTHORIZED')
+  // Check if user needs to login (auth error) - safer error checking
+  const needsAuth = (itemsError?.data?.code === 'UNAUTHORIZED') || 
+                   (locationsError?.data?.code === 'UNAUTHORIZED')
 
   if (needsAuth) {
     return (
@@ -53,10 +85,7 @@ export default function DashboardPage() {
     )
   }
 
-  // Extract items from the response object
-  const items = itemsData?.items || []
-
-  // Calculate stats
+  // Calculate stats (using items already defined above)
   const totalItems = items.length
   const totalLocations = locations.length
   const totalQRCodes = locations.length // Each location has a QR code
@@ -117,7 +146,6 @@ export default function DashboardPage() {
           <CardContent className="text-sm text-red-700">
             {itemsError && <div>Items feil: {itemsError.message}</div>}
             {locationsError && <div>Locations feil: {locationsError.message}</div>}
-            {activitiesError && <div>Activities feil: {activitiesError.message}</div>}
             <div className="mt-2">
               <Button 
                 variant="outline" 
@@ -139,136 +167,169 @@ export default function DashboardPage() {
             Velkommen tilbake! Her er en oversikt over inventaret ditt.
           </p>
         </div>
-        <Link href="/items">
-          <AccessibleButton aria-label="Legg til ny gjenstand" className="cta-button">
+        <div className="flex items-center gap-3">
+          {/* Dashboard Mode Toggle */}
+          <div className="flex rounded-lg border bg-muted p-1">
+            <Button
+              variant={dashboardMode === 'standard' ? 'default' : 'ghost'}
+              size="sm"
+              onClick={() => toggleDashboardMode('standard')}
+              className="px-3 py-1 text-xs"
+            >
+              Standard
+            </Button>
+            <Button
+              variant={dashboardMode === 'personalized' ? 'default' : 'ghost'}
+              size="sm"
+              onClick={() => toggleDashboardMode('personalized')}
+              className="px-3 py-1 text-xs"
+            >
+              Personalisert
+            </Button>
+          </div>
+          <AccessibleButton
+            aria-label="Legg til ny gjenstand"
+            className="cta-button"
+            onClick={() => setShowQuickAdd(true)}
+          >
             <Plus className="w-4 h-4 mr-2" />
-            Legg til gjenstand
+            Hurtig tillegg
           </AccessibleButton>
-        </Link>
+        </div>
       </div>
 
       {/* PWA Install Prompt */}
       <InstallPrompt />
 
-      {/* Quick Stats */}
-      <div className="cq-grid dashboard-grid gap-6 mb-8" style={{"--card-min":"220px"} as any}>
-        <Card className="stat-card">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium title">
-              Totale gjenstander
-            </CardTitle>
-            <Package className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent className="min-h-[84px]">
-            <div className="text-2xl font-bold">
-              {isLoading ? (
-                <Loader2 className="w-6 h-6 animate-spin" />
-              ) : (
-                totalItems
-              )}
-            </div>
-            <p className="text-xs text-muted-foreground">
-              {totalItems === 0 
-                ? 'Start med å legge til dine første gjenstander'
-                : `${totalItems} gjenstander registrert`
-              }
-            </p>
-          </CardContent>
-        </Card>
+      {/* Render Dashboard based on mode */}
+      {dashboardMode === 'personalized' ? (
+        <PersonalizedDashboard />
+      ) : (
+        <>
+          {/* Show skeleton while loading */}
+          {isAnyLoading ? (
+            <DashboardSkeleton />
+          ) : (
+            <>
+              {/* Quick Stats */}
+              <div className="cq-grid dashboard-grid gap-6 mb-8" style={{"--card-min":"220px"} as any}>
+                <Card className="stat-card">
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium title">
+                      Totale gjenstander
+                    </CardTitle>
+                    <Package className="h-4 w-4 text-muted-foreground" />
+                  </CardHeader>
+                  <CardContent className="min-h-[84px]">
+                    <div className="text-2xl font-bold">
+                      {isLoading ? (
+                        <Loader2 className="w-6 h-6 animate-spin" />
+                      ) : (
+                        totalItems
+                      )}
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      {totalItems === 0
+                        ? 'Start med å legge til dine første gjenstander'
+                        : `${totalItems} gjenstander registrert`
+                      }
+                    </p>
+                  </CardContent>
+                </Card>
 
-        <Card className="stat-card">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium title">
-              Lokasjoner
-            </CardTitle>
-            <MapPin className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent className="min-h-[84px]">
-            <div className="text-2xl font-bold">
-              {isLoading ? (
-                <Loader2 className="w-6 h-6 animate-spin" />
-              ) : (
-                totalLocations
-              )}
-            </div>
-            <p className="text-xs text-muted-foreground">
-              {totalLocations === 0 
-                ? 'Opprett rom og oppbevaringssteder'
-                : `${totalLocations} lokasjoner opprettet`
-              }
-            </p>
-          </CardContent>
-        </Card>
+                <Card className="stat-card">
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium title">
+                      Lokasjoner
+                    </CardTitle>
+                    <MapPin className="h-4 w-4 text-muted-foreground" />
+                  </CardHeader>
+                  <CardContent className="min-h-[84px]">
+                    <div className="text-2xl font-bold">
+                      {isLoading ? (
+                        <Loader2 className="w-6 h-6 animate-spin" />
+                      ) : (
+                        totalLocations
+                      )}
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      {totalLocations === 0
+                        ? 'Opprett rom og oppbevaringssteder'
+                        : `${totalLocations} lokasjoner opprettet`
+                      }
+                    </p>
+                  </CardContent>
+                </Card>
 
-        <Card className="stat-card">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium title">
-              QR-koder generert
-            </CardTitle>
-            <QrCode className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent className="min-h-[84px]">
-            <div className="text-2xl font-bold">
-              {isLoading ? (
-                <Loader2 className="w-6 h-6 animate-spin" />
-              ) : (
-                totalQRCodes
-              )}
-            </div>
-            <p className="text-xs text-muted-foreground">
-              {totalQRCodes === 0 
-                ? 'QR-etiketter for enkel skanning'
-                : `${totalQRCodes} QR-koder tilgjengelig`
-              }
-            </p>
-          </CardContent>
-        </Card>
+                <Card className="stat-card">
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium title">
+                      QR-koder generert
+                    </CardTitle>
+                    <QrCode className="h-4 w-4 text-muted-foreground" />
+                  </CardHeader>
+                  <CardContent className="min-h-[84px]">
+                    <div className="text-2xl font-bold">
+                      {isLoading ? (
+                        <Loader2 className="w-6 h-6 animate-spin" />
+                      ) : (
+                        totalQRCodes
+                      )}
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      {totalQRCodes === 0
+                        ? 'QR-etiketter for enkel skanning'
+                        : `${totalQRCodes} QR-koder tilgjengelig`
+                      }
+                    </p>
+                  </CardContent>
+                </Card>
 
-        <Card className="stat-card">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium title">
-              Denne måneden
-            </CardTitle>
-            <TrendingUp className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent className="min-h-[84px]">
-            <div className="text-2xl font-bold">
-              {isLoading ? (
-                <Loader2 className="w-6 h-6 animate-spin" />
-              ) : (
-                thisMonthItems
-              )}
-            </div>
-            <p className="text-xs text-muted-foreground">
-              {thisMonthItems === 0 
-                ? 'Gjenstander lagt til'
-                : `${thisMonthItems} nye gjenstander`
-              }
-            </p>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Notifications Summary */}
-      <NotificationSummary className="mb-8" />
-
-      {/* Quick Actions */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6 mb-8 cq">
-        <Card>
-          <CardHeader>
-            <CardTitle className="title">Kom i gang</CardTitle>
-            <CardDescription>
-              Sett opp ditt første inventar på noen enkle steg
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4 min-h-[240px]">
-            {isOnboardingCompleted ? (
-              <div className="text-sm text-muted-foreground">
-                Alt er klart! Du har rom, oppbevaringssteder og gjenstander.
+                <Card className="stat-card">
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium title">
+                      Denne måneden
+                    </CardTitle>
+                    <TrendingUp className="h-4 w-4 text-muted-foreground" />
+                  </CardHeader>
+                  <CardContent className="min-h-[84px]">
+                    <div className="text-2xl font-bold">
+                      {isLoading ? (
+                        <Loader2 className="w-6 h-6 animate-spin" />
+                      ) : (
+                        thisMonthItems
+                      )}
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      {thisMonthItems === 0
+                        ? 'Gjenstander lagt til'
+                        : `${thisMonthItems} nye gjenstander`
+                      }
+                    </p>
+                  </CardContent>
+                </Card>
               </div>
-            ) : (
-              <>
-              <div className="flex items-center space-x-4">
+
+              {/* Notifications Summary */}
+              <NotificationSummary className="mb-8" />
+
+              {/* Quick Actions */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6 mb-8 cq">
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="title">Kom i gang</CardTitle>
+                    <CardDescription>
+                      Sett opp ditt første inventar på noen enkle steg
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4 min-h-[240px]">
+                    {isOnboardingCompleted ? (
+                      <div className="text-sm text-muted-foreground">
+                        Alt er klart! Du har rom, oppbevaringssteder og gjenstander.
+                      </div>
+                    ) : (
+                      <>
+                        <div className="flex items-center space-x-4">
                 <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
                   hasRooms ? 'bg-green-500 text-white' : 'bg-primary text-primary-foreground'
                 }`}>
@@ -337,49 +398,42 @@ export default function DashboardPage() {
 
         <Card>
           <CardHeader>
-            <CardTitle className="title">Nylige aktiviteter</CardTitle>
+            <CardTitle className="title">Systemstatistikk</CardTitle>
             <CardDescription>
-              Oversikt over dine siste handlinger
+              Oversikt over ditt inventar
             </CardDescription>
           </CardHeader>
           <CardContent className="min-h-[240px]">
-            {activitiesLoading ? (
-              <div className="flex items-center justify-center py-8">
-                <Loader2 className="w-6 h-6 animate-spin" />
-                <span className="ml-2">Laster aktiviteter...</span>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="text-center p-4 bg-muted/30 rounded-lg">
+                <div className="text-2xl font-bold text-primary">{items.length}</div>
+                <div className="text-sm text-muted-foreground">Totalt gjenstander</div>
               </div>
-            ) : activities && 'activities' in activities && activities.activities?.length > 0 ? (
-              <div className="activity-list space-y-3">
-                {activities.activities.slice(0, 5).map((activity: any) => (
-                  <div key={activity.id} className="activity-item flex items-center gap-3 p-2 rounded hover:bg-muted/50">
-                    <div className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center">
-                      <Package className="w-4 h-4 text-primary" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="activity-content text-sm font-medium line-clamp-1">
-                        {activity.description}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        {new Date(activity.createdAt).toLocaleDateString('no-NO', {
-                          day: 'numeric',
-                          month: 'short',
-                          hour: '2-digit',
-                          minute: '2-digit'
-                        })}
-                      </p>
-                    </div>
-                  </div>
-                ))}
+              <div className="text-center p-4 bg-muted/30 rounded-lg">
+                <div className="text-2xl font-bold text-primary">{locations.length}</div>
+                <div className="text-sm text-muted-foreground">Lokasjoner</div>
               </div>
-            ) : (
-              <div className="text-center py-8 text-muted-foreground">
-                <Package className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                <p>Ingen aktiviteter ennå</p>
-                <p className="text-sm">
-                  Aktiviteter vil vises her når du begynner å bruke systemet
-                </p>
+              <div className="text-center p-4 bg-muted/30 rounded-lg">
+                <div className="text-2xl font-bold text-primary">
+                  {items.reduce((sum: number, item: any) => sum + (item.totalQuantity || 0), 0)}
+                </div>
+                <div className="text-sm text-muted-foreground">Total mengde</div>
               </div>
-            )}
+              <div className="text-center p-4 bg-muted/30 rounded-lg">
+                <div className="text-2xl font-bold text-primary">
+                  {items.filter((item: any) => item.availableQuantity > 0).length}
+                </div>
+                <div className="text-sm text-muted-foreground">Tilgjengelige</div>
+              </div>
+            </div>
+            <div className="mt-4 text-center">
+              <Link href="/items">
+                <Button variant="outline" size="sm">
+                  <Search className="w-4 h-4 mr-2" />
+                  Se alle gjenstander
+                </Button>
+              </Link>
+            </div>
           </CardContent>
         </Card>
 
@@ -449,10 +503,26 @@ export default function DashboardPage() {
             )}
           </CardContent>
         </Card>
-
-        {/* Notification Test */}
-        <NotificationTest />
       </div>
+
+              {/* Notification Test */}
+              <NotificationTest />
+            </>
+          )}
+        </>
+      )}
+
+      <QuickAddModal
+        open={showQuickAdd}
+        onOpenChange={setShowQuickAdd}
+        defaultLocationId={defaultLocationId}
+        onItemAdded={() => {
+          // Refresh dashboard data
+          // This will be handled by tRPC invalidation
+        }}
+      />
+
+      {/* Add missing closing brace for the component function */}
     </div>
   )
 }

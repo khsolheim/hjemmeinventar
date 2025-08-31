@@ -70,14 +70,16 @@ const locationTypeIcons = {
 
 // Fallback hierarchy rules (used if API fails)
 const FALLBACK_HIERARCHY_RULES: Record<string, string[]> = {
-  ROOM: ['SHELF', 'CABINET', 'CONTAINER'],
-  SHELF: ['SHELF_COMPARTMENT', 'BOX', 'DRAWER'],
-  SHELF_COMPARTMENT: ['BOX', 'BAG', 'CONTAINER'],
-  BOX: ['BAG', 'SECTION'],
-  BAG: [],
-  CABINET: ['DRAWER', 'SHELF_COMPARTMENT', 'CONTAINER', 'BOX'],
-  DRAWER: ['SECTION', 'BAG', 'CONTAINER'],
-  CONTAINER: ['BAG', 'SECTION'],
+  ROOM: ['SHELF', 'CABINET', 'CONTAINER', 'RACK', 'WALL_SHELF', 'BOX', 'DRAWER', 'BAG'],
+  SHELF: ['SHELF_COMPARTMENT', 'BOX', 'DRAWER', 'BAG', 'CONTAINER'],
+  RACK: ['SHELF_COMPARTMENT', 'BOX', 'DRAWER', 'BAG', 'CONTAINER'],
+  WALL_SHELF: ['SHELF_COMPARTMENT', 'BOX', 'BAG', 'CONTAINER'],
+  SHELF_COMPARTMENT: ['BOX', 'BAG', 'CONTAINER', 'SECTION'],
+  BOX: ['BAG', 'SECTION', 'CONTAINER'],
+  BAG: ['SECTION'],
+  CABINET: ['DRAWER', 'SHELF_COMPARTMENT', 'CONTAINER', 'BOX', 'BAG', 'SHELF'],
+  DRAWER: ['SECTION', 'BAG', 'CONTAINER', 'BOX'],
+  CONTAINER: ['BAG', 'SECTION', 'BOX'],
   SECTION: ['BAG']
 }
 
@@ -101,6 +103,7 @@ interface LocationModalProps {
   allLocations: any[]
   isLoading?: boolean
   mode: 'create' | 'edit'
+  initialData?: any
 }
 
 export function LocationModal({ 
@@ -110,7 +113,8 @@ export function LocationModal({
   location, 
   allLocations, 
   isLoading = false,
-  mode 
+  mode,
+  initialData
 }: LocationModalProps) {
   const [formData, setFormData] = useState({
     name: '',
@@ -150,13 +154,13 @@ export function LocationModal({
           name: '',
           type: 'ROOM',
           description: '',
-          parentId: 'none'
+          parentId: initialData?.parentId || 'none'
         })
       }
       setErrors({})
       setActiveTab('basic')
     }
-  }, [isOpen, location, mode])
+  }, [isOpen, location, mode, initialData])
 
   const validateForm = () => {
     const newErrors: Record<string, string> = {}
@@ -170,7 +174,7 @@ export function LocationModal({
       if (parent && !canBeChildOf(formData.type, parent.type, hierarchyData?.matrix)) {
         const parentLabel = locationTypeLabels[parent.type as keyof typeof locationTypeLabels] || parent.type
         const childLabel = locationTypeLabels[formData.type as keyof typeof locationTypeLabels] || formData.type
-        newErrors.parentId = `${childLabel} kan ikke plasseres i ${parentLabel.toLowerCase()}. Sjekk hierarki-innstillingene.`
+        newErrors.parentId = `${childLabel} kan ikke plasseres i ${parentLabel.toLowerCase()}. Gå til Innstillinger → Hierarki-regler for å endre dette.`
       }
     }
     
@@ -179,6 +183,11 @@ export function LocationModal({
   }
 
   const handleSave = () => {
+    // Prevent duplicate submissions
+    if (isLoading) {
+      return
+    }
+    
     if (!validateForm()) {
       setActiveTab('basic') // Switch to basic tab if there are errors
       return

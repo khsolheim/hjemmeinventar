@@ -195,12 +195,16 @@ export default function LoansPage() {
   const [searchQuery, setSearchQuery] = useState('')
   const [filterStatus, setFilterStatus] = useState<'all' | 'out' | 'overdue' | 'returned'>('all')
 
-  const { data: loans = [], isLoading, refetch } = trpc.loans.getUserLoans.useQuery(undefined, {
+  const { data: loansData, isLoading, refetch } = trpc.loans.getUserLoans.useQuery(undefined, {
     staleTime: 30000,
     refetchOnWindowFocus: false,
     refetchOnMount: false,
     placeholderData: (prev) => prev,
   })
+  
+  // Safe array handling
+  const loans = loansData && Array.isArray(loansData) ? loansData : []
+  
   const { data: stats, isLoading: statsLoading } = trpc.loans.getStats.useQuery(undefined, {
     staleTime: 30000,
     refetchOnWindowFocus: false,

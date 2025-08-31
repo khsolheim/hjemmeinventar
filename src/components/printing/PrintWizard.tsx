@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Textarea } from '@/components/ui/textarea'
+
 import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
 import { Progress } from '@/components/ui/progress'
@@ -19,17 +19,20 @@ import {
   Printer,
   CheckCircle,
   Eye,
-  Download,
   Zap,
-  Settings,
-  RefreshCw
+  RefreshCw,
+  Package,
+  MapPin
 } from 'lucide-react'
+import { trpc } from '@/lib/trpc/client'
+import { useSession } from 'next-auth/react'
 
 const steps = [
   { id: 1, title: 'Velg mal', description: 'Velg etikettmal' },
-  { id: 2, title: 'Konfigurer data', description: 'Fyll ut etikettdata' },
-  { id: 3, title: 'Velg skriver', description: 'Velg skriver og innstillinger' },
-  { id: 4, title: 'Forhåndsvisning', description: 'Se og bekreft utskrift' }
+  { id: 2, title: 'Velg gjenstander', description: 'Velg gjenstander å etikettere' },
+  { id: 3, title: 'Konfigurer data', description: 'Fyll ut etikettdata' },
+  { id: 4, title: 'Velg skriver', description: 'Velg skriver og innstillinger' },
+  { id: 5, title: 'Forhåndsvisning', description: 'Se og bekreft utskrift' }
 ]
 
 const availableTemplates = [
@@ -115,9 +118,12 @@ const availablePrinters = [
 ]
 
 export function PrintWizardWireframe() {
+  const { status } = useSession()
   const [currentStep, setCurrentStep] = useState(1)
   const [selectedTemplate, setSelectedTemplate] = useState<string>('')
   const [selectedPrinter, setSelectedPrinter] = useState<string>('')
+  const [selectedItems, setSelectedItems] = useState<string[]>([])
+
   const [labelData, setLabelData] = useState<Record<string, string>>({})
   const [printSettings, setPrintSettings] = useState({
     copies: 1,
@@ -127,14 +133,19 @@ export function PrintWizardWireframe() {
   const [isPrinting, setIsPrinting] = useState(false)
   const [printComplete, setPrintComplete] = useState(false)
 
+  // Fetch real data from the system
+  const { data: itemsData } = trpc.items.getAll.useQuery({ limit: 1000 }, { enabled: status === 'authenticated' })
+  // const { data: locationsData } = trpc.locations.getAll.useQuery({}, { enabled: status === 'authenticated' })
+
   const selectedTemplateData = availableTemplates.find(t => t.id === selectedTemplate)
   const selectedPrinterData = availablePrinters.find(p => p.id === selectedPrinter)
 
   const canProceedToStep = (step: number) => {
     switch (step) {
       case 2: return !!selectedTemplate
-      case 3: return !!selectedTemplate && Object.keys(labelData).length > 0
-      case 4: return !!selectedTemplate && !!selectedPrinter && Object.keys(labelData).length > 0
+      case 3: return !!selectedTemplate && selectedItems.length > 0
+      case 4: return !!selectedTemplate && selectedItems.length > 0 && Object.keys(labelData).length > 0
+      case 5: return !!selectedTemplate && selectedItems.length > 0 && !!selectedPrinter && Object.keys(labelData).length > 0
       default: return true
     }
   }
@@ -149,10 +160,10 @@ export function PrintWizardWireframe() {
       const result = await universalPrinterService.print({
         templateId: selectedTemplate,
         data: labelData,
-        printerType: selectedPrinterData?.type as any || 'PDF',
+        printerType: (selectedPrinterData?.type as 'PDF' | 'HTML' | 'ZEBRA' | 'BROTHER' | 'DYMO') || 'PDF',
         printSettings: {
           copies: printSettings.copies,
-          quality: printSettings.quality as any
+          quality: printSettings.quality as 'draft' | 'normal' | 'high'
         }
       })
       
@@ -185,6 +196,8 @@ export function PrintWizardWireframe() {
     setCurrentStep(1)
     setSelectedTemplate('')
     setSelectedPrinter('')
+    setSelectedItems([])
+
     setLabelData({})
     setPrintSettings({ copies: 1, quality: 'high', cutMode: 'auto' })
     setIsPrinting(false)
@@ -247,147 +260,362 @@ export function PrintWizardWireframe() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       {/* Progress Steps */}
       <Card>
-        <CardContent className="pt-6">
-          <div className="flex items-center justify-between mb-4">
+        <CardContent className="py-3 px-4">
+          <div className="flex items-center justify-between mb-2">
             {steps.map((step, index) => (
               <div key={step.id} className="flex items-center">
-                <div className={`flex items-center justify-center w-8 h-8 rounded-full border-2 ${
+                <div className={`flex items-center justify-center w-6 h-6 rounded-full border-2 text-xs ${
                   currentStep >= step.id 
                     ? 'bg-blue-600 border-blue-600 text-white' 
                     : 'border-muted-foreground text-muted-foreground'
                 }`}>
                   {currentStep > step.id ? (
-                    <CheckCircle className="h-4 w-4" />
+                    <CheckCircle className="h-3 w-3" />
                   ) : (
                     step.id
                   )}
                 </div>
-                <div className="ml-3 hidden sm:block">
-                  <p className="text-sm font-medium">{step.title}</p>
+                <div className="ml-2 hidden sm:block">
+                  <p className="text-xs font-medium">{step.title}</p>
                   <p className="text-xs text-muted-foreground">{step.description}</p>
                 </div>
                 {index < steps.length - 1 && (
-                  <div className={`w-8 sm:w-16 h-0.5 mx-2 sm:mx-4 ${
+                  <div className={`w-6 sm:w-12 h-0.5 mx-1 sm:mx-2 ${
                     currentStep > step.id ? 'bg-blue-600' : 'bg-muted'
                   }`} />
                 )}
               </div>
             ))}
           </div>
-          <Progress value={(currentStep / steps.length) * 100} className="h-2" />
+          <Progress value={(currentStep / steps.length) * 100} className="h-1" />
         </CardContent>
       </Card>
 
       {/* Step Content */}
-      <Card className="min-h-[500px]">
-        <CardHeader>
+      <Card className="h-[calc(100vh-200px)] flex flex-col">
+        <CardHeader className="flex-shrink-0">
           <CardTitle>
             {steps[currentStep - 1]?.title}
           </CardTitle>
         </CardHeader>
-        <CardContent className="space-y-6">
+        <CardContent className="flex-1 overflow-hidden">
           {/* Step 1: Template Selection */}
           {currentStep === 1 && (
-            <div className="space-y-4">
-              <p className="text-muted-foreground">
+            <div className="h-full flex flex-col space-y-4">
+              <p className="text-muted-foreground flex-shrink-0">
                 Velg en etikettmal for utskrift. Du kan også opprette en ny mal hvis ingen passer.
               </p>
               
-              <div className="grid gap-4 md:grid-cols-2">
-                {availableTemplates.map((template) => {
-                  const IconComponent = template.icon
-                  return (
-                    <Card 
-                      key={template.id} 
-                      className={`cursor-pointer transition-all hover:shadow-md ${
-                        selectedTemplate === template.id ? 'ring-2 ring-blue-500' : ''
-                      }`}
-                      onClick={() => setSelectedTemplate(template.id)}
-                    >
-                      <CardContent className="p-4">
-                        <div className="flex items-start gap-3">
-                          <div className="p-2 bg-blue-100 rounded-lg">
-                            <IconComponent className="h-5 w-5 text-blue-600" />
+              <div className="grid gap-6 lg:grid-cols-2 flex-1 min-h-0">
+                {/* Left Column: Template List */}
+                <div className="flex flex-col space-y-3 min-h-0">
+                  <h3 className="font-medium text-lg flex-shrink-0">Tilgjengelige maler</h3>
+                  <div className="space-y-2 overflow-y-auto flex-1 pr-2">
+                    {availableTemplates.map((template) => {
+                      const IconComponent = template.icon
+                      return (
+                        <Card 
+                          key={template.id} 
+                          className={`cursor-pointer transition-all hover:shadow-md ${
+                            selectedTemplate === template.id ? 'ring-2 ring-blue-500 bg-blue-50' : ''
+                          }`}
+                          onClick={() => setSelectedTemplate(template.id)}
+                        >
+                          <CardContent className="p-3">
+                            <div className="flex items-start gap-2">
+                              <div className="p-1.5 bg-blue-100 rounded-lg">
+                                <IconComponent className="h-4 w-4 text-blue-600" />
+                              </div>
+                              <div className="flex-1">
+                                <h4 className="font-medium text-sm">{template.name}</h4>
+                                <p className="text-xs text-muted-foreground mb-1.5">
+                                  {template.description}
+                                </p>
+                                <div className="flex gap-1.5">
+                                  <Badge variant="secondary" className="text-xs px-1.5 py-0.5">{template.type}</Badge>
+                                  <Badge variant="outline" className="text-xs px-1.5 py-0.5">{template.size}</Badge>
+                                </div>
+                              </div>
+                              {selectedTemplate === template.id && (
+                                <CheckCircle className="h-4 w-4 text-blue-600" />
+                              )}
+                            </div>
+                          </CardContent>
+                        </Card>
+                      )
+                    })}
+                  </div>
+                </div>
+
+                {/* Right Column: Template Preview */}
+                <div className="flex flex-col space-y-3 min-h-0">
+                  <h3 className="font-medium text-lg flex-shrink-0">Forhåndsvisning</h3>
+                  {selectedTemplate && selectedTemplateData ? (
+                    <div className="space-y-4 overflow-y-auto flex-1">
+                      {/* Preview Card */}
+                      <Card className="border-2 border-dashed border-blue-200">
+                        <CardContent className="p-6">
+                          <div className="aspect-[2/1] bg-white border rounded-lg p-4 flex items-center justify-center relative overflow-hidden">
+                            {/* Mock label preview based on template type */}
+                            {selectedTemplateData.type === 'QR' && (
+                              <div className="flex items-center gap-4 w-full">
+                                {/* QR Code mockup */}
+                                <div className="w-16 h-16 bg-black flex-shrink-0 rounded">
+                                  <div className="w-full h-full bg-gradient-to-br from-black via-gray-800 to-black opacity-90 rounded flex items-center justify-center">
+                                    <QrCode className="h-8 w-8 text-white" />
+                                  </div>
+                                </div>
+                                {/* Text content */}
+                                <div className="flex-1 space-y-1">
+                                  <div className="font-bold text-sm">{'{{item.name}}'}</div>
+                                  <div className="text-xs text-gray-600">{'{{location.name}}'}</div>
+                                  {selectedTemplateData.size === 'LARGE' && (
+                                    <div className="text-xs text-gray-500">{'{{item.category}}'}</div>
+                                  )}
+                                </div>
+                              </div>
+                            )}
+                            
+                            {selectedTemplateData.type === 'BARCODE' && (
+                              <div className="w-full space-y-2">
+                                {/* Barcode mockup */}
+                                <div className="w-full h-8 bg-black flex items-end justify-center">
+                                  <div className="flex h-full items-end space-x-px">
+                                    {Array.from({length: 20}).map((_, i) => (
+                                      <div key={i} className={`bg-black ${i % 3 === 0 ? 'h-full' : i % 2 === 0 ? 'h-3/4' : 'h-1/2'}`} style={{width: '2px'}}></div>
+                                    ))}
+                                  </div>
+                                </div>
+                                <div className="text-center text-xs font-mono">{'{{item.barcode}}'}</div>
+                                <div className="text-center text-sm font-medium">{'{{item.name}}'}</div>
+                              </div>
+                            )}
+
+                            {selectedTemplateData.type === 'CUSTOM' && (
+                              <div className="w-full space-y-3">
+                                <div className="flex items-center gap-3">
+                                  <div className="w-12 h-12 bg-black rounded">
+                                    <QrCode className="h-full w-full text-white p-2" />
+                                  </div>
+                                  <div className="flex-1">
+                                    <div className="font-bold text-sm">{'{{item.name}}'}</div>
+                                    <div className="text-xs text-gray-600">{'{{location.name}}'}</div>
+                                  </div>
+                                </div>
+                                <div className="text-xs text-gray-500 space-y-1">
+                                  <div>Kategori: {'{{item.category}}'}</div>
+                                  <div>Verdi: {'{{item.value}}'}</div>
+                                </div>
+                              </div>
+                            )}
                           </div>
-                          <div className="flex-1">
-                            <h3 className="font-medium">{template.name}</h3>
-                            <p className="text-sm text-muted-foreground mb-2">
-                              {template.description}
-                            </p>
-                            <div className="flex gap-2">
-                              <Badge variant="secondary">{template.type}</Badge>
-                              <Badge variant="outline">{template.size}</Badge>
+                        </CardContent>
+                      </Card>
+
+                      {/* Template Details */}
+                      <Card>
+                        <CardHeader className="pb-3">
+                          <CardTitle className="text-base flex items-center gap-2">
+                            <selectedTemplateData.icon className="h-4 w-4" />
+                            {selectedTemplateData.name}
+                          </CardTitle>
+                        </CardHeader>
+                        <CardContent className="space-y-4">
+                          <p className="text-sm text-muted-foreground">
+                            {selectedTemplateData.description}
+                          </p>
+                          
+                          <div className="space-y-2">
+                            <div className="flex justify-between text-sm">
+                              <span className="text-muted-foreground">Type:</span>
+                              <Badge variant="secondary">{selectedTemplateData.type}</Badge>
+                            </div>
+                            <div className="flex justify-between text-sm">
+                              <span className="text-muted-foreground">Størrelse:</span>
+                              <Badge variant="outline">{selectedTemplateData.size}</Badge>
                             </div>
                           </div>
+
+                          <div>
+                            <h5 className="font-medium mb-2 text-sm">Variabler i denne malen:</h5>
+                            <div className="flex flex-wrap gap-2">
+                              {selectedTemplateData.variables.map((variable) => (
+                                <Badge key={variable} variant="outline" className="text-xs">
+                                  {`{{${variable}}}`}
+                                </Badge>
+                              ))}
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    </div>
+                  ) : (
+                    <Card className="border-2 border-dashed border-gray-200 flex-1 flex items-center justify-center">
+                      <CardContent className="p-8 text-center">
+                        <Eye className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                        <h4 className="font-medium mb-2">Velg en mal</h4>
+                        <p className="text-sm text-muted-foreground">
+                          Velg en etikettmal fra listen til venstre for å se forhåndsvisning
+                        </p>
+                      </CardContent>
+                    </Card>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Step 2: Item Selection */}
+          {currentStep === 2 && (
+            <div className="space-y-4">
+              <p className="text-muted-foreground">
+                Velg gjenstander som skal få etiketter. Du kan velge flere gjenstander for batch-utskrift.
+              </p>
+
+              {itemsData && itemsData.items.length > 0 ? (
+                <div className="space-y-4">
+                  <div className="flex items-center gap-4">
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => setSelectedItems(itemsData.items.map(item => item.id))}
+                    >
+                      Velg alle
+                    </Button>
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => setSelectedItems([])}
+                    >
+                      Fjern alle
+                    </Button>
+                    <span className="text-sm text-muted-foreground">
+                      {selectedItems.length} av {itemsData.items.length} gjenstander valgt
+                    </span>
+                  </div>
+
+                  <div className="grid gap-3 max-h-96 overflow-y-auto">
+                    {itemsData.items.map((item) => (
+                      <Card 
+                        key={item.id}
+                        className={`cursor-pointer transition-all hover:shadow-md ${
+                          selectedItems.includes(item.id) ? 'ring-2 ring-blue-500 bg-blue-50' : ''
+                        }`}
+                        onClick={() => {
+                          setSelectedItems(prev => 
+                            prev.includes(item.id) 
+                              ? prev.filter(id => id !== item.id)
+                              : [...prev, item.id]
+                          )
+                        }}
+                      >
+                        <CardContent className="p-4">
+                          <div className="flex items-center gap-3">
+                            <div className="p-2 bg-green-100 rounded-lg">
+                              <Package className="h-5 w-5 text-green-600" />
+                            </div>
+                            <div className="flex-1">
+                              <h4 className="font-medium">{item.name}</h4>
+                              <p className="text-sm text-muted-foreground">
+                                {item.description || 'Ingen beskrivelse'}
+                              </p>
+                              <div className="flex gap-2 mt-1">
+                                {item.location && (
+                                  <Badge variant="outline" className="text-xs">
+                                    <MapPin className="h-3 w-3 mr-1" />
+                                    {item.location.name}
+                                  </Badge>
+                                )}
+                                {item.category && (
+                                  <Badge variant="secondary" className="text-xs">
+                                    {item.category.name}
+                                  </Badge>
+                                )}
+                              </div>
+                            </div>
+                            {selectedItems.includes(item.id) && (
+                              <CheckCircle className="h-5 w-5 text-blue-600" />
+                            )}
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <div className="text-center py-8">
+                  <Package className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                  <h3 className="text-lg font-medium mb-2">Ingen gjenstander funnet</h3>
+                  <p className="text-muted-foreground">
+                    Du må legge til gjenstander i systemet før du kan skrive ut etiketter.
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Step 3: Data Configuration */}
+          {currentStep === 3 && selectedTemplateData && selectedItems.length > 0 && (
+            <div className="space-y-4">
+              <p className="text-muted-foreground">
+                Konfigurer etikettdata for de valgte gjenstandene. Data fra systemet fylles automatisk ut.
+              </p>
+
+              <div className="space-y-4">
+                {selectedItems.map((itemId) => {
+                  const item = itemsData?.items.find(i => i.id === itemId)
+                  if (!item) return null
+
+                  return (
+                    <Card key={itemId}>
+                      <CardHeader className="pb-3">
+                        <CardTitle className="text-base flex items-center gap-2">
+                          <Package className="h-4 w-4" />
+                          {item.name}
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="grid gap-4 md:grid-cols-2">
+                          {selectedTemplateData.variables.map((variable) => {
+                            // Auto-populate from item data
+                            const autoValue = variable === 'item.name' ? item.name :
+                                            variable === 'item.qrCode' ? `HMS-${item.id}` :
+                                            variable === 'location.name' ? item.location?.name || 'Ukjent lokasjon' :
+                                            variable === 'item.category' ? item.category?.name || 'Ukategorisert' :
+                                            variable === 'item.value' ? item.price?.toString() || '' :
+                                            labelData[`${itemId}.${variable}`] || ''
+
+                            return (
+                              <div key={variable}>
+                                <Label htmlFor={`${itemId}.${variable}`}>
+                                  {(variable.split('.').pop() || variable).charAt(0).toUpperCase() + (variable.split('.').pop() || variable).slice(1)}
+                                </Label>
+                                <Input
+                                  id={`${itemId}.${variable}`}
+                                  value={autoValue}
+                                  onChange={(e) => setLabelData(prev => ({
+                                    ...prev,
+                                    [`${itemId}.${variable}`]: e.target.value
+                                  }))}
+                                  placeholder={`Skriv inn ${variable}`}
+                                />
+                              </div>
+                            )
+                          })}
                         </div>
                       </CardContent>
                     </Card>
                   )
                 })}
               </div>
-
-              {selectedTemplate && (
-                <div className="p-4 bg-blue-50 rounded-lg">
-                  <h4 className="font-medium mb-2">Variabler i denne malen:</h4>
-                  <div className="flex flex-wrap gap-2">
-                    {selectedTemplateData?.variables.map((variable) => (
-                      <Badge key={variable} variant="outline">
-                        {`{{${variable}}}`}
-                      </Badge>
-                    ))}
-                  </div>
-                </div>
-              )}
             </div>
           )}
 
-          {/* Step 2: Data Configuration */}
-          {currentStep === 2 && selectedTemplateData && (
-            <div className="space-y-4">
-              <p className="text-muted-foreground">
-                Fyll ut dataene som skal brukes i etiketten. Disse verdiene vil erstatte variablene i malen.
-              </p>
-
-              <div className="grid gap-4 md:grid-cols-2">
-                {selectedTemplateData.variables.map((variable) => (
-                  <div key={variable}>
-                    <Label htmlFor={variable}>
-                      {(variable.split('.').pop() || variable).charAt(0).toUpperCase() + (variable.split('.').pop() || variable).slice(1)}
-                    </Label>
-                    <Input
-                      id={variable}
-                      value={labelData[variable] || ''}
-                      onChange={(e) => setLabelData(prev => ({
-                        ...prev,
-                        [variable]: e.target.value
-                      }))}
-                      placeholder={`Skriv inn ${variable}`}
-                    />
-                  </div>
-                ))}
-              </div>
-
-              {Object.keys(labelData).length > 0 && (
-                <div className="p-4 bg-green-50 rounded-lg">
-                  <h4 className="font-medium mb-2">Forhåndsvisning av data:</h4>
-                  <div className="text-sm space-y-1">
-                    {Object.entries(labelData).map(([key, value]) => (
-                      <div key={key} className="flex justify-between">
-                        <span className="text-muted-foreground">{key}:</span>
-                        <span className="font-medium">{value || '(tom)'}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Step 3: Printer Selection */}
-          {currentStep === 3 && (
+          {/* Step 4: Printer Selection */}
+          {currentStep === 4 && (
             <div className="space-y-6">
               <p className="text-muted-foreground">
                 Velg skriver og konfigurer utskriftsinnstillinger.
@@ -499,8 +727,8 @@ export function PrintWizardWireframe() {
             </div>
           )}
 
-          {/* Step 4: Preview & Print */}
-          {currentStep === 4 && (
+          {/* Step 5: Preview & Print */}
+          {currentStep === 5 && (
             <div className="space-y-6">
               <p className="text-muted-foreground">
                 Kontroller alle detaljer før utskrift. Du kan gå tilbake for å gjøre endringer.

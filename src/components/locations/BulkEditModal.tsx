@@ -126,7 +126,7 @@ export function BulkEditModal({
       const newType = bulkData.type.value
       const newParentId = bulkData.parentId.value
       
-      if (newParentId) {
+      if (newParentId && newParentId !== 'none') {
         const parent = allLocations.find(loc => loc.id === newParentId)
         if (parent) {
           // Check hierarchy rules (simplified validation)
@@ -139,7 +139,7 @@ export function BulkEditModal({
     }
     
     // Check for circular references if changing parent
-    if (bulkData.parentId.enabled && bulkData.parentId.value) {
+    if (bulkData.parentId.enabled && bulkData.parentId.value && bulkData.parentId.value !== 'none') {
       const selectedIds = locations.map(loc => loc.id)
       if (selectedIds.includes(bulkData.parentId.value)) {
         errors.push('Kan ikke sette en valgt lokasjon som forelder til seg selv')
@@ -161,7 +161,7 @@ export function BulkEditModal({
         changes.type = bulkData.type.value
       }
       if (bulkData.parentId.enabled) {
-        changes.parentId = bulkData.parentId.value
+        changes.parentId = bulkData.parentId.value === 'none' ? null : bulkData.parentId.value
       }
       
       return {
@@ -181,7 +181,7 @@ export function BulkEditModal({
       .filter(([_, field]) => field.enabled)
       .reduce((acc, [key, field]) => ({
         ...acc,
-        [key]: field.value
+        [key]: key === 'parentId' && field.value === 'none' ? null : field.value
       }), {})
     
     // Simulate progress for bulk operation
@@ -342,7 +342,7 @@ export function BulkEditModal({
                       <SelectValue placeholder="Velg overordnet lokasjon" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">Ingen (rot-nivå)</SelectItem>
+                      <SelectItem value="none">Ingen (rot-nivå)</SelectItem>
                       {sortLocationsByPath(
                         enhanceLocationsWithPaths(
                           allLocations.filter(loc => !locations.some(selected => selected.id === loc.id))

@@ -28,7 +28,8 @@ import {
   TreePine,
   Smartphone,
   Layout,
-  Sparkles
+  Sparkles,
+  Plus
 } from 'lucide-react'
 import {
   Select,
@@ -53,6 +54,10 @@ import { LocationModal } from '@/components/locations/LocationModal'
 import { FloatingActionButton } from '@/components/locations/FloatingActionButton'
 import { BulkActionsToolbar } from '@/components/locations/BulkActionsToolbar'
 import { BulkEditModal } from '@/components/locations/BulkEditModal'
+import { BulkCreateModal } from '@/components/locations/BulkCreateModal'
+import { LocationBreadcrumb } from '@/components/locations/LocationBreadcrumb'
+import { LocationContentView } from '@/components/locations/LocationContentView'
+import { buildCompactPath, type LocationWithPath } from '@/lib/utils/location-path'
 
 const locationTypeIcons = {
   ROOM: Home,
@@ -104,9 +109,14 @@ function canBeChildOf(childType: string, parentType: string): boolean {
 function flattenLocations(locations: any[]): any[] {
   const flattened: any[] = []
   
+  // Safe guard - ensure locations is an array
+  if (!locations || !Array.isArray(locations)) {
+    return flattened
+  }
+  
   function addLocation(location: any) {
     flattened.push(location)
-    if (location.children && location.children.length > 0) {
+    if (location.children && Array.isArray(location.children) && location.children.length > 0) {
       location.children.forEach((child: any) => addLocation(child))
     }
   }
@@ -127,9 +137,23 @@ export default function LocationsPage() {
   const [isSelectionMode, setIsSelectionMode] = useState(false)
   const [initialLocationData, setInitialLocationData] = useState<any>(null)
   const [showBulkEdit, setShowBulkEdit] = useState(false)
+  const [showBulkCreate, setShowBulkCreate] = useState(false)
+  
+  // Navigation state
+  const [currentLocationId, setCurrentLocationId] = useState<string | null>(null)
+  const [viewMode, setViewMode] = useState<'overview' | 'content'>('overview')
 
   // tRPC queries and mutations
-  const { data: locations = [], isLoading, error, refetch } = trpc.locations.getAll.useQuery()
+  const { data: locationsData, isLoading, error, refetch } = trpc.locations.getAll.useQuery()
+  
+  // Query for location content when in content view
+  const { data: locationContent, isLoading: contentLoading, refetch: refetchContent } = trpc.locations.getLocationContent.useQuery(
+    { locationId: currentLocationId },
+    { enabled: viewMode === 'content' }
+  )
+  
+  // Safe array handling
+  const locations = locationsData && Array.isArray(locationsData) ? locationsData : []
   
   // Flat list of all locations for dropdowns
   const allLocations = flattenLocations(locations)
@@ -139,9 +163,19 @@ export default function LocationsPage() {
       setShowLocationModal(false)
       setInitialLocationData(null)
       refetch()
+      // Also refetch content if we're in content view
+      if (viewMode === 'content') {
+        refetchContent()
+      }
     },
     onError: (error) => {
+      console.error('Create location error:', error)
       toast.error(`Feil: ${error.message}`)
+    },
+    // Prevent duplicate mutations
+    retry: false,
+    onMutate: () => {
+      console.log('Creating location...')
     }
   })
   const updateLocationMutation = trpc.locations.update.useMutation({
@@ -150,6 +184,10 @@ export default function LocationsPage() {
       setShowLocationModal(false)
       setEditingLocation(null)
       refetch()
+      // Also refetch content if we're in content view
+      if (viewMode === 'content') {
+        refetchContent()
+      }
     },
     onError: (error) => {
       toast.error(`Feil: ${error.message}`)
@@ -159,6 +197,24 @@ export default function LocationsPage() {
     onSuccess: () => {
       toast.success('Lokasjon slettet!')
       refetch()
+      // Also refetch content if we're in content view
+      if (viewMode === 'content') {
+        refetchContent()
+      }
+    },
+    onError: (error) => {
+      toast.error(`Feil: ${error.message}`)
+    }
+  })
+  const bulkCreateLocationMutation = trpc.locations.bulkCreate.useMutation({
+    onSuccess: (result) => {
+      toast.success(`${result.count} lokasjoner opprettet!`)
+      setShowBulkCreate(false)
+      refetch()
+      // Also refetch content if we're in content view
+      if (viewMode === 'content') {
+        refetchContent()
+      }
     },
     onError: (error) => {
       toast.error(`Feil: ${error.message}`)
@@ -183,10 +239,13 @@ export default function LocationsPage() {
   })
 
   // Modal handlers
-  const handleCreateLocation = (template?: any) => {
+  const handleCreateLocation = (parentId?: string) => {
+    // If we're in content view and no parentId is provided, use current location
+    const effectiveParentId = parentId || (viewMode === 'content' ? currentLocationId : undefined)
+    
     setModalMode('create')
     setEditingLocation(null)
-    setInitialLocationData(template || null)
+    setInitialLocationData(effectiveParentId ? { parentId: effectiveParentId } : null)
     setShowLocationModal(true)
   }
 
@@ -198,9 +257,17 @@ export default function LocationsPage() {
   }
 
   const handleModalSave = (data: any) => {
+    // Prevent duplicate submissions
+    if (createLocationMutation.isPending || updateLocationMutation.isPending) {
+      console.log('Mutation already in progress, ignoring duplicate call')
+      return
+    }
+    
     if (modalMode === 'create') {
+      console.log('Calling create mutation with data:', data)
       createLocationMutation.mutate(data)
     } else if (modalMode === 'edit') {
+      console.log('Calling update mutation with data:', data)
       updateLocationMutation.mutate(data)
     }
   }
@@ -209,6 +276,28 @@ export default function LocationsPage() {
     setShowLocationModal(false)
     setEditingLocation(null)
     setInitialLocationData(null)
+  }
+
+  // Navigation handlers
+  const handleNavigateToLocation = (locationId: string) => {
+    setCurrentLocationId(locationId)
+    setViewMode('content')
+  }
+
+  const handleNavigateUp = () => {
+    if (locationContent?.currentLocation?.parentId) {
+      setCurrentLocationId(locationContent.currentLocation.parentId)
+    } else {
+      setCurrentLocationId(null)
+      setViewMode('overview')
+    }
+  }
+
+  const handleBreadcrumbNavigate = (locationId: string | null) => {
+    setCurrentLocationId(locationId)
+    if (locationId === null) {
+      setViewMode('overview')
+    }
   }
 
   // FAB handlers
@@ -280,6 +369,18 @@ export default function LocationsPage() {
     setShowBulkEdit(false)
   }
 
+  const handleBulkCreateSave = async (locations: any[]) => {
+    bulkCreateLocationMutation.mutate({ locations })
+  }
+
+  const handleSmartLocationCreate = async (suggestion: { name: string; type: string; parentId: string }) => {
+    createLocationMutation.mutate({
+      name: suggestion.name,
+      type: suggestion.type as any,
+      parentId: suggestion.parentId
+    })
+  }
+
   const handleDeselectAll = () => {
     setSelectedLocations([])
   }
@@ -319,15 +420,104 @@ export default function LocationsPage() {
 
   return (
     <div className="page container mx-auto px-4 py-8">
-      {/* Header */}
-      <div className="flex justify-between items-center mb-8 cq">
-        <div>
-          <h1 className="text-3xl font-bold title">Lokasjoner</h1>
-          <p className="text-muted-foreground secondary-text">
-            Administrer rom, hyller og oppbevaringssteder
-          </p>
+      {/* Kompakt Header */}
+      <div className="bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 sticky top-0 z-40 border-b mb-6 -mx-4 px-4 py-4">
+        <div className="flex items-center justify-between gap-4">
+          <div className="flex items-center gap-4">
+            <h1 className="text-xl font-semibold">🏠 Lokasjoner</h1>
+            <Badge variant="secondary" className="hidden sm:inline-flex">
+              {allLocations.length} totalt
+            </Badge>
+          </div>
+          
+          <div className="flex items-center gap-2">
+            {/* Søk */}
+            <div className="relative hidden sm:block">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
+              <Input
+                placeholder="Søk lokasjoner..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-10 w-64"
+              />
+            </div>
+            
+            {/* View Toggle */}
+            <Select value={viewMode} onValueChange={(value: 'overview' | 'content') => setViewMode(value)}>
+              <SelectTrigger className="w-32">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="overview">
+                  <div className="flex items-center gap-2">
+                    <Layout className="w-4 h-4" />
+                    Oversikt
+                  </div>
+                </SelectItem>
+                <SelectItem value="content">
+                  <div className="flex items-center gap-2">
+                    <TreePine className="w-4 h-4" />
+                    Innhold
+                  </div>
+                </SelectItem>
+              </SelectContent>
+            </Select>
+            
+            {/* Actions */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button size="sm">
+                  <Plus className="w-4 h-4 mr-2" />
+                  Ny
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => setShowLocationModal(true)}>
+                  <MapPin className="w-4 h-4 mr-2" />
+                  Enkelt lokasjon
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setShowBulkCreate(true)}>
+                  <Plus className="w-4 h-4 mr-2" />
+                  Flere lokasjoner
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+            
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm">
+                  <MoreVertical className="w-4 h-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem>
+                  <Printer className="w-4 h-4 mr-2" />
+                  Skriv ut etiketter
+                </DropdownMenuItem>
+                <DropdownMenuItem>
+                  <Sparkles className="w-4 h-4 mr-2" />
+                  Bulk-handlinger
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
         </div>
-        <div className="flex gap-2">
+        
+        {/* Mobile Search */}
+        <div className="sm:hidden mt-3">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
+            <Input
+              placeholder="Søk lokasjoner..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-10"
+            />
+          </div>
+        </div>
+      </div>
+      
+      <div className="flex gap-2">
           {/* Bulk actions when in selection mode */}
           {isSelectionMode && selectedLocations.length > 0 && (
             <>
@@ -366,18 +556,15 @@ export default function LocationsPage() {
                   Trevisning
                 </Button>
               </Link>
-              <Link href="/locations/mobile">
-                <Button variant="outline">
-                  <Smartphone className="w-4 h-4 mr-2" />
-                  Mobilvisning
-                </Button>
-              </Link>
-              <Link href="/locations/layout">
-                <Button variant="outline">
-                  <Layout className="w-4 h-4 mr-2" />
-                  Layout-editor
-                </Button>
-              </Link>
+
+
+              <Button
+                variant="outline"
+                onClick={() => setShowBulkCreate(true)}
+              >
+                <Plus className="w-4 h-4 mr-2" />
+                Legg til flere
+              </Button>
               <Link href="/locations/wizard">
                 <Button className="bg-blue-600 hover:bg-blue-700">
                   <Sparkles className="w-4 h-4 mr-2" />
@@ -386,7 +573,6 @@ export default function LocationsPage() {
               </Link>
             </>
           )}
-        </div>
       </div>
 
       {/* Search and Filters */}
@@ -420,9 +606,38 @@ export default function LocationsPage() {
         </Select>
       </div>
 
+      {/* Breadcrumb Navigation */}
+      {viewMode === 'content' && locationContent?.breadcrumbs && (
+        <LocationBreadcrumb
+          items={locationContent.breadcrumbs}
+          onNavigate={handleBreadcrumbNavigate}
+        />
+      )}
 
-
-
+      {/* Content based on view mode */}
+      {viewMode === 'content' ? (
+        // Location Content View
+        contentLoading ? (
+          <div className="flex items-center justify-center py-12">
+            <Loader2 className="w-8 h-8 animate-spin" />
+            <span className="ml-2">Laster innhold...</span>
+          </div>
+        ) : locationContent ? (
+          <LocationContentView
+            currentLocation={locationContent.currentLocation}
+            childLocations={locationContent.childLocations || []}
+            items={locationContent.items || []}
+            allLocations={allLocations}
+            onNavigateToLocation={handleNavigateToLocation}
+            onNavigateUp={handleNavigateUp}
+            onCreateLocation={handleCreateLocation}
+            onCreateSmartLocation={handleSmartLocationCreate}
+            onEditLocation={handleEditLocation}
+          />
+        ) : null
+      ) : (
+        // Original Overview
+        <>
 
       {/* QR Code Display Modal */}
       {showQRCode && (
@@ -450,13 +665,17 @@ export default function LocationsPage() {
         </Card>
       )}
 
-      {/* Locations Grid */}
-      <div className="cq-grid locations-grid" style={{"--card-min":"220px"} as any}>
+      {/* Forbedret Locations Grid */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
         {filteredLocations.map((location) => (
-          <Card key={location.id} className="hover:shadow-md transition-shadow">
-            <CardHeader className="pb-3">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
+          <Card 
+            key={location.id} 
+            className="hover:shadow-md transition-shadow cursor-pointer"
+            onClick={() => handleNavigateToLocation(location.id)}
+          >
+            <CardHeader className="pb-2">
+              <div className="flex items-start justify-between">
+                <div className="flex items-center gap-3 flex-1 min-w-0">
                   {isSelectionMode && (
                     <Checkbox
                       checked={selectedLocations.includes(location.id)}
@@ -467,14 +686,30 @@ export default function LocationsPage() {
                           setSelectedLocations(prev => prev.filter(id => id !== location.id))
                         }
                       }}
+                      onClick={(e) => e.stopPropagation()}
                     />
                   )}
                   <LocationIcon type={location.type} />
-                  <CardTitle className="text-lg">{location.name}</CardTitle>
+                  <div className="flex-1 min-w-0">
+                    <CardTitle className="text-base truncate">{location.name}</CardTitle>
+                    <div className="flex items-center gap-2 mt-1">
+                      <Badge variant="secondary" className="text-xs">
+                        {locationTypeLabels[location.type as keyof typeof locationTypeLabels]}
+                      </Badge>
+                      <Badge variant="outline" className="text-xs font-mono">
+                        {location.qrCode}
+                      </Badge>
+                    </div>
+                  </div>
                 </div>
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="sm" aria-label={`Mer handlinger for ${location.name}`}>
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      aria-label={`Mer handlinger for ${location.name}`}
+                      onClick={(e) => e.stopPropagation()}
+                    >
                       <MoreVertical className="w-4 h-4" />
                     </Button>
                   </DropdownMenuTrigger>
@@ -498,40 +733,35 @@ export default function LocationsPage() {
                   </DropdownMenuContent>
                 </DropdownMenu>
               </div>
-              <div className="flex items-center gap-2 flex-wrap">
-                <Badge variant="secondary">
-                  {locationTypeLabels[location.type as keyof typeof locationTypeLabels]}
-                </Badge>
-                <Badge variant="outline" className="flex items-center gap-1">
-                  <QrCode className="w-3 h-3" />
-                  {location.qrCode}
-                </Badge>
-                {location.parent && (
-                  <Badge variant="outline" className="text-xs">
-                    I: {location.parent.name}
-                  </Badge>
-                )}
-              </div>
+
+              {/* Vis kompakt lokasjonsstier */}
+              {location.parentId && (
+                <p className="text-xs text-muted-foreground mt-2">
+                  📍 {buildCompactPath(location as LocationWithPath, allLocations as LocationWithPath[], 2)}
+                </p>
+              )}
             </CardHeader>
-            <CardContent>
+            <CardContent className="pt-0">
               {location.description && (
-                <p className="text-sm text-muted-foreground mb-3">
+                <p className="text-sm text-muted-foreground mb-3 line-clamp-2">
                   {location.description}
                 </p>
               )}
               
-              <div className="flex items-center justify-between mb-4">
-                <span className="text-sm font-medium">
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-muted-foreground">
                   {location._count?.items || 0} gjenstander
                 </span>
                 <Button 
-                  variant="outline" 
+                  variant="ghost" 
                   size="sm" 
-                  className="flex items-center gap-1"
-                  onClick={() => setShowQRCode(location.qrCode)}
+                  className="h-7 px-2 opacity-70 hover:opacity-100"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    setShowQRCode(location.qrCode)
+                  }}
                 >
                   <QrCode className="w-3 h-3" />
-                  QR-kode
                 </Button>
               </div>
 
@@ -594,6 +824,8 @@ export default function LocationsPage() {
           )}
         </div>
       )}
+        </>
+      )}
 
       {/* Location Modal */}
       <LocationModal
@@ -604,6 +836,7 @@ export default function LocationsPage() {
         allLocations={allLocations}
         isLoading={createLocationMutation.isPending || updateLocationMutation.isPending}
         mode={modalMode}
+        initialData={initialLocationData}
       />
 
       {/* Floating Action Button */}
@@ -638,6 +871,15 @@ export default function LocationsPage() {
         locations={selectedLocations.map(id => allLocations.find(loc => loc.id === id)!).filter(Boolean)}
         allLocations={allLocations}
         isLoading={false}
+      />
+
+      {/* Bulk Create Modal */}
+      <BulkCreateModal
+        isOpen={showBulkCreate}
+        onClose={() => setShowBulkCreate(false)}
+        onSave={handleBulkCreateSave}
+        allLocations={allLocations}
+        isLoading={bulkCreateLocationMutation.isPending}
       />
 
       {/* Dymo Print Dialog */}
